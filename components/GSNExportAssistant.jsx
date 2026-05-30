@@ -516,11 +516,10 @@ function createAssistantResponse(input) {
 export default function GSNExportAssistant() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
-  const [inputFocused, setInputFocused] = useState(false);
   const [typing, setTyping] = useState(false);
   const [messages, setMessages] = useState([welcomeMessage]);
   const scrollRef = useRef(null);
-  const showSuggestions = inputFocused && !typing;
+  const showSuggestions = open && messages.length === 1 && !typing;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -592,7 +591,7 @@ export default function GSNExportAssistant() {
         aria-label={open ? "Close NusaBot" : "Open NusaBot"}
       >
         <span className="ai-orb-core">
-          <img src="/images/nusabot.webp" alt="" />
+          <img src="/images/nusabot.webp" alt="NusaBot assistant" />
         </span>
         <span className="ai-orb-ring"></span>
         <i></i>
@@ -604,7 +603,7 @@ export default function GSNExportAssistant() {
         <section className="ai-chat-window" aria-label="NusaBot chatbot">
           <header className="ai-chat-header">
             <div className="ai-avatar">
-              <img src="/images/nusabot.webp" alt="" />
+              <img src="/images/nusabot.webp" alt="NusaBot assistant" />
             </div>
             <div>
               <p>NusaBot</p>
@@ -645,9 +644,7 @@ export default function GSNExportAssistant() {
             <div className="ai-input-row">
               <input
                 value={input}
-                onBlur={() => window.setTimeout(() => setInputFocused(false), 140)}
                 onChange={(event) => setInput(event.target.value)}
-                onFocus={() => setInputFocused(true)}
                 placeholder="Ask NusaBot about products, export, samples, or quotation..."
               />
               <div className="ai-side-actions">

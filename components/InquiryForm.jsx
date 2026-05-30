@@ -90,6 +90,8 @@ const formLabels = {
     division: "Choose Division",
     products: "Product Inquiry",
     details: "Order Details",
+    optionalDetails: "Add packaging, specification, and target price",
+    hideOptionalDetails: "Hide additional details",
     message: "Additional Message",
     agreement: "I agree that Garda Samudra Nusantara may contact me regarding this inquiry.",
     submit: "SEND INQUIRY",
@@ -106,6 +108,8 @@ const formLabels = {
     division: "Pilih Divisi",
     products: "Inquiry Produk",
     details: "Detail Pesanan",
+    optionalDetails: "Tambah packaging, spesifikasi, dan target price",
+    hideOptionalDetails: "Sembunyikan detail tambahan",
     message: "Pesan Tambahan",
     agreement: "Saya setuju Garda Samudra Nusantara dapat menghubungi saya mengenai inquiry ini.",
     submit: "KIRIM INQUIRY",
@@ -174,6 +178,7 @@ export default function InquiryForm() {
   const [status, setStatus] = useState("idle");
   const [notice, setNotice] = useState("");
   const [language, setLanguage] = useState("en");
+  const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
 
   const activeGroups = productGroups[selectedDivision];
   const whatsappHref = useMemo(
@@ -331,24 +336,12 @@ export default function InquiryForm() {
                 <input name="fullName" value={form.fullName} onChange={updateField} required />
               </label>
               <label>
-                <span>Company Name</span>
-                <input name="companyName" value={form.companyName} onChange={updateField} />
-              </label>
-              <label>
-                <span>Email Address</span>
-                <input name="email" type="email" value={form.email} onChange={updateField} required />
-              </label>
-              <label>
                 <span>WhatsApp Number</span>
                 <input name="whatsapp" value={form.whatsapp} onChange={updateField} required />
               </label>
               <label>
-                <span>Country</span>
+                <span>Destination Country</span>
                 <input name="country" value={form.country} onChange={updateField} required />
-              </label>
-              <label>
-                <span>City</span>
-                <input name="city" value={form.city} onChange={updateField} />
               </label>
             </div>
           </fieldset>
@@ -405,30 +398,57 @@ export default function InquiryForm() {
                 <span>Monthly Requirement</span>
                 <input name="monthlyRequirement" value={form.monthlyRequirement} onChange={updateField} />
               </label>
-              <label>
-                <span>Packaging Request</span>
-                <textarea name="packagingRequest" value={form.packagingRequest} onChange={updateField}></textarea>
-              </label>
-              <label>
-                <span>Product Specification</span>
-                <textarea name="productSpecification" value={form.productSpecification} onChange={updateField}></textarea>
-              </label>
-              <label>
-                <span>Target Price (Optional)</span>
-                <input name="targetPrice" value={form.targetPrice} onChange={updateField} />
-              </label>
             </div>
           </fieldset>
 
-          <label className="neo-message-field">
-            <span>{text.message}</span>
-            <textarea
-              name="message"
-              onChange={updateField}
-              placeholder={text.messagePlaceholder}
-              value={form.message}
-            ></textarea>
-          </label>
+          <button
+            className="neo-details-toggle"
+            type="button"
+            onClick={() => setShowAdvancedDetails((current) => !current)}
+          >
+            {showAdvancedDetails ? text.hideOptionalDetails : text.optionalDetails}
+          </button>
+
+          {showAdvancedDetails ? (
+            <div className="neo-advanced-details">
+              <div className="neo-input-grid">
+                <label>
+                  <span>Company Name</span>
+                  <input name="companyName" value={form.companyName} onChange={updateField} />
+                </label>
+                <label>
+                  <span>Email Address (Optional)</span>
+                  <input name="email" type="email" value={form.email} onChange={updateField} />
+                </label>
+                <label>
+                  <span>City / Port</span>
+                  <input name="city" value={form.city} onChange={updateField} />
+                </label>
+                <label>
+                  <span>Packaging Request</span>
+                  <textarea name="packagingRequest" value={form.packagingRequest} onChange={updateField}></textarea>
+                </label>
+                <label>
+                  <span>Product Specification</span>
+                  <textarea name="productSpecification" value={form.productSpecification} onChange={updateField}></textarea>
+                </label>
+                <label>
+                  <span>Target Price (Optional)</span>
+                  <input name="targetPrice" value={form.targetPrice} onChange={updateField} />
+                </label>
+              </div>
+
+              <label className="neo-message-field">
+                <span>{text.message}</span>
+                <textarea
+                  name="message"
+                  onChange={updateField}
+                  placeholder={text.messagePlaceholder}
+                  value={form.message}
+                ></textarea>
+              </label>
+            </div>
+          ) : null}
 
           <label className="neo-agreement">
             <input

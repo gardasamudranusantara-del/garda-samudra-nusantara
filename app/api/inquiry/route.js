@@ -71,7 +71,7 @@ export async function POST(request) {
   try {
     const data = await request.json();
 
-    if (!data.fullName || !data.email || !data.whatsapp || !data.country || !data.agreement) {
+    if (!data.fullName || !data.whatsapp || !data.country || !data.agreement) {
       return Response.json({ message: "Please complete the required inquiry fields." }, { status: 400 });
     }
 
@@ -85,7 +85,7 @@ export async function POST(request) {
     }
 
     const fromEmail = process.env.RESEND_FROM_EMAIL || "GSN Inquiry <onboarding@resend.dev>";
-    const replyTo = data.email;
+    const replyTo = data.email || inquiryRecipient;
 
     await sendResendEmail({
       from: fromEmail,
@@ -95,20 +95,22 @@ export async function POST(request) {
       html: buildInquiryHtml(data)
     });
 
-    await sendResendEmail({
-      from: fromEmail,
-      to: data.email,
-      subject: "Thank you for contacting Garda Samudra Nusantara",
-      html: `
-        <div style="font-family:Inter,Arial,sans-serif;background:#070713;color:#ffffff;padding:28px;">
-          <div style="max-width:620px;margin:auto;border:1px solid rgba(137,111,255,.35);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.03));padding:28px;">
-            <p style="margin:0 0 8px;color:#9fd7ff;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;">Garda Samudra Nusantara</p>
-            <h1 style="margin:0 0 14px;font-size:26px;">Thank you for contacting Garda Samudra Nusantara.</h1>
-            <p style="margin:0;color:#dce4ff;line-height:1.7;">Our team will contact you shortly regarding your inquiry.</p>
+    if (data.email) {
+      await sendResendEmail({
+        from: fromEmail,
+        to: data.email,
+        subject: "Thank you for contacting Garda Samudra Nusantara",
+        html: `
+          <div style="font-family:Inter,Arial,sans-serif;background:#070713;color:#ffffff;padding:28px;">
+            <div style="max-width:620px;margin:auto;border:1px solid rgba(137,111,255,.35);border-radius:24px;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.03));padding:28px;">
+              <p style="margin:0 0 8px;color:#9fd7ff;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;">Garda Samudra Nusantara</p>
+              <h1 style="margin:0 0 14px;font-size:26px;">Thank you for contacting Garda Samudra Nusantara.</h1>
+              <p style="margin:0;color:#dce4ff;line-height:1.7;">Our team will contact you shortly regarding your inquiry.</p>
+            </div>
           </div>
-        </div>
-      `
-    });
+        `
+      });
+    }
 
     return Response.json({ message: "Inquiry sent successfully." });
   } catch (error) {

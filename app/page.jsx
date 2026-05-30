@@ -116,6 +116,21 @@ const globalStats = [
   { value: "100%", label: "Commitment to Long-Term Partnerships" }
 ];
 
+const buyerQuickFacts = [
+  {
+    title: "Products",
+    text: "Fresh vegetables, eggs, rice, coconut charcoal, charcoal briquette, wood pellet, and Indonesian spices."
+  },
+  {
+    title: "MOQ & Samples",
+    text: "MOQ and samples depend on product, destination, packaging, and current supply availability."
+  },
+  {
+    title: "Export & Contact",
+    text: "Share destination country, quantity, and product specs so GSN can guide quotation and export follow-up."
+  }
+];
+
 const pageText = {
   en: {
     projects,
@@ -124,6 +139,7 @@ const pageText = {
     productCards,
     whyCards,
     globalStats,
+    buyerQuickFacts,
     futureGoals,
     footerValues: brandValues,
     heroKicker: "Quality | Reliability | Consistency",
@@ -142,8 +158,8 @@ const pageText = {
     divisionsTitle: "Three divisions built around practical buyer needs.",
     divisionsDescription:
       "Explore fresh food supply, eco-energy commodities, and Indonesian spices through a company designed for clear communication and long-term cooperation.",
-    projectsKicker: "Projects",
-    projectsTitle: "Future-ready development for stronger commodity supply.",
+    projectsKicker: "Buyer Essentials",
+    projectsTitle: "The key details buyers usually need first.",
     projectDescription:
       "Strategic development designed to strengthen GSN's sourcing, distribution, and buyer partnership ecosystem.",
     partnershipKicker: "Partnership",
@@ -253,6 +269,20 @@ const pageText = {
       { value: "3", label: "Divisi Bisnis Terintegrasi" },
       { value: "100%", label: "Komitmen Untuk Kemitraan Jangka Panjang" }
     ],
+    buyerQuickFacts: [
+      {
+        title: "Produk",
+        text: "Sayuran segar, telur, beras, arang batok kelapa, arang briket, wood pellet, dan rempah Indonesia."
+      },
+      {
+        title: "MOQ & Sampel",
+        text: "MOQ dan sampel bergantung pada produk, negara tujuan, packaging, dan ketersediaan pasokan."
+      },
+      {
+        title: "Ekspor & Kontak",
+        text: "Bagikan negara tujuan, quantity, dan spesifikasi agar GSN dapat memberi arahan quotation dan ekspor."
+      }
+    ],
     futureGoals: [
       "Memperluas jaringan sourcing dan distribusi yang andal di Indonesia",
       "Mengembangkan akses pasar internasional yang lebih kuat untuk komoditas Indonesia",
@@ -277,8 +307,8 @@ const pageText = {
     divisionsTitle: "Tiga divisi yang dibangun berdasarkan kebutuhan buyer.",
     divisionsDescription:
       "Jelajahi pasokan pangan segar, komoditas eco-energy, dan rempah Indonesia melalui perusahaan yang dirancang untuk komunikasi jelas dan kerja sama jangka panjang.",
-    projectsKicker: "Proyek",
-    projectsTitle: "Pengembangan masa depan untuk pasokan komoditas yang lebih kuat.",
+    projectsKicker: "Info Buyer",
+    projectsTitle: "Detail utama yang biasanya dibutuhkan buyer lebih dulu.",
     projectDescription:
       "Pengembangan strategis untuk memperkuat ekosistem sourcing, distribusi, dan kemitraan buyer GSN.",
     partnershipKicker: "Kemitraan",
@@ -518,7 +548,7 @@ export default function HomePage() {
           <div className="future-product-grid">
             {text.productCards.map((product) => (
               <article className={`future-product-card product-${product.accent}`} key={product.id}>
-                <img src={product.image} alt="" />
+                <img src={product.image} alt={`${product.title} commodity products`} />
                 <div>
                   <span>{product.number}</span>
                   <h3>{product.title.toUpperCase()}</h3>
@@ -542,23 +572,22 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="future-section projects-section reveal" id="projects">
-          <div className="section-intro">
+        <section className="future-section buyer-summary-section reveal" id="projects">
+          <div className="section-intro center">
             <p className="future-kicker">{text.projectsKicker}</p>
             <h2>{text.projectsTitle}</h2>
           </div>
-          <div className="project-carousel" aria-label="GSN project concepts">
-            {text.projects.map((project, index) => (
-              <article className="project-card" key={project}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <h3>{project}</h3>
-                <p>{text.projectDescription}</p>
+          <div className="buyer-summary-grid">
+            {text.buyerQuickFacts.map((item) => (
+              <article className="spotlight-card buyer-summary-card" key={item.title}>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="future-section partnership-section reveal" id="partnership">
+        <section className="future-section partnership-compact-section" id="partnership">
           <div className="section-intro center">
             <p className="future-kicker">{text.partnershipKicker}</p>
             <h2>{text.partnershipTitle}</h2>
@@ -566,30 +595,18 @@ export default function HomePage() {
           <div className="partnership-grid">
             {text.partnershipCards.map((card) => (
               <article className="spotlight-card" key={card.title}>
-                <span>✦</span>
                 <h3>{card.title}</h3>
                 <p>{card.text}</p>
               </article>
             ))}
           </div>
+          <div className="partnership-cta-row">
+            <a className="future-button primary" href="#gsnformneo">{text.inquiryForm}</a>
+            <a className="future-button secondary" href="#contact">{text.contactKicker}</a>
+          </div>
         </section>
 
         <InquiryForm />
-
-        <section className="future-section goals-section reveal">
-          <div className="section-intro">
-            <p className="future-kicker">{text.goalsKicker}</p>
-            <h2>{text.goalsTitle}</h2>
-          </div>
-          <div className="goals-grid">
-            {text.futureGoals.map((goal, index) => (
-              <article className="goal-card" key={goal}>
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <p>{goal}</p>
-              </article>
-            ))}
-          </div>
-        </section>
 
         <section className="future-section contact-future-section reveal" id="contact">
           <div className="section-intro center">
