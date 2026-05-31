@@ -424,6 +424,21 @@ export default function HomePage() {
   const loadingDivision = divisions.find((division) => division.id === loadingDivisionId);
   const text = pageText[language];
 
+  function track(event, label) {
+    const payload = JSON.stringify({ event, label, path: window.location.pathname });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/track", new Blob([payload], { type: "application/json" }));
+      return;
+    }
+
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+      keepalive: true
+    }).catch(() => {});
+  }
+
   useEffect(() => {
     const savedLanguage = window.localStorage.getItem("gsn-language");
     if (savedLanguage === "id" || savedLanguage === "en") {
@@ -573,8 +588,8 @@ export default function HomePage() {
             </h1>
             <p>{text.heroDescription}</p>
             <div className="future-actions">
-              <a className="future-button primary" href="#gsnformneo">{text.requestQuotation}</a>
-              <a className="future-button secondary" href="#products">{text.exploreDivisions}</a>
+              <a className="future-button primary" href="#gsnformneo" onClick={() => track("cta_click", "hero_request_quotation")}>{text.requestQuotation}</a>
+              <a className="future-button secondary" href="#products" onClick={() => track("cta_click", "hero_explore_divisions")}>{text.exploreDivisions}</a>
             </div>
           </div>
 
@@ -625,8 +640,8 @@ export default function HomePage() {
             ))}
           </div>
           <div className="partnership-cta-row">
-            <a className="future-button primary" href="#gsnformneo">{text.discussPartnership}</a>
-            <button className="future-button secondary" type="button" onClick={() => openMarketExperience("future")}>
+            <a className="future-button primary" href="#gsnformneo" onClick={() => track("cta_click", "partnership_discuss")}>{text.discussPartnership}</a>
+            <button className="future-button secondary" type="button" onClick={() => { track("cta_click", "partnership_long_term_roadmap"); openMarketExperience("future"); }}>
               {text.longTermRoadmap}
             </button>
           </div>
@@ -658,7 +673,7 @@ export default function HomePage() {
                     <button type="button" onClick={() => enterDivision(product.id)}>
                       {product.action}
                     </button>
-                    <button className="send-inquiry-button" type="button" onClick={() => openInquiryForm(product.id)}>
+                    <button className="send-inquiry-button" type="button" onClick={() => { track("cta_click", `product_inquiry_${product.id}`); openInquiryForm(product.id); }}>
                       {text.inquiryForm}
                     </button>
                   </div>

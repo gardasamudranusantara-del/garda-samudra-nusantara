@@ -330,6 +330,22 @@ function getProductResponse(text) {
   return `${product.name} is part of ${product.division}. ${product.answer} I recommend sending your target quantity, destination country, packaging preference, and required specification through the inquiry form so GSN can prepare the most suitable quotation.`;
 }
 
+function getSmartInquiry(text) {
+  const product = productKnowledge.find((item) => includesAny(text, item.terms));
+
+  if (!product) {
+    return null;
+  }
+
+  const divisionId = product.division === "Garda Fresh" ? "fresh" : product.division === "Garda Green" ? "green" : "prime";
+
+  return {
+    divisionId,
+    selectedProducts: [product.name],
+    message: `NusaBot lead capture: Buyer asked about ${product.name}. Please follow up with destination, quantity, packaging, and specification.`
+  };
+}
+
 function getIndonesianProductResponse(text) {
   const product = productKnowledge.find((item) => includesAny(text, item.terms));
 
@@ -518,6 +534,7 @@ export default function GSNExportAssistant() {
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [messages, setMessages] = useState([welcomeMessage]);
+  const [suggestedInquiry, setSuggestedInquiry] = useState(null);
   const scrollRef = useRef(null);
   const showSuggestions = open && messages.length === 1 && !typing;
 
@@ -535,6 +552,7 @@ export default function GSNExportAssistant() {
       ...messages,
       { id: `user-${Date.now()}`, role: "user", text: trimmed }
     ];
+    const smartInquiry = getSmartInquiry(trimmed.toLowerCase());
 
     setMessages((current) => [
       ...current,
@@ -571,8 +589,46 @@ export default function GSNExportAssistant() {
         ...current,
         { id: `assistant-${Date.now()}`, role: "assistant", text: answer || createAssistantResponse(trimmed) }
       ]);
+      setSuggestedInquiry(smartInquiry);
       setTyping(false);
     }, 900);
+  }
+
+  function useSuggestedInquiry() {
+    if (!suggestedInquiry) {
+      return;
+    }
+
+    const conversationSummary = messages
+      .slice(-6)
+      .map((message) => `${message.role}: ${message.text}`)
+      .join("\n")
+      .slice(0, 1400);
+
+    window.sessionStorage.setItem("gsn-smart-inquiry", JSON.stringify(suggestedInquiry));
+    window.dispatchEvent(new CustomEvent("gsn:smartInquiry", { detail: suggestedInquiry }));
+    document.getElementById("gsnformneo")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: "nusabot_lead_capture",
+        label: suggestedInquiry.selectedProducts.join(", "),
+        path: window.location.pathname,
+        source: "nusabot",
+        metadata: suggestedInquiry
+      }),
+      keepalive: true
+    }).catch(() => {});
+    fetch("/api/nusabot/lead", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...suggestedInquiry,
+        message: `${suggestedInquiry.message}\n\nConversation summary:\n${conversationSummary}`
+      }),
+      keepalive: true
+    }).catch(() => {});
   }
 
   function handleSubmit(event) {
@@ -628,6 +684,12 @@ export default function GSNExportAssistant() {
                   <span></span>
                 </div>
               </article>
+            ) : null}
+
+            {!typing && suggestedInquiry ? (
+              <button className="ai-lead-capture" type="button" onClick={useSuggestedInquiry}>
+                Use this product in inquiry form
+              </button>
             ) : null}
           </div>
 

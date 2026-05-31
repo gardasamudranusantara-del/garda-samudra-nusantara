@@ -1,3 +1,5 @@
+import { insertInquiry } from "@/lib/gsnDataStore";
+
 const resendEndpoint = "https://api.resend.com/emails";
 const inquiryRecipient = "gardasamudranusantara@gmail.com";
 
@@ -14,10 +16,44 @@ function line(label, value) {
   return `<tr><td style="padding:8px 12px;color:#8b93a8;">${label}</td><td style="padding:8px 12px;color:#ffffff;font-weight:700;">${escapeHtml(value || "-")}</td></tr>`;
 }
 
+function scoreInquiry(data) {
+  let score = 0;
+  const reasons = [];
+
+  if (Array.isArray(data.selectedProducts) && data.selectedProducts.length) {
+    score += 20;
+    reasons.push("product selected");
+  }
+  if (data.quantity) {
+    score += 20;
+    reasons.push("quantity provided");
+  }
+  if (data.monthlyRequirement) {
+    score += 20;
+    reasons.push("monthly requirement provided");
+  }
+  if (data.country) {
+    score += 15;
+    reasons.push("destination country provided");
+  }
+  if (data.whatsapp) {
+    score += 15;
+    reasons.push("WhatsApp provided");
+  }
+  if (data.packagingRequest || data.productSpecification || data.targetPrice) {
+    score += 10;
+    reasons.push("advanced requirements provided");
+  }
+
+  const priority = score >= 70 ? "High" : score >= 40 ? "Medium" : "Low";
+  return { priority, score, reasons: reasons.join(", ") || "basic inquiry" };
+}
+
 function buildInquiryHtml(data) {
   const products = Array.isArray(data.selectedProducts) && data.selectedProducts.length
     ? data.selectedProducts.join(", ")
     : "-";
+  const lead = scoreInquiry(data);
 
   return `
     <div style="font-family:Inter,Arial,sans-serif;background:#070713;color:#ffffff;padding:28px;">
@@ -27,6 +63,8 @@ function buildInquiryHtml(data) {
           <h1 style="margin:0;font-size:28px;">New GSN Inquiry</h1>
         </div>
         <table style="width:100%;border-collapse:collapse;">
+          ${line("Lead Priority", `${lead.priority} (${lead.score}/100)`)}
+          ${line("Priority Reason", lead.reasons)}
           ${line("Full Name", data.fullName)}
           ${line("Company", data.companyName)}
           ${line("Email", data.email)}
@@ -86,12 +124,15 @@ export async function POST(request) {
 
     const fromEmail = process.env.RESEND_FROM_EMAIL || "GSN Inquiry <onboarding@resend.dev>";
     const replyTo = data.email || inquiryRecipient;
+    const lead = scoreInquiry(data);
+
+    await insertInquiry(data, lead);
 
     await sendResendEmail({
       from: fromEmail,
       to: inquiryRecipient,
       reply_to: replyTo,
-      subject: `New GSN Inquiry from ${data.fullName}`,
+      subject: `[${lead.priority} Priority] New GSN Inquiry from ${data.fullName}`,
       html: buildInquiryHtml(data)
     });
 

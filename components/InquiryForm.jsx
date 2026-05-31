@@ -181,6 +181,32 @@ function normalizeSmartProducts(divisionId, selectedProducts = []) {
   });
 }
 
+function trackInquiryEvent(event, label, metadata = {}) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const payload = JSON.stringify({
+    event,
+    label,
+    path: window.location.pathname,
+    source: "inquiry_form",
+    metadata
+  });
+
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon("/api/track", new Blob([payload], { type: "application/json" }));
+    return;
+  }
+
+  fetch("/api/track", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    keepalive: true
+  }).catch(() => {});
+}
+
 export default function InquiryForm() {
   const [selectedDivision, setSelectedDivision] = useState("fresh");
   const [selectedProducts, setSelectedProducts] = useState([]);
@@ -321,6 +347,12 @@ export default function InquiryForm() {
 
       setStatus("success");
       setNotice("INQUIRY SENT SUCCESSFULLY");
+      trackInquiryEvent("inquiry_submit", selectedDivision, {
+        selectedProducts,
+        country: form.country,
+        hasEmail: Boolean(form.email),
+        hasCompany: Boolean(form.companyName)
+      });
       setForm(emptyForm);
       setSelectedProducts([]);
       window.setTimeout(() => setStatus("idle"), 3600);
@@ -521,7 +553,13 @@ export default function InquiryForm() {
             <button className="neo-submit" disabled={status === "loading"} type="submit">
               {status === "loading" ? text.sending : text.submit}
             </button>
-            <a className="neo-whatsapp" href={whatsappHref} rel="noreferrer" target="_blank">
+            <a
+              className="neo-whatsapp"
+              href={whatsappHref}
+              onClick={() => trackInquiryEvent("whatsapp_click", selectedDivision, { selectedProducts })}
+              rel="noreferrer"
+              target="_blank"
+            >
               {text.whatsapp}
             </a>
           </div>
