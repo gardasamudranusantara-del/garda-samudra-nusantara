@@ -89,6 +89,11 @@ const formLabels = {
     customer: "Customer Information",
     division: "Choose Division",
     products: "Product Inquiry",
+    productCategory: "Product Category",
+    productSelect: "Select Product",
+    addProduct: "Add Product",
+    selectedProducts: "Selected Products",
+    noSelectedProducts: "No product selected yet. You can still send the inquiry and GSN will help recommend it.",
     details: "Order Details",
     optionalDetails: "Add packaging, specification, and target price",
     hideOptionalDetails: "Hide additional details",
@@ -107,6 +112,11 @@ const formLabels = {
     customer: "Informasi Pelanggan",
     division: "Pilih Divisi",
     products: "Inquiry Produk",
+    productCategory: "Kategori Produk",
+    productSelect: "Pilih Produk",
+    addProduct: "Tambah Produk",
+    selectedProducts: "Produk Dipilih",
+    noSelectedProducts: "Belum ada produk dipilih. Anda tetap bisa kirim inquiry dan GSN akan membantu merekomendasikannya.",
     details: "Detail Pesanan",
     optionalDetails: "Tambah packaging, spesifikasi, dan target price",
     hideOptionalDetails: "Sembunyikan detail tambahan",
@@ -174,6 +184,8 @@ function normalizeSmartProducts(divisionId, selectedProducts = []) {
 export default function InquiryForm() {
   const [selectedDivision, setSelectedDivision] = useState("fresh");
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [selectedProductGroup, setSelectedProductGroup] = useState(productGroups.fresh[0].label);
+  const [productChoice, setProductChoice] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [status, setStatus] = useState("idle");
   const [notice, setNotice] = useState("");
@@ -251,6 +263,8 @@ export default function InquiryForm() {
   }, []);
 
   const text = formLabels[language];
+  const activeProductGroup = activeGroups.find((group) => group.label === selectedProductGroup) || activeGroups[0];
+  const productOptions = activeProductGroup?.products || [];
 
   function updateField(event) {
     const { name, type, checked, value } = event.target;
@@ -263,6 +277,8 @@ export default function InquiryForm() {
   function chooseDivision(divisionId) {
     setSelectedDivision(divisionId);
     setSelectedProducts([]);
+    setSelectedProductGroup(productGroups[divisionId][0].label);
+    setProductChoice("");
   }
 
   function toggleProduct(product) {
@@ -271,6 +287,15 @@ export default function InquiryForm() {
         ? current.filter((item) => item !== product)
         : [...current, product]
     );
+  }
+
+  function addSelectedProduct() {
+    if (!productChoice) {
+      return;
+    }
+
+    setSelectedProducts((current) => (current.includes(productChoice) ? current : [...current, productChoice]));
+    setProductChoice("");
   }
 
   async function handleSubmit(event) {
@@ -366,24 +391,55 @@ export default function InquiryForm() {
 
           <fieldset className="neo-fieldset">
             <legend>{text.products}</legend>
-            <div className="neo-product-groups">
-              {activeGroups.map((group) => (
-                <div className="neo-product-group" key={group.label}>
-                  <h3>{group.label}</h3>
-                  <div className="neo-product-grid">
-                    {group.products.map((product) => (
-                      <label className={selectedProducts.includes(product) ? "is-checked" : ""} key={product}>
-                        <input
-                          checked={selectedProducts.includes(product)}
-                          onChange={() => toggleProduct(product)}
-                          type="checkbox"
-                        />
-                        <span>{product}</span>
-                      </label>
+            <div className="neo-product-picker">
+              <div className="neo-input-grid">
+                <label>
+                  <span>{text.productCategory}</span>
+                  <select
+                    value={selectedProductGroup}
+                    onChange={(event) => {
+                      setSelectedProductGroup(event.target.value);
+                      setProductChoice("");
+                    }}
+                  >
+                    {activeGroups.map((group) => (
+                      <option key={group.label} value={group.label}>
+                        {group.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>{text.productSelect}</span>
+                  <select value={productChoice} onChange={(event) => setProductChoice(event.target.value)}>
+                    <option value="">-</option>
+                    {productOptions.map((product) => (
+                      <option key={product} value={product}>
+                        {product}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <button className="neo-details-toggle neo-product-add" type="button" onClick={addSelectedProduct}>
+                {text.addProduct}
+              </button>
+
+              <div className="neo-selected-products" aria-live="polite">
+                <h3>{text.selectedProducts}</h3>
+                {selectedProducts.length ? (
+                  <div>
+                    {selectedProducts.map((product) => (
+                      <button key={product} type="button" onClick={() => toggleProduct(product)}>
+                        {product}
+                      </button>
                     ))}
                   </div>
-                </div>
-              ))}
+                ) : (
+                  <p>{text.noSelectedProducts}</p>
+                )}
+              </div>
             </div>
           </fieldset>
 

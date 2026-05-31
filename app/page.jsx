@@ -22,6 +22,8 @@ const projects = [
   "Global buyer partnership"
 ];
 
+const primaryContactLabels = ["WhatsApp / Telephone", "Email", "Address", "Alamat"];
+
 const partnershipCards = [
   {
     title: "Investor Opportunities",
@@ -44,14 +46,9 @@ const aboutCards = [
     action: "divisions"
   },
   {
-    value: "Global",
-    label: "Market Vision",
+    value: "Global Partnership",
+    label: "Trusted Relationship Worldwide",
     action: "global"
-  },
-  {
-    value: "Long-Term",
-    label: "Trusted Partnerships",
-    action: "partnership"
   }
 ];
 
@@ -118,16 +115,43 @@ const globalStats = [
 
 const buyerQuickFacts = [
   {
+    number: "01",
+    icon: "📦",
     title: "Products",
-    text: "Fresh vegetables, eggs, rice, coconut charcoal, charcoal briquette, wood pellet, and Indonesian spices."
+    label: "Product Portfolio",
+    text: "We offer fresh vegetables, eggs, rice, coconut charcoal, charcoal briquettes, wood pellets, and premium Indonesian spices."
   },
   {
-    title: "MOQ & Samples",
-    text: "MOQ and samples depend on product, destination, packaging, and current supply availability."
+    number: "02",
+    icon: "📋",
+    title: "MOQ & Sampling",
+    label: "MOQ & Sampling",
+    text: "Minimum Order Quantity (MOQ) and sample availability vary depending on product type."
   },
   {
-    title: "Export & Contact",
-    text: "Share destination country, quantity, and product specs so GSN can guide quotation and export follow-up."
+    number: "03",
+    icon: "🚢",
+    title: "Export Process",
+    label: "Inquiry & Export Process",
+    text: "Share your destination country, quantity, and specifications for a tailored quotation."
+  }
+];
+
+const futureTimeline = [
+  {
+    period: "March - June 2026",
+    title: "Strengthen Sourcing Network",
+    text: "Build a more reliable supplier and handling network for selected Indonesian commodity categories."
+  },
+  {
+    period: "July 2026",
+    title: "Export-Ready Product Lines",
+    text: "Expand product lines that are easier for international buyers to review, compare, and request."
+  },
+  {
+    period: "July 2026 onward",
+    title: "International Buyer Partnerships",
+    text: "Develop repeat buyer relationships through clearer quotation support and long-term collaboration channels."
   }
 ];
 
@@ -141,6 +165,7 @@ const pageText = {
     globalStats,
     buyerQuickFacts,
     futureGoals,
+    futureTimeline,
     footerValues: brandValues,
     heroKicker: "Quality | Reliability | Consistency",
     heroTitle: "Indonesian Commodities,",
@@ -150,6 +175,9 @@ const pageText = {
     requestQuotation: "Request Quotation",
     exploreDivisions: "Explore Divisions",
     inquiryForm: "Inquiry Form",
+    businessCollaboration: "Business Collaboration",
+    whatsappGsn: "WhatsApp GSN",
+    longTermRoadmap: "Long-Term Roadmap",
     aboutKicker: "About GSN",
     aboutTitle: "Building trusted Indonesian commodity access for global buyers.",
     aboutDescription:
@@ -158,12 +186,15 @@ const pageText = {
     divisionsTitle: "Three divisions built around practical buyer needs.",
     divisionsDescription:
       "Explore fresh food supply, eco-energy commodities, and Indonesian spices through a company designed for clear communication and long-term cooperation.",
-    projectsKicker: "Buyer Essentials",
-    projectsTitle: "The key details buyers usually need first.",
+    projectsKicker: "Business Information",
+    projectsTitle: "Essential details for product sourcing and export cooperation.",
     projectDescription:
       "Strategic development designed to strengthen GSN's sourcing, distribution, and buyer partnership ecosystem.",
-    partnershipKicker: "Partnership",
-    partnershipTitle: "Built for buyers, investors, and long-term collaborators.",
+    partnershipKicker: "Partnership Pathways",
+    partnershipTitle: "Collaboration routes for buyers, investors, and long-term commodity partners.",
+    partnershipDescription:
+      "Choose the partnership direction that matches your sourcing, procurement, investment, or export development needs.",
+    discussPartnership: "Discuss Partnership",
     goalsKicker: "Future Goals",
     goalsTitle: "GSN's roadmap toward stronger Indonesian commodity recognition.",
     contactKicker: "Contact",
@@ -172,6 +203,8 @@ const pageText = {
     enteringDivision: "Entering Division",
     globalLoadingOne: "INITIALIZING GLOBAL NETWORK...",
     globalLoadingTwo: "CONNECTING INTERNATIONAL ROUTES...",
+    futureLoadingOne: "INITIALIZING GSN FUTURE ROADMAP...",
+    futureLoadingTwo: "SCANNING LONG-TERM GROWTH PATHWAYS...",
     backToGsn: "Back to GSN",
     globalKicker: "Global Market Vision",
     globalTitle: "Connecting Indonesia To Global Opportunities",
@@ -181,6 +214,10 @@ const pageText = {
     whyTitle: "Why GSN",
     whyDescription:
       "Building trusted distribution and commodity solutions through quality, sustainability, and long-term partnerships.",
+    futureOverlayKicker: "Long-Term Roadmap",
+    futureOverlayTitle: "Future direction for stronger GSN commodity growth.",
+    futureOverlayDescription:
+      "GSN is building a long-term path around stronger sourcing, export readiness, product expansion, handling standards, and global buyer recognition.",
     contacts: contactLinks,
     footerDescription: "Trading, distribution, and development of Indonesia's leading commodities."
   },
@@ -208,8 +245,7 @@ const pageText = {
     ],
     aboutCards: [
       { value: "3+", label: "Divisi Bisnis Terintegrasi", action: "divisions" },
-      { value: "Global", label: "Visi Pasar Global", action: "global" },
-      { value: "Jangka Panjang", label: "Kemitraan Tepercaya", action: "partnership" }
+      { value: "Global Partnership", label: "Trusted Relationship Worldwide", action: "global" }
     ],
     productCards: [
       {
@@ -271,16 +307,42 @@ const pageText = {
     ],
     buyerQuickFacts: [
       {
+        number: "01",
+        icon: "📦",
         title: "Produk",
-        text: "Sayuran segar, telur, beras, arang batok kelapa, arang briket, wood pellet, dan rempah Indonesia."
+        label: "Portofolio Produk",
+        text: "Kami menawarkan sayuran segar, telur, beras, arang batok kelapa, arang briket, wood pellet, dan rempah premium Indonesia."
       },
       {
-        title: "MOQ & Sampel",
-        text: "MOQ dan sampel bergantung pada produk, negara tujuan, packaging, dan ketersediaan pasokan."
+        number: "02",
+        icon: "📋",
+        title: "MOQ & Sampling",
+        label: "MOQ & Sampling",
+        text: "Minimum Order Quantity (MOQ) dan ketersediaan sampel dapat berbeda tergantung jenis produk."
       },
       {
-        title: "Ekspor & Kontak",
-        text: "Bagikan negara tujuan, quantity, dan spesifikasi agar GSN dapat memberi arahan quotation dan ekspor."
+        number: "03",
+        icon: "🚢",
+        title: "Proses Ekspor",
+        label: "Inquiry & Proses Ekspor",
+        text: "Bagikan negara tujuan, quantity, dan spesifikasi untuk quotation yang disesuaikan."
+      }
+    ],
+    futureTimeline: [
+      {
+        period: "Maret - Juni 2026",
+        title: "Memperkuat Jaringan Sourcing",
+        text: "Membangun jaringan pemasok dan handling yang lebih andal untuk kategori komoditas Indonesia pilihan."
+      },
+      {
+        period: "Juli 2026",
+        title: "Lini Produk Siap Ekspor",
+        text: "Memperluas lini produk yang lebih mudah ditinjau, dibandingkan, dan diminta oleh buyer internasional."
+      },
+      {
+        period: "Mulai Juli 2026",
+        title: "Kemitraan Buyer Internasional",
+        text: "Mengembangkan hubungan buyer berulang melalui dukungan quotation yang lebih jelas dan kanal kolaborasi jangka panjang."
       }
     ],
     futureGoals: [
@@ -299,6 +361,9 @@ const pageText = {
     requestQuotation: "Minta Quotation",
     exploreDivisions: "Lihat Divisi",
     inquiryForm: "Form Inquiry",
+    businessCollaboration: "Business Collaboration",
+    whatsappGsn: "WhatsApp GSN",
+    longTermRoadmap: "Roadmap Jangka Panjang",
     aboutKicker: "Tentang GSN",
     aboutTitle: "Membangun akses komoditas Indonesia tepercaya untuk buyer global.",
     aboutDescription:
@@ -307,12 +372,15 @@ const pageText = {
     divisionsTitle: "Tiga divisi yang dibangun berdasarkan kebutuhan buyer.",
     divisionsDescription:
       "Jelajahi pasokan pangan segar, komoditas eco-energy, dan rempah Indonesia melalui perusahaan yang dirancang untuk komunikasi jelas dan kerja sama jangka panjang.",
-    projectsKicker: "Info Buyer",
-    projectsTitle: "Detail utama yang biasanya dibutuhkan buyer lebih dulu.",
+    projectsKicker: "Informasi Bisnis",
+    projectsTitle: "Detail penting untuk sourcing produk dan kerja sama ekspor.",
     projectDescription:
       "Pengembangan strategis untuk memperkuat ekosistem sourcing, distribusi, dan kemitraan buyer GSN.",
-    partnershipKicker: "Kemitraan",
-    partnershipTitle: "Dibangun untuk buyer, investor, dan kolaborator jangka panjang.",
+    partnershipKicker: "Jalur Kemitraan",
+    partnershipTitle: "Rute kolaborasi untuk buyer, investor, dan partner komoditas jangka panjang.",
+    partnershipDescription:
+      "Pilih arah kemitraan yang sesuai dengan kebutuhan sourcing, pengadaan, investasi, atau pengembangan ekspor.",
+    discussPartnership: "Diskusikan Kemitraan",
     goalsKicker: "Tujuan Ke Depan",
     goalsTitle: "Roadmap GSN menuju pengakuan komoditas Indonesia yang lebih kuat.",
     contactKicker: "Kontak",
@@ -322,6 +390,8 @@ const pageText = {
     enteringDivision: "Masuk Divisi",
     globalLoadingOne: "MEMULAI JARINGAN GLOBAL...",
     globalLoadingTwo: "MENGHUBUNGKAN RUTE INTERNASIONAL...",
+    futureLoadingOne: "MEMULAI ROADMAP MASA DEPAN GSN...",
+    futureLoadingTwo: "MEMINDAI ARAH PERTUMBUHAN JANGKA PANJANG...",
     backToGsn: "Kembali ke GSN",
     globalKicker: "Visi Pasar Global",
     globalTitle: "Menghubungkan Indonesia Dengan Peluang Global",
@@ -331,6 +401,10 @@ const pageText = {
     whyTitle: "Mengapa GSN",
     whyDescription:
       "Membangun solusi distribusi dan komoditas tepercaya melalui kualitas, keberlanjutan, dan kemitraan jangka panjang.",
+    futureOverlayKicker: "Roadmap Jangka Panjang",
+    futureOverlayTitle: "Arah masa depan untuk pertumbuhan komoditas GSN yang lebih kuat.",
+    futureOverlayDescription:
+      "GSN membangun arah jangka panjang melalui sourcing yang lebih kuat, kesiapan ekspor, perluasan produk, standar handling, dan pengakuan buyer global.",
     contacts: contactLinks.map((contact) =>
       contact.label === "Address" ? { ...contact, label: "Alamat" } : contact
     ),
@@ -426,9 +500,9 @@ export default function HomePage() {
     window.setTimeout(() => setDivisionPulse(false), 1800);
   }
 
-  function openGlobalMarket() {
-    setGlobalMode("loading");
-    window.setTimeout(() => setGlobalMode("active"), 1800);
+  function openMarketExperience(type = "global") {
+    setGlobalMode(`${type}-loading`);
+    window.setTimeout(() => setGlobalMode(`${type}-active`), 1800);
   }
 
   function handleAboutAction(action) {
@@ -438,11 +512,11 @@ export default function HomePage() {
     }
 
     if (action === "global") {
-      openGlobalMarket();
+      openMarketExperience("global");
       return;
     }
 
-    document.getElementById("partnership")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    openMarketExperience("future");
   }
 
   function enterDivision(divisionId) {
@@ -494,13 +568,13 @@ export default function HomePage() {
             <p className="future-kicker">{text.heroKicker}</p>
             <h1 id="hero-title">
               {text.heroTitle}
+              {" "}
               <span>{text.heroHighlight}</span>
             </h1>
             <p>{text.heroDescription}</p>
             <div className="future-actions">
               <a className="future-button primary" href="#gsnformneo">{text.requestQuotation}</a>
               <a className="future-button secondary" href="#products">{text.exploreDivisions}</a>
-              <a className="future-button secondary" href="#gsnformneo">{text.inquiryForm}</a>
             </div>
           </div>
 
@@ -533,6 +607,28 @@ export default function HomePage() {
                 <p>{card.label}</p>
               </button>
             ))}
+          </div>
+        </section>
+
+        <section className="future-section partnership-compact-section" id="partnership">
+          <div className="section-intro center">
+            <p className="future-kicker">{text.partnershipKicker}</p>
+            <h2>{text.partnershipTitle}</h2>
+            <p>{text.partnershipDescription}</p>
+          </div>
+          <div className="partnership-grid">
+            {text.partnershipCards.map((card) => (
+              <article className="spotlight-card" key={card.title}>
+                <h3>{card.title}</h3>
+                <p>{card.text}</p>
+              </article>
+            ))}
+          </div>
+          <div className="partnership-cta-row">
+            <a className="future-button primary" href="#gsnformneo">{text.discussPartnership}</a>
+            <button className="future-button secondary" type="button" onClick={() => openMarketExperience("future")}>
+              {text.longTermRoadmap}
+            </button>
           </div>
         </section>
 
@@ -580,29 +676,15 @@ export default function HomePage() {
           <div className="buyer-summary-grid">
             {text.buyerQuickFacts.map((item) => (
               <article className="spotlight-card buyer-summary-card" key={item.title}>
+                <span>
+                  <strong>{item.number}</strong>
+                  <i aria-hidden="true">{item.icon}</i>
+                </span>
+                <small>{item.label}</small>
                 <h3>{item.title}</h3>
                 <p>{item.text}</p>
               </article>
             ))}
-          </div>
-        </section>
-
-        <section className="future-section partnership-compact-section" id="partnership">
-          <div className="section-intro center">
-            <p className="future-kicker">{text.partnershipKicker}</p>
-            <h2>{text.partnershipTitle}</h2>
-          </div>
-          <div className="partnership-grid">
-            {text.partnershipCards.map((card) => (
-              <article className="spotlight-card" key={card.title}>
-                <h3>{card.title}</h3>
-                <p>{card.text}</p>
-              </article>
-            ))}
-          </div>
-          <div className="partnership-cta-row">
-            <a className="future-button primary" href="#gsnformneo">{text.inquiryForm}</a>
-            <a className="future-button secondary" href="#contact">{text.contactKicker}</a>
           </div>
         </section>
 
@@ -615,7 +697,7 @@ export default function HomePage() {
             <p>{text.contactDescription}</p>
           </div>
           <div className="contact-grid future-contact-grid">
-            {text.contacts.map((contact) => (
+            {text.contacts.filter((contact) => primaryContactLabels.includes(contact.label)).map((contact) => (
               <a
                 className="contact-card"
                 href={contact.href}
@@ -682,10 +764,11 @@ function DivisionLoading({ division, text }) {
 }
 
 function GlobalMarketExperience({ mode, onClose, text }) {
-  const loading = mode === "loading";
+  const loading = mode.endsWith("loading");
+  const futureMode = mode.startsWith("future");
 
   return (
-    <section className={`global-market-overlay ${loading ? "is-loading" : "is-active"}`} aria-modal="true" role="dialog">
+    <section className={`global-market-overlay ${futureMode ? "future-roadmap-overlay" : ""} ${loading ? "is-loading" : "is-active"}`} aria-modal="true" role="dialog">
       <div className="global-noise" aria-hidden="true"></div>
       <div className="global-particles" aria-hidden="true">
         {Array.from({ length: 28 }).map((_, index) => (
@@ -697,8 +780,51 @@ function GlobalMarketExperience({ mode, onClose, text }) {
         <div className="global-loader">
           <img src="/logos/gsn-clear-logo.png" alt="" />
           <div className="scanner-line"></div>
-          <p>{text.globalLoadingOne}</p>
-          <p>{text.globalLoadingTwo}</p>
+          <p>{futureMode ? text.futureLoadingOne : text.globalLoadingOne}</p>
+          <p>{futureMode ? text.futureLoadingTwo : text.globalLoadingTwo}</p>
+        </div>
+      ) : futureMode ? (
+        <div className="global-market-page future-roadmap-page">
+          <button className="global-close" onClick={onClose} type="button">
+            {text.backToGsn}
+          </button>
+
+          <div className="global-copy">
+            <p className="future-kicker">{text.futureOverlayKicker}</p>
+            <h2>{text.futureOverlayTitle}</h2>
+            <p>{text.futureOverlayDescription}</p>
+          </div>
+
+          <div className="future-roadmap-stage" aria-label="GSN future roadmap">
+            <div className="roadmap-core">
+              <img src="/logos/gsn-clear-logo.png" alt="" />
+              <strong>GSN FUTURE</strong>
+              <div className="roadmap-slogan">
+                <span>Quality</span>
+                <span>Reliability</span>
+                <span>Consistency</span>
+              </div>
+            </div>
+            <div className="roadmap-orbit orbit-a"></div>
+            <div className="roadmap-orbit orbit-b"></div>
+            <div className="roadmap-orbit orbit-c"></div>
+          </div>
+
+          <div className="future-roadmap-grid future-roadmap-timeline">
+            {text.futureTimeline.map((goal, index) => (
+              <article key={goal.period}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <strong>{goal.period}</strong>
+                <h3>{goal.title}</h3>
+                <p>{goal.text}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="partnership-cta-row future-roadmap-actions">
+            <a className="future-button primary" href="#partnership" onClick={onClose}>{text.businessCollaboration}</a>
+            <a className="future-button secondary" href="#gsnformneo" onClick={onClose}>{text.inquiryForm}</a>
+          </div>
         </div>
       ) : (
         <div className="global-market-page">
@@ -740,6 +866,40 @@ function GlobalMarketExperience({ mode, onClose, text }) {
                 <article key={card.title}>
                   <h3>{card.title}</h3>
                   <p>{card.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="global-roadmap-section">
+            <div className="section-intro center">
+              <p className="future-kicker">{text.futureOverlayKicker}</p>
+              <h2>{text.futureOverlayTitle}</h2>
+              <p>{text.futureOverlayDescription}</p>
+            </div>
+
+            <div className="future-roadmap-stage" aria-label="GSN long-term global partnership roadmap">
+              <div className="roadmap-core">
+                <img src="/logos/gsn-clear-logo.png" alt="" />
+                <strong>GSN FUTURE</strong>
+                <div className="roadmap-slogan">
+                  <span>Quality</span>
+                  <span>Reliability</span>
+                  <span>Consistency</span>
+                </div>
+              </div>
+              <div className="roadmap-orbit orbit-a"></div>
+              <div className="roadmap-orbit orbit-b"></div>
+              <div className="roadmap-orbit orbit-c"></div>
+            </div>
+
+            <div className="future-roadmap-grid future-roadmap-timeline">
+              {text.futureTimeline.map((goal, index) => (
+                <article key={goal.period}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <strong>{goal.period}</strong>
+                  <h3>{goal.title}</h3>
+                  <p>{goal.text}</p>
                 </article>
               ))}
             </div>
