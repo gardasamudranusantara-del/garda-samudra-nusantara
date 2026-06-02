@@ -1,5 +1,6 @@
 import { isAdminAuthorized } from "@/lib/adminAuth";
 import { insertNotification, insertQuotationRequest } from "@/lib/gsnDataStore";
+import { notifyOwner } from "@/lib/ownerNotifications";
 
 export async function POST(request) {
   if (!isAdminAuthorized(request)) {
@@ -25,6 +26,16 @@ export async function POST(request) {
     message: `${data.quantity || "Quantity pending"} | ${data.incoterm || "Incoterm pending"}`,
     reference_type: "quotation",
     reference_id: result?.[0]?.id || null
+  });
+  await notifyOwner({
+    title: "New GSN Quotation Draft",
+    message: `${data.buyer_name || data.company_name || "Buyer"} has a quotation record in the admin dashboard.`,
+    channels: ["telegram", "whatsapp"],
+    lines: [
+      `Products: ${Array.isArray(data.products) ? data.products.join(", ") : "-"}`,
+      `Quantity: ${data.quantity || "-"}`,
+      `Incoterm: ${data.incoterm || "-"}`
+    ]
   });
 
   return Response.json({ ok: true, result });

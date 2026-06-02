@@ -209,6 +209,59 @@ function buildQuotationDocumentHtml(lead, draft) {
   `;
 }
 
+function leadToDraft(lead = {}) {
+  return {
+    full_name: lead.full_name || "",
+    company_name: lead.company_name || "",
+    email: lead.email || "",
+    whatsapp: lead.whatsapp || "",
+    country: lead.country || "",
+    city: lead.city || "",
+    division: lead.division || "",
+    products: normalizeProducts(lead).join(", "),
+    quantity: lead.quantity || "",
+    monthly_requirement: lead.monthly_requirement || "",
+    packaging_request: lead.packaging_request || "",
+    product_specification: lead.product_specification || "",
+    target_price: lead.target_price || "",
+    message: lead.message || "",
+    status: getStatus(lead),
+    internal_notes: lead.internal_notes || ""
+  };
+}
+
+function investorToDraft(item = {}) {
+  return {
+    full_name: item.full_name || "",
+    company_name: item.company_name || "",
+    email: item.email || "",
+    country: item.country || "",
+    investment_interest: item.investment_interest || "",
+    message: item.message || "",
+    status: item.status || "New",
+    internal_notes: item.internal_notes || ""
+  };
+}
+
+function quotationToDraft(item = {}) {
+  return {
+    buyer_name: item.buyer_name || "",
+    company_name: item.company_name || "",
+    email: item.email || "",
+    whatsapp: item.whatsapp || "",
+    country: item.country || "",
+    products: Array.isArray(item.products) ? item.products.join(", ") : "",
+    quantity: item.quantity || "",
+    incoterm: item.incoterm || "",
+    unit_price: item.unit_price || "",
+    validity: item.validity || "",
+    product_details: item.product_details || "",
+    request_summary: item.request_summary || "",
+    internal_notes: item.internal_notes || "",
+    status: item.status || "Draft"
+  };
+}
+
 function printQuotation(lead, draft) {
   const html = buildQuotationDocumentHtml(lead, draft);
   const popup = window.open("", "_blank", "width=900,height=1100");
@@ -244,6 +297,7 @@ export default function AdminDashboard() {
   const [activeModule, setActiveModule] = useState("Leads");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState(defaultSettings);
+  const [modal, setModal] = useState(null);
   const [quotationDraft, setQuotationDraft] = useState({
     incoterm: "FOB",
     unit_price: "",
@@ -328,6 +382,102 @@ export default function AdminDashboard() {
     await loadDashboard(savedCredentials);
   }
 
+  async function deleteLead(id) {
+    const response = await fetch(`/api/admin/inquiries/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(savedCredentials)
+    });
+
+    if (!response.ok) {
+      setNotice("Unable to delete lead.");
+      return;
+    }
+
+    setModal(null);
+    setSelected(null);
+    setNotice("Buyer lead deleted.");
+    await loadDashboard(savedCredentials);
+  }
+
+  function openModal(type, item) {
+    const drafts = {
+      lead: leadToDraft,
+      investor: investorToDraft,
+      quotation: quotationToDraft
+    };
+    setModal({
+      type,
+      mode: "edit",
+      item,
+      draft: drafts[type]?.(item) || {}
+    });
+  }
+
+  function openDeleteModal(type, item) {
+    setModal({ type, mode: "delete", item, draft: {} });
+  }
+
+  function updateModalField(field, value) {
+    setModal((current) => ({
+      ...current,
+      draft: {
+        ...current.draft,
+        [field]: value
+      }
+    }));
+  }
+
+  async function saveModal() {
+    if (!modal?.item) {
+      return;
+    }
+
+    if (modal.type === "lead") {
+      const { products, ...draft } = modal.draft;
+      await updateLead(modal.item.id, {
+        ...draft,
+        products: products.split(",").map((item) => item.trim()).filter(Boolean)
+      });
+      setModal(null);
+      setNotice("Buyer lead updated.");
+      return;
+    }
+
+    if (modal.type === "investor") {
+      await updateInvestor(modal.item.id, modal.draft);
+      setModal(null);
+      setNotice("Investor inquiry updated.");
+      return;
+    }
+
+    if (modal.type === "quotation") {
+      const { products, ...draft } = modal.draft;
+      await updateQuotation(modal.item.id, {
+        ...draft,
+        products: products.split(",").map((item) => item.trim()).filter(Boolean)
+      });
+      setModal(null);
+      setNotice("Quotation updated.");
+    }
+  }
+
+  async function confirmDeleteModal() {
+    if (!modal?.item) {
+      return;
+    }
+
+    if (modal.type === "lead") {
+      await deleteLead(modal.item.id);
+    }
+    if (modal.type === "investor") {
+      await deleteInvestor(modal.item.id, true);
+    }
+    if (modal.type === "quotation") {
+      await deleteQuotation(modal.item.id, true);
+    }
+    setModal(null);
+  }
+
   async function saveQuotation() {
     if (!selected) {
       setNotice("Select a lead before creating a quotation.");
@@ -405,6 +555,25 @@ export default function AdminDashboard() {
     await loadDashboard(savedCredentials);
   }
 
+  async function downloadQuotationPdf(document) {
+    const response = await fetch(`/api/admin/quotation-documents/${document.id}/download`, {
+      headers: authHeaders(savedCredentials)
+    });
+
+    if (!response.ok) {
+      setNotice("Unable to download PDF.");
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = window.document.createElement("a");
+    link.href = url;
+    link.download = `${String(document.document_title || "gsn-quotation").toLowerCase().replace(/[^a-z0-9]+/g, "-")}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function updateInvestor(id, updates) {
     const response = await fetch(`/api/admin/investors/${id}`, {
       method: "PATCH",
@@ -423,8 +592,9 @@ export default function AdminDashboard() {
     await loadDashboard(savedCredentials);
   }
 
-  async function deleteInvestor(id) {
-    if (!window.confirm("Delete this investor inquiry?")) {
+  async function deleteInvestor(id, confirmed = false) {
+    if (!confirmed) {
+      openDeleteModal("investor", investorInquiries.find((item) => item.id === id));
       return;
     }
 
@@ -460,8 +630,9 @@ export default function AdminDashboard() {
     await loadDashboard(savedCredentials);
   }
 
-  async function deleteQuotation(id) {
-    if (!window.confirm("Delete this quotation request?")) {
+  async function deleteQuotation(id, confirmed = false) {
+    if (!confirmed) {
+      openDeleteModal("quotation", quotationRequests.find((item) => item.id === id));
       return;
     }
 
@@ -514,6 +685,22 @@ export default function AdminDashboard() {
     }
 
     setNotice("Admin settings saved.");
+    await loadDashboard(savedCredentials);
+  }
+
+  async function runAutomation(path, successMessage) {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: authHeaders(savedCredentials)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to run automation.");
+      return;
+    }
+
+    setNotice(successMessage || "Automation completed.");
     await loadDashboard(savedCredentials);
   }
 
@@ -615,6 +802,57 @@ export default function AdminDashboard() {
   const priorityClass = selected ? getPriority(selected).toLowerCase() : "low";
   const selectedProducts = selected ? normalizeProducts(selected) : [];
   const selectedFollowUpHours = selected ? hoursSince(selected.created_at) : 0;
+  const modalTitles = {
+    lead: "Buyer Lead",
+    investor: "Investor Inquiry",
+    quotation: "Quotation Request"
+  };
+  const modalFields = {
+    lead: [
+      ["full_name", "Full Name"],
+      ["company_name", "Company Name"],
+      ["email", "Email"],
+      ["whatsapp", "WhatsApp"],
+      ["country", "Country"],
+      ["city", "City"],
+      ["division", "Division"],
+      ["products", "Products"],
+      ["quantity", "Quantity"],
+      ["monthly_requirement", "Monthly Requirement"],
+      ["packaging_request", "Packaging Request", "textarea"],
+      ["product_specification", "Product Specification", "textarea"],
+      ["target_price", "Target Price"],
+      ["message", "Message", "textarea"],
+      ["status", "Status", "select"],
+      ["internal_notes", "Internal Notes", "textarea"]
+    ],
+    investor: [
+      ["full_name", "Full Name"],
+      ["company_name", "Company Name"],
+      ["email", "Email"],
+      ["country", "Country"],
+      ["investment_interest", "Investment Interest"],
+      ["message", "Message", "textarea"],
+      ["status", "Status", "select"],
+      ["internal_notes", "Internal Notes", "textarea"]
+    ],
+    quotation: [
+      ["buyer_name", "Buyer Name"],
+      ["company_name", "Company Name"],
+      ["email", "Email"],
+      ["whatsapp", "WhatsApp"],
+      ["country", "Country"],
+      ["products", "Products"],
+      ["quantity", "Quantity"],
+      ["incoterm", "Incoterm"],
+      ["unit_price", "Indicative Price"],
+      ["validity", "Validity"],
+      ["product_details", "Product Details", "textarea"],
+      ["request_summary", "Request Summary", "textarea"],
+      ["internal_notes", "Internal Notes", "textarea"],
+      ["status", "Status", "select"]
+    ]
+  };
 
   return (
     <main className={`admin-shell ${!savedCredentials ? "admin-login-screen" : ""}`}>
@@ -838,8 +1076,10 @@ export default function AdminDashboard() {
                   </label>
 
                   <div className="admin-actions">
+                    <button onClick={() => openModal("lead", selected)} type="button">Edit Lead</button>
                     <a href={`https://wa.me/${String(selected.whatsapp || selected.phone || "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">WhatsApp</a>
                     {selected.email ? <a href={`mailto:${selected.email}`}>Email</a> : null}
+                    <button className="danger" onClick={() => openDeleteModal("lead", selected)} type="button">Delete</button>
                   </div>
                 </div>
               ) : <p className="admin-empty">Select a lead to see details.</p>}
@@ -893,7 +1133,7 @@ export default function AdminDashboard() {
                         <td>{item.message || "-"}</td>
                         <td>
                           <div className="admin-table-actions">
-                            <button onClick={() => updateInvestor(item.id, { internal_notes: window.prompt("Investor notes", item.internal_notes || "") || item.internal_notes || "" })} type="button">Notes</button>
+                            <button onClick={() => openModal("investor", item)} type="button">Edit</button>
                             <button onClick={() => deleteInvestor(item.id)} type="button">Delete</button>
                           </div>
                         </td>
@@ -960,7 +1200,7 @@ export default function AdminDashboard() {
                         <button onClick={() => updateQuotation(item.id, { status: item.status === "Sent" ? "Draft" : "Sent" })} type="button">
                           {item.status === "Sent" ? "Mark Draft" : "Mark Sent"}
                         </button>
-                        <button onClick={() => updateQuotation(item.id, { internal_notes: window.prompt("Quotation notes", item.internal_notes || "") || item.internal_notes || "" })} type="button">Notes</button>
+                        <button onClick={() => openModal("quotation", item)} type="button">Edit</button>
                         <button onClick={() => deleteQuotation(item.id)} type="button">Delete</button>
                       </div>
                     </article>
@@ -974,6 +1214,9 @@ export default function AdminDashboard() {
                       <strong>{item.document_title || item.buyer_name || "Quotation Document"}</strong>
                       <span>{item.buyer_name || "-"} | {item.company_name || "-"}</span>
                       <small>{item.status || "Generated"} - {formatDate(item.created_at)}</small>
+                      <div className="admin-actions">
+                        <button onClick={() => downloadQuotationPdf(item)} type="button">Download PDF</button>
+                      </div>
                     </article>
                   ))}
                   {!quotationDocuments.length ? <p className="admin-empty">No PDF-ready records yet.</p> : null}
@@ -1074,6 +1317,20 @@ export default function AdminDashboard() {
               <div className="admin-panel admin-future-panel">
                 <div className="admin-panel-header">
                   <div>
+                    <p>Automation Center</p>
+                    <h2>Live Workflows</h2>
+                  </div>
+                </div>
+                <div className="admin-actions">
+                  <button onClick={() => runAutomation("/api/automation/followups", "Follow-up automation checked.")} type="button">Run Follow-Up Check</button>
+                  <button onClick={() => runAutomation("/api/automation/daily-report", "Daily report sent.")} type="button">Send Daily Report</button>
+                </div>
+                <p className="admin-empty">Vercel Cron runs follow-up checks hourly and sends the daily lead report at 08:00 Jakarta time after deployment.</p>
+              </div>
+
+              <div className="admin-panel admin-future-panel">
+                <div className="admin-panel-header">
+                  <div>
                     <p>Future Ready</p>
                     <h2>Integration Roadmap</h2>
                   </div>
@@ -1133,6 +1390,54 @@ export default function AdminDashboard() {
             </div>
           </section> : null}
         </>
+      ) : null}
+
+      {modal ? (
+        <section className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label={`${modal.mode === "delete" ? "Delete" : "Edit"} ${modalTitles[modal.type]}`}>
+          <div className="admin-modal">
+            <div className="admin-panel-header">
+              <div>
+                <p>{modal.mode === "delete" ? "Confirm Delete" : "Edit Record"}</p>
+                <h2>{modalTitles[modal.type]}</h2>
+              </div>
+              <button onClick={() => setModal(null)} type="button">Close</button>
+            </div>
+
+            {modal.mode === "delete" ? (
+              <div className="admin-modal-confirm">
+                <p>This record will be removed from the GSN admin dashboard.</p>
+                <strong>{modal.item?.full_name || modal.item?.buyer_name || modal.item?.company_name || "Selected record"}</strong>
+                <div className="admin-actions">
+                  <button className="danger" onClick={confirmDeleteModal} type="button">Delete Record</button>
+                  <button onClick={() => setModal(null)} type="button">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="admin-modal-form">
+                  {(modalFields[modal.type] || []).map(([field, label, kind]) => (
+                    <label key={field} className={kind === "textarea" ? "wide" : ""}>
+                      {label}
+                      {kind === "textarea" ? (
+                        <textarea value={modal.draft[field] || ""} onChange={(event) => updateModalField(field, event.target.value)} />
+                      ) : kind === "select" ? (
+                        <select value={modal.draft[field] || "New"} onChange={(event) => updateModalField(field, event.target.value)}>
+                          {(modal.type === "quotation" ? ["Draft", "Sent", "Accepted", "Rejected", "Closed"] : statuses).map((status) => <option key={status}>{status}</option>)}
+                        </select>
+                      ) : (
+                        <input value={modal.draft[field] || ""} onChange={(event) => updateModalField(field, event.target.value)} />
+                      )}
+                    </label>
+                  ))}
+                </div>
+                <div className="admin-actions">
+                  <button onClick={saveModal} type="button">Save Changes</button>
+                  <button onClick={() => setModal(null)} type="button">Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
       ) : null}
     </main>
   );

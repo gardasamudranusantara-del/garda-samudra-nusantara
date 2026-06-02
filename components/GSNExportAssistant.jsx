@@ -535,6 +535,13 @@ export default function GSNExportAssistant() {
   const [typing, setTyping] = useState(false);
   const [messages, setMessages] = useState([welcomeMessage]);
   const [suggestedInquiry, setSuggestedInquiry] = useState(null);
+  const [leadDetails, setLeadDetails] = useState({
+    fullName: "",
+    companyName: "",
+    email: "",
+    whatsapp: "",
+    country: ""
+  });
   const scrollRef = useRef(null);
   const showSuggestions = open && messages.length === 1 && !typing;
 
@@ -625,6 +632,7 @@ export default function GSNExportAssistant() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...suggestedInquiry,
+        ...leadDetails,
         message: `${suggestedInquiry.message}\n\nConversation summary:\n${conversationSummary}`
       }),
       keepalive: true
@@ -687,9 +695,19 @@ export default function GSNExportAssistant() {
             ) : null}
 
             {!typing && suggestedInquiry ? (
-              <button className="ai-lead-capture" type="button" onClick={useSuggestedInquiry}>
-                Use this product in inquiry form
-              </button>
+              <div className="ai-lead-card">
+                <p>Share buyer details for faster quotation follow-up.</p>
+                <div>
+                  <input value={leadDetails.fullName} onChange={(event) => setLeadDetails((current) => ({ ...current, fullName: event.target.value }))} placeholder="Name" />
+                  <input value={leadDetails.companyName} onChange={(event) => setLeadDetails((current) => ({ ...current, companyName: event.target.value }))} placeholder="Company" />
+                  <input value={leadDetails.email} onChange={(event) => setLeadDetails((current) => ({ ...current, email: event.target.value }))} placeholder="Email" />
+                  <input value={leadDetails.whatsapp} onChange={(event) => setLeadDetails((current) => ({ ...current, whatsapp: event.target.value }))} placeholder="WhatsApp" />
+                  <input value={leadDetails.country} onChange={(event) => setLeadDetails((current) => ({ ...current, country: event.target.value }))} placeholder="Country" />
+                </div>
+                <button className="ai-lead-capture" type="button" onClick={useSuggestedInquiry}>
+                  Save lead and open inquiry form
+                </button>
+              </div>
             ) : null}
           </div>
 

@@ -1,4 +1,5 @@
 import { insertInquiry } from "@/lib/gsnDataStore";
+import { notifyOwner } from "@/lib/ownerNotifications";
 
 const resendEndpoint = "https://api.resend.com/emails";
 const inquiryRecipient = "gardasamudranusantara@gmail.com";
@@ -113,20 +114,31 @@ export async function POST(request) {
       return Response.json({ message: "Please complete the required inquiry fields." }, { status: 400 });
     }
 
-    const resendApiKey = process.env.RESEND_API_KEY?.trim();
-
-    if (!resendApiKey || resendApiKey.startsWith("replace_with_")) {
-      return Response.json(
-        { message: "Resend API key is not configured. Please add RESEND_API_KEY to your environment." },
-        { status: 503 }
-      );
-    }
-
     const fromEmail = process.env.RESEND_FROM_EMAIL || "GSN Inquiry <onboarding@resend.dev>";
     const replyTo = data.email || inquiryRecipient;
     const lead = scoreInquiry(data);
 
     await insertInquiry(data, lead);
+    await notifyOwner({
+      title: `[${lead.priority}] New GSN Buyer Inquiry`,
+      message: `${data.fullName || "New buyer"} submitted an inquiry${data.country ? ` from ${data.country}` : ""}.`,
+      channels: ["telegram", "whatsapp"],
+      lines: [
+        `Company: ${data.companyName || "-"}`,
+        `WhatsApp: ${data.whatsapp || "-"}`,
+        `Products: ${Array.isArray(data.selectedProducts) ? data.selectedProducts.join(", ") : "-"}`,
+        `Quantity: ${data.quantity || "-"}`
+      ]
+    });
+
+    const resendApiKey = process.env.RESEND_API_KEY?.trim();
+
+    if (!resendApiKey || resendApiKey.startsWith("replace_with_")) {
+      return Response.json({
+        message: "Inquiry saved successfully. Email automation is not configured yet.",
+        email_status: "not_configured"
+      });
+    }
 
     await sendResendEmail({
       from: fromEmail,

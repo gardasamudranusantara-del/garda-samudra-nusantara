@@ -1,4 +1,5 @@
 import { insertInquiry } from "@/lib/gsnDataStore";
+import { notifyOwner } from "@/lib/ownerNotifications";
 
 const divisionNames = {
   fresh: "Garda Fresh",
@@ -23,12 +24,12 @@ export async function POST(request) {
 
     await insertInquiry(
       {
-        fullName: "NusaBot Visitor",
-        companyName: "",
-        email: "",
-        whatsapp: "",
-        country: "",
-        city: "",
+        fullName: data.fullName || "NusaBot Visitor",
+        companyName: data.companyName || "",
+        email: data.email || "",
+        whatsapp: data.whatsapp || "",
+        country: data.country || "",
+        city: data.city || "",
         selectedDivision: divisionNames[data.divisionId] || "NusaBot",
         selectedProducts: products,
         quantity: data.quantity || "",
@@ -41,6 +42,20 @@ export async function POST(request) {
       },
       lead
     );
+    await notifyOwner({
+      title: "New NusaBot Lead",
+      message: "NusaBot captured a qualified product conversation.",
+      channels: ["telegram", "whatsapp"],
+      lines: [
+        `Division: ${divisionNames[data.divisionId] || "NusaBot"}`,
+        `Buyer: ${data.fullName || "NusaBot Visitor"}`,
+        `Company: ${data.companyName || "-"}`,
+        `WhatsApp: ${data.whatsapp || "-"}`,
+        `Country: ${data.country || "-"}`,
+        `Products: ${products.join(", ") || "-"}`,
+        `Summary: ${data.message || "Product conversation"}`
+      ]
+    });
 
     return Response.json({ ok: true });
   } catch (error) {
