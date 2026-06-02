@@ -3852,6 +3852,47 @@ body {
   gap: 12px;
 }
 
+.admin-user-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-user-list article {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(188, 174, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.admin-user-list div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-user-list span,
+.admin-role-chip {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid rgba(159, 224, 255, 0.22);
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(91, 204, 255, 0.08);
+  color: #9fe0ff;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-user-list small {
+  color: rgba(239, 244, 255, 0.64);
+}
+
 .admin-integration-list article {
   border: 1px solid rgba(188, 174, 255, 0.12);
   border-radius: 14px;

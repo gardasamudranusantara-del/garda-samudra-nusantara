@@ -1,9 +1,10 @@
-import { deleteInvestorInquiry, updateInvestorInquiry } from "@/lib/gsnDataStore";
-import { isAdminAuthorized } from "@/lib/adminAuth";
+import { deleteInvestorInquiry, insertAdminActivity, updateInvestorInquiry } from "@/lib/gsnDataStore";
+import { requireAdminPermission } from "@/lib/adminAuth";
 
 export async function PATCH(request, { params }) {
-  if (!isAdminAuthorized(request)) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+  const permission = requireAdminPermission(request, "edit_investors");
+  if (!permission.ok) {
+    return Response.json({ message: permission.message }, { status: permission.status });
   }
 
   const data = await request.json();
@@ -23,14 +24,30 @@ export async function PATCH(request, { params }) {
   }
 
   const result = await updateInvestorInquiry(params.id, updates);
+  await insertAdminActivity({
+    admin: permission.admin,
+    action: "edit_investor",
+    label: `Edited investor inquiry ${params.id}`,
+    referenceType: "investor",
+    referenceId: params.id,
+    metadata: { fields: Object.keys(updates) }
+  });
   return Response.json({ ok: true, result });
 }
 
 export async function DELETE(request, { params }) {
-  if (!isAdminAuthorized(request)) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+  const permission = requireAdminPermission(request, "delete_investors");
+  if (!permission.ok) {
+    return Response.json({ message: permission.message }, { status: permission.status });
   }
 
   const result = await deleteInvestorInquiry(params.id);
+  await insertAdminActivity({
+    admin: permission.admin,
+    action: "delete_investor",
+    label: `Deleted investor inquiry ${params.id}`,
+    referenceType: "investor",
+    referenceId: params.id
+  });
   return Response.json({ ok: true, result });
 }

@@ -1,4 +1,4 @@
-import { getAdminSettings, isSupabaseConfigured, listInquiries, listInvestorInquiries, listNotifications, listQuotationDocuments, listQuotationRequests, listTrackingEvents } from "@/lib/gsnDataStore";
+import { getAdminSettings, isSupabaseConfigured, listAdminActivities, listInquiries, listInvestorInquiries, listNotifications, listQuotationDocuments, listQuotationRequests, listTrackingEvents } from "@/lib/gsnDataStore";
 import { isAdminAuthorized } from "@/lib/adminAuth";
 
 function summarize(inquiries, events, investorInquiries = [], quotationRequests = []) {
@@ -43,18 +43,20 @@ export async function GET(request) {
       notifications: [],
       settings: null,
       events: [],
+      adminActivities: [],
       summary: summarize([], [], [], [])
     });
   }
 
-  const [inquiries, investorInquiries, quotationRequests, quotationDocuments, notifications, settings, events] = await Promise.all([
+  const [inquiries, investorInquiries, quotationRequests, quotationDocuments, notifications, settings, events, adminActivities] = await Promise.all([
     listInquiries(),
     listInvestorInquiries(),
     listQuotationRequests(),
     listQuotationDocuments(),
     listNotifications(),
     getAdminSettings(),
-    listTrackingEvents()
+    listTrackingEvents(),
+    listAdminActivities()
   ]);
 
   return Response.json({
@@ -66,6 +68,7 @@ export async function GET(request) {
     notifications,
     settings,
     events,
+    adminActivities,
     summary: summarize(inquiries, events, investorInquiries, quotationRequests)
   });
 }

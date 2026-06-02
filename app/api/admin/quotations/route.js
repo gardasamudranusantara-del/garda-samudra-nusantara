@@ -1,10 +1,11 @@
-import { isAdminAuthorized } from "@/lib/adminAuth";
-import { insertNotification, insertQuotationRequest } from "@/lib/gsnDataStore";
+import { requireAdminPermission } from "@/lib/adminAuth";
+import { insertAdminActivity, insertNotification, insertQuotationRequest } from "@/lib/gsnDataStore";
 import { notifyOwner } from "@/lib/ownerNotifications";
 
 export async function POST(request) {
-  if (!isAdminAuthorized(request)) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+  const permission = requireAdminPermission(request, "edit_quotations");
+  if (!permission.ok) {
+    return Response.json({ message: permission.message }, { status: permission.status });
   }
 
   const data = await request.json();
@@ -36,6 +37,13 @@ export async function POST(request) {
       `Quantity: ${data.quantity || "-"}`,
       `Incoterm: ${data.incoterm || "-"}`
     ]
+  });
+  await insertAdminActivity({
+    admin: permission.admin,
+    action: "create_quotation",
+    label: `Created quotation for ${data.buyer_name || data.company_name || "buyer"}`,
+    referenceType: "quotation",
+    referenceId: result?.[0]?.id || null
   });
 
   return Response.json({ ok: true, result });

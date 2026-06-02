@@ -1,5 +1,5 @@
 import { isAutomationAuthorized } from "@/lib/automationAuth";
-import { isAdminAuthorized } from "@/lib/adminAuth";
+import { hasAdminPermission } from "@/lib/adminAuth";
 import { insertNotification, isSupabaseConfigured, listInquiries, listInvestorInquiries, listQuotationDocuments, listQuotationRequests, listTrackingEvents } from "@/lib/gsnDataStore";
 import { notifyOwner } from "@/lib/ownerNotifications";
 
@@ -23,7 +23,7 @@ function countBy(items, getter) {
 }
 
 export async function GET(request) {
-  if (!isAutomationAuthorized(request) && !isAdminAuthorized(request)) {
+  if (!isAutomationAuthorized(request) && !hasAdminPermission(request, "automation")) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 

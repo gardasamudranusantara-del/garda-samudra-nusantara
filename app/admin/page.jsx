@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 const statuses = ["New", "Contacted", "Negotiation", "Quotation Sent", "Converted", "Closed"];
 const priorities = ["All", "High", "Medium", "Low"];
 const statusFilters = ["All", ...statuses];
-const modules = ["Leads", "Investors", "Quotations", "Analytics", "Settings"];
+const modules = ["Leads", "Investors", "Quotations", "Analytics", "Activity", "Settings", "Users"];
 const futureIntegrations = [
   "WhatsApp API",
   "Telegram Notifications",
@@ -179,9 +179,25 @@ function exportRowsCsv(filename, headers, rows) {
   URL.revokeObjectURL(url);
 }
 
+function makeQuotationNumber(index, year = new Date().getFullYear()) {
+  return `GSN-QTN-${year}-${String(index).padStart(4, "0")}`;
+}
+
+function getNextQuotationNumber(quotationRequests = [], quotationDocuments = []) {
+  const year = new Date().getFullYear();
+  const existing = [...quotationRequests, ...quotationDocuments]
+    .map((item) => `${item.request_summary || ""} ${item.document_title || ""} ${item.document_text || ""}`)
+    .map((text) => text.match(new RegExp(`GSN-QTN-${year}-(\\d{4})`))?.[1])
+    .filter(Boolean)
+    .map((value) => Number(value));
+  const nextIndex = existing.length ? Math.max(...existing) + 1 : quotationRequests.length + quotationDocuments.length + 1;
+  return makeQuotationNumber(nextIndex, year);
+}
+
 function buildQuotationSummary(lead, draft) {
   const products = normalizeProducts(lead);
   return [
+    draft.quotation_number ? `Quotation Number: ${draft.quotation_number}` : "",
     `Buyer: ${lead?.full_name || "-"}${lead?.company_name ? ` (${lead.company_name})` : ""}`,
     `Country: ${lead?.country || "-"}`,
     `Products: ${products.length ? products.join(", ") : "-"}`,
@@ -193,7 +209,7 @@ function buildQuotationSummary(lead, draft) {
     draft.product_details || lead?.product_specification || "Product specification to be confirmed based on buyer requirements.",
     "",
     draft.internal_notes || "Next step: confirm final specification, packaging, destination port, and payment terms."
-  ].join("\n");
+  ].filter((line) => line !== "").join("\n");
 }
 
 function buildQuotationDocumentHtml(lead, draft) {
@@ -298,7 +314,9 @@ export default function AdminDashboard() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState(defaultSettings);
   const [modal, setModal] = useState(null);
+  const [userAccounts, setUserAccounts] = useState([]);
   const [quotationDraft, setQuotationDraft] = useState({
+    quotation_number: "",
     incoterm: "FOB",
     unit_price: "",
     validity: "7 business days",
@@ -332,6 +350,9 @@ export default function AdminDashboard() {
       setSavedCredentials(credentials);
       setAdminProfile(result.admin || { username: credentials.username, role: "owner" });
       await loadDashboard(credentials);
+      if ((result.admin?.role || "owner") === "owner") {
+        await loadUsers(credentials);
+      }
     } catch (error) {
       setNotice(error.message);
     } finally {
@@ -357,10 +378,24 @@ export default function AdminDashboard() {
       setData(result);
       setSelected((current) => result.inquiries?.find((lead) => lead.id === current?.id) || result.inquiries?.[0] || null);
       setSettingsDraft({ ...defaultSettings, ...(result.settings || {}) });
+      if ((adminProfile?.role || result.admin?.role || activeCredentials.role) === "owner") {
+        loadUsers(activeCredentials);
+      }
     } catch (error) {
       setNotice(error.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadUsers(activeCredentials = savedCredentials || credentials) {
+    const response = await fetch("/api/admin/users", {
+      headers: authHeaders(activeCredentials)
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      setUserAccounts(result.accounts || []);
     }
   }
 
@@ -484,6 +519,8 @@ export default function AdminDashboard() {
       return;
     }
 
+    const quotationNumber = quotationDraft.quotation_number || getNextQuotationNumber(quotationRequests, quotationDocuments);
+    const numberedDraft = { ...quotationDraft, quotation_number: quotationNumber };
     const payload = {
       inquiry_id: selected.id,
       buyer_name: selected.full_name || "",
@@ -492,13 +529,13 @@ export default function AdminDashboard() {
       whatsapp: selected.whatsapp || selected.phone || "",
       country: selected.country || "",
       products: normalizeProducts(selected),
-      quantity: quotationDraft.quantity || selected.quantity || "",
-      incoterm: quotationDraft.incoterm,
-      unit_price: quotationDraft.unit_price,
-      validity: quotationDraft.validity,
-      product_details: quotationDraft.product_details || selected.product_specification || "",
-      internal_notes: quotationDraft.internal_notes,
-      request_summary: buildQuotationSummary(selected, quotationDraft),
+      quantity: numberedDraft.quantity || selected.quantity || "",
+      incoterm: numberedDraft.incoterm,
+      unit_price: numberedDraft.unit_price,
+      validity: numberedDraft.validity,
+      product_details: numberedDraft.product_details || selected.product_specification || "",
+      internal_notes: numberedDraft.internal_notes,
+      request_summary: buildQuotationSummary(selected, numberedDraft),
       status: "Draft"
     };
 
@@ -527,7 +564,8 @@ export default function AdminDashboard() {
       return;
     }
 
-    const summary = buildQuotationSummary(selected, quotationDraft);
+    const quotationNumber = quotationDraft.quotation_number || getNextQuotationNumber(quotationRequests, quotationDocuments);
+    const summary = buildQuotationSummary(selected, { ...quotationDraft, quotation_number: quotationNumber });
     const response = await fetch("/api/admin/quotation-documents", {
       method: "POST",
       headers: {
@@ -538,7 +576,7 @@ export default function AdminDashboard() {
         inquiry_id: selected.id,
         buyer_name: selected.full_name || "",
         company_name: selected.company_name || "",
-        document_title: `GSN Quotation - ${selected.full_name || selected.company_name || "Buyer"}`,
+        document_title: `${quotationNumber} - GSN Quotation - ${selected.full_name || selected.company_name || "Buyer"}`,
         document_html: buildQuotationDocumentHtml(selected, quotationDraft),
         document_text: summary,
         status: "PDF Ready"
@@ -724,6 +762,16 @@ export default function AdminDashboard() {
   const quotationDocuments = data?.quotationDocuments || [];
   const notifications = data?.notifications || [];
   const events = data?.events || [];
+  const adminActivities = data?.adminActivities || [];
+  const isOwner = adminProfile?.role === "owner";
+  const canDelete = isOwner;
+  const canUseSettings = isOwner;
+  const visibleModules = modules.filter((module) => {
+    if (["Investors", "Settings", "Users"].includes(module)) {
+      return isOwner;
+    }
+    return true;
+  });
 
   const filteredLeads = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -796,6 +844,7 @@ export default function AdminDashboard() {
   }, [leads, events]);
 
   const latestEvents = useMemo(() => events.slice(0, 12), [events]);
+  const latestAdminActivities = useMemo(() => adminActivities.slice(0, 24), [adminActivities]);
   const unreadNotifications = notifications.filter((item) => !item.is_read);
   const mostClicked = chartData.clicks[0]?.[0] || "-";
   const conversionRate = getConversionRate(leads, events);
@@ -953,7 +1002,7 @@ export default function AdminDashboard() {
           </section>
 
           <nav className="admin-module-tabs" aria-label="Admin modules">
-            {modules.map((module) => (
+            {visibleModules.map((module) => (
               <button className={activeModule === module ? "is-active" : ""} key={module} onClick={() => setActiveModule(module)} type="button">
                 {module}
               </button>
@@ -1079,7 +1128,7 @@ export default function AdminDashboard() {
                     <button onClick={() => openModal("lead", selected)} type="button">Edit Lead</button>
                     <a href={`https://wa.me/${String(selected.whatsapp || selected.phone || "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">WhatsApp</a>
                     {selected.email ? <a href={`mailto:${selected.email}`}>Email</a> : null}
-                    <button className="danger" onClick={() => openDeleteModal("lead", selected)} type="button">Delete</button>
+                    {canDelete ? <button className="danger" onClick={() => openDeleteModal("lead", selected)} type="button">Delete</button> : null}
                   </div>
                 </div>
               ) : <p className="admin-empty">Select a lead to see details.</p>}
@@ -1134,7 +1183,7 @@ export default function AdminDashboard() {
                         <td>
                           <div className="admin-table-actions">
                             <button onClick={() => openModal("investor", item)} type="button">Edit</button>
-                            <button onClick={() => deleteInvestor(item.id)} type="button">Delete</button>
+                            {canDelete ? <button onClick={() => deleteInvestor(item.id)} type="button">Delete</button> : null}
                           </div>
                         </td>
                       </tr>
@@ -1158,6 +1207,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="admin-quotation-builder">
                   <p className="admin-empty">Selected lead: <strong>{selected?.full_name || "Select a lead in Leads tab first"}</strong></p>
+                  <label>Quotation Number<input value={quotationDraft.quotation_number || getNextQuotationNumber(quotationRequests, quotationDocuments)} onChange={(event) => setQuotationDraft((current) => ({ ...current, quotation_number: event.target.value }))} placeholder="GSN-QTN-2026-0001" /></label>
                   <label>Quantity<input value={quotationDraft.quantity || selected?.quantity || ""} onChange={(event) => setQuotationDraft((current) => ({ ...current, quantity: event.target.value }))} placeholder="Example: 1 container / 10 MT" /></label>
                   <label>Incoterm<input value={quotationDraft.incoterm} onChange={(event) => setQuotationDraft((current) => ({ ...current, incoterm: event.target.value }))} placeholder="FOB, CIF, CNF..." /></label>
                   <label>Indicative Price<input value={quotationDraft.unit_price} onChange={(event) => setQuotationDraft((current) => ({ ...current, unit_price: event.target.value }))} placeholder="Example: USD xxx / MT" /></label>
@@ -1182,8 +1232,8 @@ export default function AdminDashboard() {
                     disabled={!quotationRequests.length}
                     onClick={() => exportRowsCsv(
                       `gsn-quotations-${new Date().toISOString().slice(0, 10)}.csv`,
-                      ["Created At", "Buyer", "Company", "Country", "Products", "Quantity", "Incoterm", "Price", "Status"],
-                      quotationRequests.map((item) => [item.created_at, item.buyer_name, item.company_name, item.country, Array.isArray(item.products) ? item.products.join("; ") : "", item.quantity, item.incoterm, item.unit_price, item.status])
+                      ["Created At", "Quotation Number", "Buyer", "Company", "Country", "Products", "Quantity", "Incoterm", "Price", "Status"],
+                      quotationRequests.map((item) => [item.created_at, item.request_summary?.match(/GSN-QTN-\d{4}-\d{4}/)?.[0] || "", item.buyer_name, item.company_name, item.country, Array.isArray(item.products) ? item.products.join("; ") : "", item.quantity, item.incoterm, item.unit_price, item.status])
                     )}
                     type="button"
                   >
@@ -1201,7 +1251,7 @@ export default function AdminDashboard() {
                           {item.status === "Sent" ? "Mark Draft" : "Mark Sent"}
                         </button>
                         <button onClick={() => openModal("quotation", item)} type="button">Edit</button>
-                        <button onClick={() => deleteQuotation(item.id)} type="button">Delete</button>
+                        {canDelete ? <button onClick={() => deleteQuotation(item.id)} type="button">Delete</button> : null}
                       </div>
                     </article>
                   ))}
@@ -1264,7 +1314,28 @@ export default function AdminDashboard() {
             </>
           ) : null}
 
-          {activeModule === "Settings" ? (
+          {activeModule === "Activity" ? (
+            <section className="admin-panel">
+              <div className="admin-panel-header">
+                <div>
+                  <p>Activity Log</p>
+                  <h2>Admin Actions</h2>
+                </div>
+              </div>
+              <div className="admin-event-list">
+                {latestAdminActivities.map((activity) => (
+                  <article key={activity.id}>
+                    <strong>{activity.metadata?.admin || "admin"} <span className="admin-role-chip">{activity.metadata?.role || "role"}</span></strong>
+                    <span>{activity.label || activity.metadata?.action || "Admin activity"}</span>
+                    <small>{formatDate(activity.created_at)}</small>
+                  </article>
+                ))}
+                {!latestAdminActivities.length ? <p className="admin-empty">No admin actions recorded yet.</p> : null}
+              </div>
+            </section>
+          ) : null}
+
+          {activeModule === "Settings" && canUseSettings ? (
             <section className="admin-settings-grid">
               <div className="admin-panel">
                 <div className="admin-panel-header">
@@ -1342,6 +1413,45 @@ export default function AdminDashboard() {
                       <span>Planned integration layer ready</span>
                     </article>
                   ))}
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {activeModule === "Users" && isOwner ? (
+            <section className="admin-settings-grid">
+              <div className="admin-panel">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>User Management</p>
+                    <h2>Admin Accounts</h2>
+                  </div>
+                  <button onClick={() => loadUsers(savedCredentials)} type="button">Refresh Users</button>
+                </div>
+                <div className="admin-user-list">
+                  {userAccounts.map((account) => (
+                    <article key={account.username}>
+                      <div>
+                        <strong>{account.username}</strong>
+                        <span>{account.role}</span>
+                      </div>
+                      <small>{account.role === "owner" ? "Full access to dashboard, settings, users, delete actions, and automation." : "Marketing access: leads, quotations, analytics, activity log, and PDF download only."}</small>
+                    </article>
+                  ))}
+                </div>
+              </div>
+              <div className="admin-panel">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Marketing Staff</p>
+                    <h2>Restricted Account</h2>
+                  </div>
+                </div>
+                <div className="admin-modal-confirm">
+                  <p>New staff marketing account prepared:</p>
+                  <strong>marketing / marketing123</strong>
+                  <p>For production, add it to Vercel env `ADMIN_DASHBOARD_ACCOUNTS` as:</p>
+                  <strong>dapi:dapi123:owner,pici:pici123:owner,marketing:marketing123:marketing</strong>
                 </div>
               </div>
             </section>

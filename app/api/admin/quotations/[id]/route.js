@@ -1,9 +1,10 @@
-import { deleteQuotationRequest, updateQuotationRequest } from "@/lib/gsnDataStore";
-import { isAdminAuthorized } from "@/lib/adminAuth";
+import { deleteQuotationRequest, insertAdminActivity, updateQuotationRequest } from "@/lib/gsnDataStore";
+import { requireAdminPermission } from "@/lib/adminAuth";
 
 export async function PATCH(request, { params }) {
-  if (!isAdminAuthorized(request)) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+  const permission = requireAdminPermission(request, "edit_quotations");
+  if (!permission.ok) {
+    return Response.json({ message: permission.message }, { status: permission.status });
   }
 
   const data = await request.json();
@@ -24,14 +25,30 @@ export async function PATCH(request, { params }) {
   }
 
   const result = await updateQuotationRequest(params.id, updates);
+  await insertAdminActivity({
+    admin: permission.admin,
+    action: "edit_quotation",
+    label: `Edited quotation ${params.id}`,
+    referenceType: "quotation",
+    referenceId: params.id,
+    metadata: { fields: Object.keys(updates) }
+  });
   return Response.json({ ok: true, result });
 }
 
 export async function DELETE(request, { params }) {
-  if (!isAdminAuthorized(request)) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+  const permission = requireAdminPermission(request, "delete_quotations");
+  if (!permission.ok) {
+    return Response.json({ message: permission.message }, { status: permission.status });
   }
 
   const result = await deleteQuotationRequest(params.id);
+  await insertAdminActivity({
+    admin: permission.admin,
+    action: "delete_quotation",
+    label: `Deleted quotation ${params.id}`,
+    referenceType: "quotation",
+    referenceId: params.id
+  });
   return Response.json({ ok: true, result });
 }

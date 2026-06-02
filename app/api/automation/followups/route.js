@@ -1,5 +1,5 @@
 import { isAutomationAuthorized } from "@/lib/automationAuth";
-import { isAdminAuthorized } from "@/lib/adminAuth";
+import { hasAdminPermission } from "@/lib/adminAuth";
 import { insertNotification, isSupabaseConfigured, listNotifications, listOpenInquiries, updateInquiry } from "@/lib/gsnDataStore";
 import { notifyOwner } from "@/lib/ownerNotifications";
 
@@ -18,7 +18,7 @@ function makeKey(type, referenceId) {
 }
 
 export async function GET(request) {
-  if (!isAutomationAuthorized(request) && !isAdminAuthorized(request)) {
+  if (!isAutomationAuthorized(request) && !hasAdminPermission(request, "automation")) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
