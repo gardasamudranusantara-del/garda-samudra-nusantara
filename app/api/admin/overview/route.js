@@ -29,7 +29,7 @@ function summarize(inquiries, events, investorInquiries = [], quotationRequests 
 }
 
 export async function GET(request) {
-  if (!isAdminAuthorized(request)) {
+  if (!(await isAdminAuthorized(request))) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 

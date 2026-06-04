@@ -21,7 +21,9 @@ create table if not exists public.inquiries (
   status text not null default 'New',
   source text not null default 'inquiry_form',
   internal_notes text,
-  follow_up_at timestamptz
+  follow_up_at timestamptz,
+  assigned_to text,
+  follow_up_deadline timestamptz
 );
 
 create table if not exists public.tracking_events (
@@ -50,6 +52,7 @@ create table if not exists public.investor_inquiries (
 create table if not exists public.quotation_requests (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
+  quotation_number text,
   inquiry_id uuid,
   buyer_name text,
   company_name text,
@@ -70,6 +73,7 @@ create table if not exists public.quotation_requests (
 create table if not exists public.quotation_documents (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
+  quotation_number text,
   quotation_id uuid,
   inquiry_id uuid,
   buyer_name text,
@@ -105,9 +109,20 @@ create table if not exists public.admin_settings (
   integration_settings jsonb not null default '{}'::jsonb
 );
 
+create table if not exists public.admin_users (
+  username text primary key,
+  password text not null,
+  role text not null default 'marketing',
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists inquiries_created_at_idx on public.inquiries (created_at desc);
 create index if not exists inquiries_status_idx on public.inquiries (status);
 create index if not exists inquiries_priority_idx on public.inquiries (lead_priority);
+create index if not exists inquiries_assigned_to_idx on public.inquiries (assigned_to);
+create index if not exists inquiries_follow_up_deadline_idx on public.inquiries (follow_up_deadline);
 create index if not exists tracking_events_created_at_idx on public.tracking_events (created_at desc);
 create index if not exists tracking_events_event_idx on public.tracking_events (event);
 create index if not exists investor_inquiries_created_at_idx on public.investor_inquiries (created_at desc);
@@ -119,6 +134,7 @@ create index if not exists quotation_documents_quotation_id_idx on public.quotat
 create index if not exists admin_notifications_created_at_idx on public.admin_notifications (created_at desc);
 create index if not exists admin_notifications_is_read_idx on public.admin_notifications (is_read);
 create index if not exists admin_settings_updated_at_idx on public.admin_settings (updated_at desc);
+create index if not exists admin_users_role_idx on public.admin_users (role);
 
 alter table public.inquiries enable row level security;
 alter table public.tracking_events enable row level security;
@@ -127,3 +143,11 @@ alter table public.quotation_requests enable row level security;
 alter table public.quotation_documents enable row level security;
 alter table public.admin_notifications enable row level security;
 alter table public.admin_settings enable row level security;
+alter table public.admin_users enable row level security;
+
+alter table public.quotation_requests add column if not exists quotation_number text;
+alter table public.quotation_documents add column if not exists quotation_number text;
+alter table public.inquiries add column if not exists assigned_to text;
+alter table public.inquiries add column if not exists follow_up_deadline timestamptz;
+create index if not exists quotation_requests_number_idx on public.quotation_requests (quotation_number);
+create index if not exists quotation_documents_number_idx on public.quotation_documents (quotation_number);

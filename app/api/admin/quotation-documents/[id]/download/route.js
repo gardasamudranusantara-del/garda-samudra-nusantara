@@ -11,7 +11,7 @@ function safeFileName(value) {
 }
 
 export async function GET(request, { params }) {
-  const permission = requireAdminPermission(request, "download_pdf");
+  const permission = await requireAdminPermission(request, "download_pdf");
   if (!permission.ok) {
     return Response.json({ message: permission.message }, { status: permission.status });
   }

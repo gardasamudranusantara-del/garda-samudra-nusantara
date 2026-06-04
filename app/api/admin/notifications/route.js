@@ -2,7 +2,7 @@ import { isAdminAuthorized } from "@/lib/adminAuth";
 import { markAllNotificationsRead, updateNotification } from "@/lib/gsnDataStore";
 
 export async function PATCH(request) {
-  if (!isAdminAuthorized(request)) {
+  if (!(await isAdminAuthorized(request))) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isSupabaseConfigured, listInquiries } from "@/lib/gsnDataStore";
 
 const productKnowledge = `
 Company:
@@ -80,6 +81,64 @@ function extractOutputText(data) {
   return text;
 }
 
+function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function extractEmail(value) {
+  return String(value || "").match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0]?.toLowerCase() || "";
+}
+
+function extractPhone(value) {
+  return normalizePhone(String(value || "").match(/(?:\+?\d[\d\s().-]{7,}\d)/)?.[0] || "");
+}
+
+function countTop(items, getter, limit = 5) {
+  const counts = new Map();
+  items.forEach((item) => {
+    const values = getter(item);
+    (Array.isArray(values) ? values : [values]).filter(Boolean).forEach((value) => {
+      counts.set(value, (counts.get(value) || 0) + 1);
+    });
+  });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit);
+}
+
+async function buildSafeCrmContext(message) {
+  if (!isSupabaseConfigured()) {
+    return "";
+  }
+
+  try {
+    const inquiries = await listInquiries();
+    const topProducts = countTop(inquiries, (lead) => Array.isArray(lead.products) ? lead.products : []);
+    const topCountries = countTop(inquiries, (lead) => lead.country);
+    const highPriorityOpen = inquiries.filter((lead) => lead.lead_priority === "High" && !["Converted", "Closed"].includes(lead.status)).length;
+    const email = extractEmail(message);
+    const phone = extractPhone(message);
+    const asksStatus = /\b(status|follow[\s-]?up|progress|update|lead|inquiry|quotation|quote|request|statusnya|progres|ditindaklanjuti)\b/i.test(message);
+    const matchedLead = asksStatus && (email || phone)
+      ? inquiries.find((lead) => {
+        const emailMatches = email && String(lead.email || "").toLowerCase() === email;
+        const phoneMatches = phone && normalizePhone(lead.whatsapp || lead.phone).endsWith(phone.slice(-9));
+        return emailMatches || phoneMatches;
+      })
+      : null;
+
+    return `
+Safe CRM context from GSN dashboard:
+- Recent lead count: ${inquiries.length}
+- Current high-priority open leads: ${highPriorityOpen}
+- Most requested product interests: ${topProducts.map(([name, count]) => `${name} (${count})`).join(", ") || "No product demand data yet"}
+- Most common destination countries: ${topCountries.map(([name, count]) => `${name} (${count})`).join(", ") || "No country data yet"}
+${matchedLead ? `- Exact matching inquiry found for the provided contact. Safe status: ${matchedLead.status || "New"}; priority: ${matchedLead.lead_priority || "Low"}; assigned owner: ${matchedLead.assigned_to || "GSN team"}; products: ${Array.isArray(matchedLead.products) ? matchedLead.products.join(", ") : "-"}; quantity: ${matchedLead.quantity || "-"}; created: ${matchedLead.created_at || "-"}. Do not reveal internal notes or private data.` : "- No exact contact-based inquiry status should be disclosed unless the customer provides matching email or WhatsApp and asks for status."}
+Use dashboard demand trends only for general product recommendations. Do not expose other buyers, internal notes, email addresses, phone numbers, or company names.
+`;
+  } catch {
+    return "";
+  }
+}
+
 export async function POST(request) {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
 
@@ -100,6 +159,8 @@ export async function POST(request) {
         .slice(-8)
         .map((item) => ({ role: item.role, content: item.text.slice(0, 900) }))
     : [];
+  const crmContext = await buildSafeCrmContext(trimmedMessage);
+  const dynamicInstructions = crmContext ? `${instructions}\n\n${crmContext}` : instructions;
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -109,7 +170,7 @@ export async function POST(request) {
     },
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-      instructions,
+      instructions: dynamicInstructions,
       input: [...recentHistory, { role: "user", content: trimmedMessage }],
       max_output_tokens: 420
     })

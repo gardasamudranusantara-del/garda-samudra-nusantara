@@ -25,6 +25,47 @@ function includesAny(text, words) {
   return words.some((word) => text.includes(word));
 }
 
+function detectProductNames(text) {
+  const normalized = text.toLowerCase();
+  return productKnowledge
+    .filter((product) => product.terms.some((term) => normalized.includes(term)))
+    .map((product) => product.name)
+    .filter((name, index, list) => list.indexOf(name) === index)
+    .slice(0, 4);
+}
+
+function extractLeadDetailsFromText(text) {
+  const updates = {};
+  const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0];
+  const phone = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/)?.[0];
+  const quantity = text.match(/\b\d+(?:[.,]\d+)?\s*(?:mt|ton|tons|kg|kilogram|container|containers|pcs|pack|packs|carton|cartons|pallet|pallets|month|monthly)\b/i)?.[0];
+  const name = text.match(/\b(?:my name is|i am|i'm|nama saya|saya)\s+([a-z][a-z\s.'-]{1,40})/i)?.[1];
+  const company = text.match(/\b(?:company|perusahaan|from company|dari perusahaan)\s+([a-z0-9&.,\s-]{2,50})/i)?.[1];
+  const countrySignals = [
+    "Indonesia", "Malaysia", "Singapore", "Thailand", "Vietnam", "Philippines", "Japan", "Korea",
+    "China", "India", "UAE", "Saudi Arabia", "Qatar", "Turkey", "Australia", "United States",
+    "USA", "Canada", "United Kingdom", "Germany", "Netherlands", "France", "Italy", "Spain"
+  ];
+  const country = countrySignals.find((item) => new RegExp(`\\b${item.replace(/\s+/g, "\\s+")}\\b`, "i").test(text));
+  const products = detectProductNames(text);
+
+  if (email) updates.email = email;
+  if (phone) updates.whatsapp = phone.replace(/\s+/g, " ").trim();
+  if (quantity) updates.quantity = quantity;
+  if (name) updates.fullName = name.trim().replace(/\s+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  if (company) updates.companyName = company.trim().replace(/\s+/g, " ");
+  if (country) updates.country = country;
+  if (products.length) updates.productInterest = products.join(", ");
+
+  return updates;
+}
+
+function mergeLeadDetails(current, updates) {
+  return Object.fromEntries(
+    Object.entries({ ...current, ...updates }).map(([key, value]) => [key, typeof value === "string" ? value.trim() : value])
+  );
+}
+
 function detectQuestionLanguage(input) {
   const text = input.toLowerCase();
   const idSignals = [
@@ -535,15 +576,56 @@ export default function GSNExportAssistant() {
   const [typing, setTyping] = useState(false);
   const [messages, setMessages] = useState([welcomeMessage]);
   const [suggestedInquiry, setSuggestedInquiry] = useState(null);
+  const [leadCaptureStep, setLeadCaptureStep] = useState(0);
   const [leadDetails, setLeadDetails] = useState({
     fullName: "",
     companyName: "",
     email: "",
     whatsapp: "",
-    country: ""
+    country: "",
+    productInterest: "",
+    quantity: ""
   });
   const scrollRef = useRef(null);
   const showSuggestions = open && messages.length === 1 && !typing;
+  const leadCaptureFields = [
+    {
+      key: "fullName",
+      label: "May I have your name?",
+      placeholder: "Buyer name"
+    },
+    {
+      key: "country",
+      label: "Which destination country should GSN prepare for?",
+      placeholder: "Destination country"
+    },
+    {
+      key: "whatsapp",
+      label: "What WhatsApp number can our team contact?",
+      placeholder: "WhatsApp number"
+    },
+    {
+      key: "quantity",
+      label: "What quantity or monthly requirement do you need?",
+      placeholder: "Example: 1 container / 10 MT"
+    },
+    {
+      key: "productInterest",
+      label: "Please confirm the product interest.",
+      placeholder: suggestedInquiry?.selectedProducts?.join(", ") || "Product interest"
+    },
+    {
+      key: "email",
+      label: "Optional: share your email for quotation documents.",
+      placeholder: "Email address"
+    },
+    {
+      key: "companyName",
+      label: "Optional: company name.",
+      placeholder: "Company name"
+    }
+  ];
+  const activeLeadField = leadCaptureFields[Math.min(leadCaptureStep, leadCaptureFields.length - 1)];
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -555,16 +637,29 @@ export default function GSNExportAssistant() {
       return;
     }
 
+    const capturedDetails = extractLeadDetailsFromText(trimmed);
     const nextMessages = [
       ...messages,
       { id: `user-${Date.now()}`, role: "user", text: trimmed }
     ];
     const smartInquiry = getSmartInquiry(trimmed.toLowerCase());
+    const capturedProducts = capturedDetails.productInterest
+      ? capturedDetails.productInterest.split(",").map((item) => item.trim()).filter(Boolean)
+      : [];
+    const conversationalInquiry = smartInquiry || (Object.keys(capturedDetails).length >= 2 ? {
+      selectedProducts: capturedProducts.length ? capturedProducts : ["Product Requirement"],
+      selectedDivision: capturedProducts.length ? getSmartInquiry(capturedProducts.join(" ").toLowerCase())?.selectedDivision || "" : "",
+      message: "NusaBot captured buyer details from a natural chat conversation.",
+      source: "nusabot_lead_capture"
+    } : null);
 
     setMessages((current) => [
       ...current,
       nextMessages[nextMessages.length - 1]
     ]);
+    if (Object.keys(capturedDetails).length) {
+      setLeadDetails((current) => mergeLeadDetails(current, capturedDetails));
+    }
     setInput("");
     setTyping(true);
 
@@ -592,11 +687,32 @@ export default function GSNExportAssistant() {
         answer = "";
       }
 
-      setMessages((current) => [
-        ...current,
-        { id: `assistant-${Date.now()}`, role: "assistant", text: answer || createAssistantResponse(trimmed) }
-      ]);
-      setSuggestedInquiry(smartInquiry);
+      setMessages((current) => {
+        const next = [
+          ...current,
+          { id: `assistant-${Date.now()}`, role: "assistant", text: answer || createAssistantResponse(trimmed) }
+        ];
+
+        if (conversationalInquiry) {
+          next.push({
+            id: `assistant-capture-${Date.now()}`,
+            role: "assistant",
+            text: Object.keys(capturedDetails).length >= 2
+              ? "I captured some buyer details from your message. Please review or complete the remaining details so GSN can follow up professionally."
+              : "I can help prepare this as a qualified lead for the GSN team. I will ask a few quick details one by one so the quotation follow-up is easier."
+          });
+        }
+
+        return next;
+      });
+      setSuggestedInquiry(conversationalInquiry);
+      if (conversationalInquiry) {
+        setLeadCaptureStep(0);
+        setLeadDetails((current) => ({
+          ...current,
+          productInterest: capturedDetails.productInterest || conversationalInquiry.selectedProducts?.join(", ") || current.productInterest
+        }));
+      }
       setTyping(false);
     }, 900);
   }
@@ -612,18 +728,26 @@ export default function GSNExportAssistant() {
       .join("\n")
       .slice(0, 1400);
 
-    window.sessionStorage.setItem("gsn-smart-inquiry", JSON.stringify(suggestedInquiry));
-    window.dispatchEvent(new CustomEvent("gsn:smartInquiry", { detail: suggestedInquiry }));
+    const capturedInquiry = {
+      ...suggestedInquiry,
+      selectedProducts: leadDetails.productInterest
+        ? leadDetails.productInterest.split(",").map((item) => item.trim()).filter(Boolean)
+        : suggestedInquiry.selectedProducts,
+      quantity: leadDetails.quantity || ""
+    };
+
+    window.sessionStorage.setItem("gsn-smart-inquiry", JSON.stringify(capturedInquiry));
+    window.dispatchEvent(new CustomEvent("gsn:smartInquiry", { detail: capturedInquiry }));
     document.getElementById("gsnformneo")?.scrollIntoView({ behavior: "smooth", block: "start" });
     fetch("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         event: "nusabot_lead_capture",
-        label: suggestedInquiry.selectedProducts.join(", "),
+        label: capturedInquiry.selectedProducts.join(", "),
         path: window.location.pathname,
         source: "nusabot",
-        metadata: suggestedInquiry
+        metadata: capturedInquiry
       }),
       keepalive: true
     }).catch(() => {});
@@ -631,12 +755,21 @@ export default function GSNExportAssistant() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...suggestedInquiry,
+        ...capturedInquiry,
         ...leadDetails,
-        message: `${suggestedInquiry.message}\n\nConversation summary:\n${conversationSummary}`
+        message: `${capturedInquiry.message}\n\nCaptured details:\nProduct: ${leadDetails.productInterest || capturedInquiry.selectedProducts.join(", ")}\nQuantity: ${leadDetails.quantity || "-"}\nDestination: ${leadDetails.country || "-"}\n\nConversation summary:\n${conversationSummary}`
       }),
       keepalive: true
     }).catch(() => {});
+    setMessages((current) => [
+      ...current,
+      {
+        id: `assistant-saved-${Date.now()}`,
+        role: "assistant",
+        text: "Thank you. I saved this as a NusaBot lead and opened the inquiry form so the GSN team can prepare a clearer follow-up."
+      }
+    ]);
+    setSuggestedInquiry(null);
   }
 
   function handleSubmit(event) {
@@ -696,17 +829,32 @@ export default function GSNExportAssistant() {
 
             {!typing && suggestedInquiry ? (
               <div className="ai-lead-card">
-                <p>Share buyer details for faster quotation follow-up.</p>
-                <div>
-                  <input value={leadDetails.fullName} onChange={(event) => setLeadDetails((current) => ({ ...current, fullName: event.target.value }))} placeholder="Name" />
-                  <input value={leadDetails.companyName} onChange={(event) => setLeadDetails((current) => ({ ...current, companyName: event.target.value }))} placeholder="Company" />
-                  <input value={leadDetails.email} onChange={(event) => setLeadDetails((current) => ({ ...current, email: event.target.value }))} placeholder="Email" />
-                  <input value={leadDetails.whatsapp} onChange={(event) => setLeadDetails((current) => ({ ...current, whatsapp: event.target.value }))} placeholder="WhatsApp" />
-                  <input value={leadDetails.country} onChange={(event) => setLeadDetails((current) => ({ ...current, country: event.target.value }))} placeholder="Country" />
+                <p>{activeLeadField.label}</p>
+                <input
+                  value={leadDetails[activeLeadField.key]}
+                  onChange={(event) => setLeadDetails((current) => ({ ...current, [activeLeadField.key]: event.target.value }))}
+                  placeholder={activeLeadField.placeholder}
+                />
+                <div className="ai-lead-progress">
+                  {leadCaptureFields.map((field, index) => (
+                    <span className={index <= leadCaptureStep ? "active" : ""} key={field.key}></span>
+                  ))}
                 </div>
-                <button className="ai-lead-capture" type="button" onClick={useSuggestedInquiry}>
-                  Save lead and open inquiry form
-                </button>
+                <div className="ai-lead-actions">
+                  {leadCaptureStep > 0 ? (
+                    <button type="button" onClick={() => setLeadCaptureStep((current) => Math.max(0, current - 1))}>
+                      Back
+                    </button>
+                  ) : null}
+                  {leadCaptureStep < leadCaptureFields.length - 1 ? (
+                    <button type="button" onClick={() => setLeadCaptureStep((current) => current + 1)}>
+                      Next
+                    </button>
+                  ) : null}
+                  <button className="ai-lead-capture" type="button" onClick={useSuggestedInquiry}>
+                    Save lead
+                  </button>
+                </div>
               </div>
             ) : null}
           </div>

@@ -1,8 +1,8 @@
-import { deleteQuotationRequest, insertAdminActivity, updateQuotationRequest } from "@/lib/gsnDataStore";
+import { deleteQuotationRequest, getQuotationRequest, insertAdminActivity, updateQuotationRequest } from "@/lib/gsnDataStore";
 import { requireAdminPermission } from "@/lib/adminAuth";
 
 export async function PATCH(request, { params }) {
-  const permission = requireAdminPermission(request, "edit_quotations");
+  const permission = await requireAdminPermission(request, "edit_quotations");
   if (!permission.ok) {
     return Response.json({ message: permission.message }, { status: permission.status });
   }
@@ -10,7 +10,7 @@ export async function PATCH(request, { params }) {
   const data = await request.json();
   const updates = {};
 
-  ["quantity", "incoterm", "unit_price", "validity", "status"].forEach((key) => {
+  ["quotation_number", "quantity", "incoterm", "unit_price", "validity", "status"].forEach((key) => {
     if (typeof data[key] === "string") {
       updates[key] = data[key].slice(0, 160);
     }
@@ -24,6 +24,7 @@ export async function PATCH(request, { params }) {
     updates.products = data.products;
   }
 
+  const before = await getQuotationRequest(params.id);
   const result = await updateQuotationRequest(params.id, updates);
   await insertAdminActivity({
     admin: permission.admin,
@@ -31,24 +32,31 @@ export async function PATCH(request, { params }) {
     label: `Edited quotation ${params.id}`,
     referenceType: "quotation",
     referenceId: params.id,
-    metadata: { fields: Object.keys(updates) }
+    metadata: {
+      fields: Object.keys(updates),
+      before: Object.fromEntries(Object.keys(updates).map((field) => [field, before?.[field] ?? null])),
+      after: updates,
+      quotationNumber: updates.quotation_number || data.quotation_number || ""
+    }
   });
   return Response.json({ ok: true, result });
 }
 
 export async function DELETE(request, { params }) {
-  const permission = requireAdminPermission(request, "delete_quotations");
+  const permission = await requireAdminPermission(request, "delete_quotations");
   if (!permission.ok) {
     return Response.json({ message: permission.message }, { status: permission.status });
   }
 
+  const before = await getQuotationRequest(params.id);
   const result = await deleteQuotationRequest(params.id);
   await insertAdminActivity({
     admin: permission.admin,
     action: "delete_quotation",
     label: `Deleted quotation ${params.id}`,
     referenceType: "quotation",
-    referenceId: params.id
+    referenceId: params.id,
+    metadata: { before, quotationNumber: before?.quotation_number || "" }
   });
   return Response.json({ ok: true, result });
 }

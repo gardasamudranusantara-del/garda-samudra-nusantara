@@ -23,7 +23,7 @@ function countBy(items, getter) {
 }
 
 export async function GET(request) {
-  if (!isAutomationAuthorized(request) && !hasAdminPermission(request, "automation")) {
+  if (!isAutomationAuthorized(request) && !(await hasAdminPermission(request, "automation"))) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 

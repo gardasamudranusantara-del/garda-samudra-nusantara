@@ -95,6 +95,10 @@ const formLabels = {
     selectedProducts: "Selected Products",
     noSelectedProducts: "No product selected yet. You can still send the inquiry and GSN will help recommend it.",
     details: "Order Details",
+    quickMode: "Quick Inquiry",
+    detailedMode: "Detailed Inquiry",
+    quickProduct: "Product Interest",
+    quickProductPlaceholder: "Example: Coconut shell charcoal, vanilla, fresh vegetables...",
     optionalDetails: "Add packaging, specification, and target price",
     hideOptionalDetails: "Hide additional details",
     message: "Additional Message",
@@ -118,6 +122,10 @@ const formLabels = {
     selectedProducts: "Produk Dipilih",
     noSelectedProducts: "Belum ada produk dipilih. Anda tetap bisa kirim inquiry dan GSN akan membantu merekomendasikannya.",
     details: "Detail Pesanan",
+    quickMode: "Inquiry Cepat",
+    detailedMode: "Inquiry Detail",
+    quickProduct: "Produk Diminati",
+    quickProductPlaceholder: "Contoh: Arang batok kelapa, vanili, sayuran segar...",
     optionalDetails: "Tambah packaging, spesifikasi, dan target price",
     hideOptionalDetails: "Sembunyikan detail tambahan",
     message: "Pesan Tambahan",
@@ -136,6 +144,7 @@ const emptyForm = {
   whatsapp: "",
   country: "",
   city: "",
+  quickProduct: "",
   quantity: "",
   monthlyRequirement: "",
   packagingRequest: "",
@@ -147,6 +156,7 @@ const emptyForm = {
 
 function createWhatsappText(form, selectedDivision, selectedProducts) {
   const divisionName = divisions.find((division) => division.id === selectedDivision)?.title || "GSN";
+  const effectiveProducts = selectedProducts.length ? selectedProducts : splitQuickProducts(form.quickProduct);
 
   return [
     "Hello Garda Samudra Nusantara, I would like to send an inquiry.",
@@ -157,7 +167,7 @@ function createWhatsappText(form, selectedDivision, selectedProducts) {
     `WhatsApp: ${form.whatsapp || "-"}`,
     `Location: ${[form.city, form.country].filter(Boolean).join(", ") || "-"}`,
     `Division: ${divisionName}`,
-    `Products: ${selectedProducts.length ? selectedProducts.join(", ") : "-"}`,
+    `Products: ${effectiveProducts.length ? effectiveProducts.join(", ") : "-"}`,
     `Quantity: ${form.quantity || "-"}`,
     `Monthly Requirement: ${form.monthlyRequirement || "-"}`,
     `Packaging Request: ${form.packagingRequest || "-"}`,
@@ -166,6 +176,26 @@ function createWhatsappText(form, selectedDivision, selectedProducts) {
     "",
     form.message || "-"
   ].join("\n");
+}
+
+function splitQuickProducts(value) {
+  return String(value || "")
+    .split(/[,;\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function inferDivisionFromProducts(products = []) {
+  const text = products.join(" ").toLowerCase();
+
+  if (/(charcoal|arang|briquette|briket|pellet|biomass|bbq|shisha)/i.test(text)) {
+    return "green";
+  }
+  if (/(vanilla|vanili|cinnamon|kayu manis|nutmeg|pala|clove|cengkeh|pepper|lada|turmeric|kunyit|ginger|jahe|patchouli|nilam|spice|rempah)/i.test(text)) {
+    return "prime";
+  }
+  return "fresh";
 }
 
 function normalizeSmartProducts(divisionId, selectedProducts = []) {
@@ -216,12 +246,15 @@ export default function InquiryForm() {
   const [status, setStatus] = useState("idle");
   const [notice, setNotice] = useState("");
   const [language, setLanguage] = useState("en");
+  const [formMode, setFormMode] = useState("quick");
   const [showAdvancedDetails, setShowAdvancedDetails] = useState(false);
 
+  const effectiveSelectedProducts = selectedProducts.length ? selectedProducts : splitQuickProducts(form.quickProduct);
+  const effectiveDivision = selectedProducts.length ? selectedDivision : inferDivisionFromProducts(effectiveSelectedProducts);
   const activeGroups = productGroups[selectedDivision];
   const whatsappHref = useMemo(
-    () => `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(createWhatsappText(form, selectedDivision, selectedProducts))}`,
-    [form, selectedDivision, selectedProducts]
+    () => `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(createWhatsappText(form, effectiveDivision, effectiveSelectedProducts))}`,
+    [form, effectiveDivision, effectiveSelectedProducts]
   );
 
   function applySmartInquiry(detail) {
@@ -232,9 +265,10 @@ export default function InquiryForm() {
     window.__gsnSmartInquiryApplied = true;
     setSelectedDivision(detail.divisionId);
     setSelectedProducts(normalizeSmartProducts(detail.divisionId, Array.isArray(detail.selectedProducts) ? detail.selectedProducts : []));
-    setForm((current) => ({
-      ...current,
-      quantity: detail.quantity || current.quantity,
+      setForm((current) => ({
+        ...current,
+        quickProduct: Array.isArray(detail.selectedProducts) ? detail.selectedProducts.join(", ") : current.quickProduct,
+        quantity: detail.quantity || current.quantity,
       packagingRequest: detail.packagingRequest || current.packagingRequest,
       productSpecification: detail.productSpecification || current.productSpecification,
       message: detail.message || current.message
@@ -335,8 +369,8 @@ export default function InquiryForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          selectedDivision,
-          selectedProducts
+          selectedDivision: effectiveDivision,
+          selectedProducts: effectiveSelectedProducts
         })
       });
       const result = await response.json();
@@ -348,7 +382,7 @@ export default function InquiryForm() {
       setStatus("success");
       setNotice("INQUIRY SENT SUCCESSFULLY");
       trackInquiryEvent("inquiry_submit", selectedDivision, {
-        selectedProducts,
+        selectedProducts: effectiveSelectedProducts,
         country: form.country,
         hasEmail: Boolean(form.email),
         hasCompany: Boolean(form.companyName)
@@ -385,7 +419,49 @@ export default function InquiryForm() {
             <p>{text.description}</p>
           </div>
 
-          <fieldset className="neo-fieldset">
+          <div className="neo-mode-toggle" role="tablist" aria-label="Inquiry form mode">
+            <button className={formMode === "quick" ? "is-active" : ""} type="button" onClick={() => setFormMode("quick")}>
+              {text.quickMode}
+            </button>
+            <button className={formMode === "detailed" ? "is-active" : ""} type="button" onClick={() => setFormMode("detailed")}>
+              {text.detailedMode}
+            </button>
+          </div>
+
+          {formMode === "quick" ? (
+            <fieldset className="neo-fieldset neo-quick-fieldset">
+              <legend>{text.quickMode}</legend>
+              <div className="neo-quick-grid">
+                <label>
+                  <span>Full Name</span>
+                  <input name="fullName" value={form.fullName} onChange={updateField} required />
+                </label>
+                <label>
+                  <span>WhatsApp Number</span>
+                  <input name="whatsapp" value={form.whatsapp} onChange={updateField} required />
+                </label>
+                <label>
+                  <span>{text.quickProduct}</span>
+                  <input list="gsn-product-suggestions" name="quickProduct" value={form.quickProduct} onChange={updateField} placeholder={text.quickProductPlaceholder} required />
+                </label>
+                <label>
+                  <span>Quantity</span>
+                  <input name="quantity" value={form.quantity} onChange={updateField} placeholder="Example: 1 container / 10 MT" />
+                </label>
+                <label>
+                  <span>Destination Country</span>
+                  <input name="country" value={form.country} onChange={updateField} required />
+                </label>
+              </div>
+              <datalist id="gsn-product-suggestions">
+                {Object.values(productGroups).flat().flatMap((group) => group.products).map((product) => (
+                  <option key={product} value={product} />
+                ))}
+              </datalist>
+            </fieldset>
+          ) : null}
+
+          {formMode === "detailed" ? <fieldset className="neo-fieldset">
             <legend>{text.customer}</legend>
             <div className="neo-input-grid">
               <label>
@@ -401,9 +477,9 @@ export default function InquiryForm() {
                 <input name="country" value={form.country} onChange={updateField} required />
               </label>
             </div>
-          </fieldset>
+          </fieldset> : null}
 
-          <fieldset className="neo-fieldset">
+          {formMode === "detailed" ? <fieldset className="neo-fieldset">
             <legend>{text.division}</legend>
             <div className="neo-division-grid">
               {divisions.map((division) => (
@@ -419,9 +495,9 @@ export default function InquiryForm() {
                 </button>
               ))}
             </div>
-          </fieldset>
+          </fieldset> : null}
 
-          <fieldset className="neo-fieldset">
+          {formMode === "detailed" ? <fieldset className="neo-fieldset">
             <legend>{text.products}</legend>
             <div className="neo-product-picker">
               <div className="neo-input-grid">
@@ -473,9 +549,9 @@ export default function InquiryForm() {
                 )}
               </div>
             </div>
-          </fieldset>
+          </fieldset> : null}
 
-          <fieldset className="neo-fieldset">
+          {formMode === "detailed" ? <fieldset className="neo-fieldset">
             <legend>{text.details}</legend>
             <div className="neo-input-grid">
               <label>
@@ -487,17 +563,17 @@ export default function InquiryForm() {
                 <input name="monthlyRequirement" value={form.monthlyRequirement} onChange={updateField} />
               </label>
             </div>
-          </fieldset>
+          </fieldset> : null}
 
-          <button
+          {formMode === "detailed" ? <button
             className="neo-details-toggle"
             type="button"
             onClick={() => setShowAdvancedDetails((current) => !current)}
           >
             {showAdvancedDetails ? text.hideOptionalDetails : text.optionalDetails}
-          </button>
+          </button> : null}
 
-          {showAdvancedDetails ? (
+          {formMode === "detailed" && showAdvancedDetails ? (
             <div className="neo-advanced-details">
               <div className="neo-input-grid">
                 <label>
@@ -556,7 +632,7 @@ export default function InquiryForm() {
             <a
               className="neo-whatsapp"
               href={whatsappHref}
-              onClick={() => trackInquiryEvent("whatsapp_click", selectedDivision, { selectedProducts })}
+              onClick={() => trackInquiryEvent("whatsapp_click", effectiveDivision, { selectedProducts: effectiveSelectedProducts })}
               rel="noreferrer"
               target="_blank"
             >

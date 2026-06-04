@@ -3,7 +3,7 @@ import { insertAdminActivity, insertNotification, insertQuotationRequest } from 
 import { notifyOwner } from "@/lib/ownerNotifications";
 
 export async function POST(request) {
-  const permission = requireAdminPermission(request, "edit_quotations");
+  const permission = await requireAdminPermission(request, "edit_quotations");
   if (!permission.ok) {
     return Response.json({ message: permission.message }, { status: permission.status });
   }
@@ -16,6 +16,7 @@ export async function POST(request) {
 
   const result = await insertQuotationRequest({
     ...data,
+    quotation_number: String(data.quotation_number || "").slice(0, 48),
     request_summary: String(data.request_summary || "").slice(0, 2400),
     product_details: String(data.product_details || "").slice(0, 2400),
     internal_notes: String(data.internal_notes || "").slice(0, 1200)
@@ -41,9 +42,16 @@ export async function POST(request) {
   await insertAdminActivity({
     admin: permission.admin,
     action: "create_quotation",
-    label: `Created quotation for ${data.buyer_name || data.company_name || "buyer"}`,
+    label: `Created quotation ${data.quotation_number || ""} for ${data.buyer_name || data.company_name || "buyer"}`.trim(),
     referenceType: "quotation",
-    referenceId: result?.[0]?.id || null
+    referenceId: result?.[0]?.id || null,
+    metadata: {
+      quotationNumber: data.quotation_number || "",
+      buyer: data.buyer_name || data.company_name || "",
+      products: Array.isArray(data.products) ? data.products : [],
+      quantity: data.quantity || "",
+      status: "Draft"
+    }
   });
 
   return Response.json({ ok: true, result });

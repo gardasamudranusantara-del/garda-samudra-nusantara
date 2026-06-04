@@ -77,18 +77,116 @@ export const metadata = {
 export default function RootLayout({ children }) {
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
   const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN;
+  const productSchemas = [
+    {
+      name: "Coconut Shell Charcoal",
+      description: "Indonesian coconut shell charcoal for BBQ, shisha, retail charcoal, and industrial buyer requirements.",
+      category: "Coconut charcoal supplier Indonesia"
+    },
+    {
+      name: "Charcoal Briquette",
+      description: "Export-oriented Indonesian charcoal briquettes for BBQ, shisha, hospitality, and retail markets.",
+      category: "Charcoal briquette exporter Indonesia"
+    },
+    {
+      name: "Wood Pellet",
+      description: "Indonesian biomass wood pellet supply for industrial heating, boiler use, and renewable fuel programs.",
+      category: "Wood pellet supplier Indonesia"
+    },
+    {
+      name: "Premium Indonesian Spices",
+      description: "Selected Indonesian spices including vanilla, cinnamon, nutmeg, cloves, pepper, turmeric, ginger, and patchouli.",
+      category: "Indonesian spices exporter"
+    },
+    {
+      name: "Fresh Vegetables",
+      description: "Fresh vegetables from Indonesia for food service, retail, catering, and recurring procurement needs.",
+      category: "Fresh vegetables supplier Indonesia"
+    },
+    {
+      name: "Eggs and Premium Rice",
+      description: "Egg and premium rice supply for retail, food service, distributor, hotel, restaurant, and catering buyers.",
+      category: "Indonesian food commodity supplier"
+    }
+  ];
+  const faqSchemas = [
+    {
+      question: "What products does Garda Samudra Nusantara supply?",
+      answer: "Garda Samudra Nusantara supplies fresh vegetables, eggs, premium rice, coconut shell charcoal, charcoal briquettes, wood pellets, and selected Indonesian spices."
+    },
+    {
+      question: "Can GSN support international buyer inquiries?",
+      answer: "Yes. GSN supports international buyer inquiries by reviewing destination country, product requirements, quantity, packaging needs, and specifications before preparing quotation follow-up."
+    },
+    {
+      question: "Does GSN provide MOQ and sample information?",
+      answer: "MOQ and sample availability vary by product category, supply condition, destination, and packaging requirement. Buyers should submit product, quantity, and destination details for accurate guidance."
+    },
+    {
+      question: "How can buyers request a quotation from GSN?",
+      answer: "Buyers can request a quotation through the inquiry form, WhatsApp, email, or NusaBot by sharing product interest, quantity, destination country, company information, and required specifications."
+    },
+    {
+      question: "Which GSN divisions handle each product category?",
+      answer: "Garda Fresh handles fresh vegetables, eggs, and rice. Garda Green handles coconut shell charcoal, charcoal briquette, and wood pellet. Garda Prime handles premium Indonesian spices."
+    }
+  ];
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        name: siteName,
+        url: siteUrl,
+        publisher: {
+          "@id": `${siteUrl}/#organization`
+        },
+        inLanguage: "en-US"
+      },
+      {
         "@type": "Organization",
         "@id": `${siteUrl}/#organization`,
         name: siteName,
+        legalName: "Garda Samudra Nusantara",
         url: siteUrl,
         logo: `${siteUrl}/logos/gsn-clear-logo.png`,
+        image: `${siteUrl}/og-gsn.jpg`,
         description,
         email: "gardasamudranusantara@gmail.com",
         telephone: "+62 851-9090-7967",
+        foundingLocation: {
+          "@type": "Place",
+          name: "Gresik, Indonesia",
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: "Gresik",
+            addressCountry: "ID"
+          }
+        },
+        areaServed: [
+          { "@type": "Country", name: "Indonesia" },
+          { "@type": "Place", name: "Global export markets" }
+        ],
+        knowsAbout: [
+          "Indonesian commodity supplier",
+          "Coconut shell charcoal supplier Indonesia",
+          "Charcoal briquette export",
+          "Wood pellet Indonesia",
+          "Indonesian spices exporter",
+          "Fresh vegetables supplier Indonesia",
+          "International trading company Indonesia"
+        ],
+        contactPoint: [
+          {
+            "@type": "ContactPoint",
+            contactType: "sales",
+            email: "gardasamudranusantara@gmail.com",
+            telephone: "+62 851-9090-7967",
+            availableLanguage: ["English", "Indonesian"],
+            areaServed: "Worldwide"
+          }
+        ],
         sameAs: [
           "https://www.instagram.com/gsn.corp",
           "https://www.linkedin.com/search/results/companies/?keywords=Garda%20Samudra%20Nusantara"
@@ -114,20 +212,47 @@ export default function RootLayout({ children }) {
         "@type": "ItemList",
         "@id": `${siteUrl}/#products`,
         name: "GSN Indonesian Commodity Product Categories",
-        itemListElement: [
-          "Fresh vegetables, eggs, and premium rice",
-          "Coconut shell charcoal, charcoal briquette, and wood pellet",
-          "Indonesian spices including vanilla, cinnamon, nutmeg, cloves, pepper, and patchouli"
-        ].map((name, index) => ({
+        itemListElement: productSchemas.map((product, index) => ({
           "@type": "ListItem",
           position: index + 1,
           item: {
             "@type": "Product",
-            name,
+            "@id": `${siteUrl}/#product-${index + 1}`,
+            name: product.name,
+            description: product.description,
             brand: {
               "@id": `${siteUrl}/#organization`
             },
-            category: "Indonesian commodity supplier"
+            manufacturer: {
+              "@id": `${siteUrl}/#organization`
+            },
+            category: product.category,
+            offers: {
+              "@type": "Offer",
+              priceCurrency: "USD",
+              priceSpecification: {
+                "@type": "PriceSpecification",
+                priceCurrency: "USD",
+                description: "Quotation is prepared after product specification, quantity, packaging, and destination are confirmed."
+              },
+              availability: "https://schema.org/InStock",
+              url: `${siteUrl}/#gsnformneo`,
+              seller: {
+                "@id": `${siteUrl}/#organization`
+              }
+            }
+          }
+        }))
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${siteUrl}/#faq`,
+        mainEntity: faqSchemas.map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: item.answer
           }
         }))
       }

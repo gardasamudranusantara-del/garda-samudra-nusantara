@@ -13,12 +13,20 @@ function hoursSince(value) {
   return Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 36e5));
 }
 
+function hoursPastDeadline(value) {
+  if (!value) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 36e5));
+}
+
 function makeKey(type, referenceId) {
   return `${type}:${referenceId}`;
 }
 
 export async function GET(request) {
-  if (!isAutomationAuthorized(request) && !hasAdminPermission(request, "automation")) {
+  if (!isAutomationAuthorized(request) && !(await hasAdminPermission(request, "automation"))) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -41,7 +49,9 @@ export async function GET(request) {
 
   for (const inquiry of inquiries) {
     const age = hoursSince(inquiry.created_at);
-    const dueThresholds = thresholds.filter((threshold) => age >= threshold.hours);
+    const deadlineAge = hoursPastDeadline(inquiry.follow_up_deadline);
+    const effectiveAge = Math.max(age, deadlineAge ? 24 + deadlineAge : 0);
+    const dueThresholds = thresholds.filter((threshold) => effectiveAge >= threshold.hours);
 
     for (const threshold of dueThresholds) {
       const key = makeKey(threshold.type, inquiry.id);
@@ -50,7 +60,9 @@ export async function GET(request) {
       }
 
       const title = inquiry.full_name || inquiry.company_name || "GSN Lead";
-      const message = `${title} has not been marked contacted after ${age} hours.`;
+      const message = inquiry.follow_up_deadline && deadlineAge
+        ? `${title} passed the manual follow-up deadline by ${deadlineAge} hours.`
+        : `${title} has not been marked contacted after ${age} hours.`;
       const result = await insertNotification({
         type: threshold.type,
         title,
@@ -67,6 +79,8 @@ export async function GET(request) {
           `Company: ${inquiry.company_name || "-"}`,
           `WhatsApp: ${inquiry.whatsapp || "-"}`,
           `Country: ${inquiry.country || "-"}`,
+          `Assigned to: ${inquiry.assigned_to || "Unassigned"}`,
+          `Deadline: ${inquiry.follow_up_deadline || "-"}`,
           `Status: ${inquiry.status || "New"}`
         ]
       });

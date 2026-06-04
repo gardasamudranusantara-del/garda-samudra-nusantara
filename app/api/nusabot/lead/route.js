@@ -53,6 +53,7 @@ export async function POST(request) {
         `WhatsApp: ${data.whatsapp || "-"}`,
         `Country: ${data.country || "-"}`,
         `Products: ${products.join(", ") || "-"}`,
+        `Quantity: ${data.quantity || "-"}`,
         `Summary: ${data.message || "Product conversation"}`
       ]
     });
