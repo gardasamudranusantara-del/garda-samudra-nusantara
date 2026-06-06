@@ -29,6 +29,8 @@ const budgetCategories = ["Operations", "Marketing", "Technology", "Human Resour
 const financialReportTypes = ["Profit & Loss Statement", "Cash Flow Statement", "Revenue Report", "Expense Report", "Budget Report", "Financial Summary"];
 const financeTypeTables = {
   financeTransaction: "finance_transactions",
+  bankAccount: "bank_accounts",
+  pettyCash: "petty_cash",
   financeRevenue: "revenues",
   financeExpense: "expenses",
   financeReceivable: "receivables",
@@ -36,6 +38,9 @@ const financeTypeTables = {
   financeBudget: "budgets",
   financeReport: "financial_reports"
 };
+const financePeriodPresets = ["This Month", "This Quarter", "This Year", "Custom"];
+const pettyCashStatuses = ["Recorded", "Reimburse", "Cash Opname", "Pending Review"];
+const bankAccountStatuses = ["Active", "Inactive", "Closed"];
 const expenseCatalog = {
   "Operational Expense": ["Office Supplies", "Internet", "Utilities", "Office Rent", "Bank Charges"],
   "Technology Expense": ["Domain", "Hosting", "CRM", "Supabase", "Cloud Services", "ChatGPT", "Canva", "Google Workspace"],
@@ -223,6 +228,40 @@ function formatMoney(value, currency = "IDR") {
   }).format(parseAmount(value));
 }
 
+function toDateInput(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function getPeriodRange(preset) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  if (preset === "This Year") {
+    return { from: `${year}-01-01`, to: `${year}-12-31` };
+  }
+
+  if (preset === "This Quarter") {
+    const quarterStart = Math.floor(month / 3) * 3;
+    const start = new Date(year, quarterStart, 1);
+    const end = new Date(year, quarterStart + 3, 0);
+    return { from: toDateInput(start), to: toDateInput(end) };
+  }
+
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0);
+  return { from: toDateInput(start), to: toDateInput(end) };
+}
+
+function isInDateRange(value, from, to) {
+  if (!value) {
+    return false;
+  }
+
+  const date = String(value).slice(0, 10);
+  return (!from || date >= from) && (!to || date <= to);
+}
+
 function sumByCurrency(items, getter) {
   return financeCurrencies.reduce((total, currency) => {
     total[currency] = items
@@ -295,6 +334,92 @@ function exportRowsCsv(filename, headers, rows) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function downloadTextFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function makeFinanceReportRows(summary) {
+  return [
+    ["Metric", "Value", "Currency"],
+    ["Total Revenue", summary.totalRevenue, summary.currency],
+    ["Total Expenses", summary.totalExpenses, summary.currency],
+    ["Net Profit", summary.netProfit, summary.currency],
+    ["Cash In", summary.cashIn, summary.currency],
+    ["Cash Out", summary.cashOut, summary.currency],
+    ["Net Cash Flow", summary.netCashFlow, summary.currency],
+    ["Accounts Receivable", summary.receivableOutstanding, summary.currency],
+    ["Accounts Payable", summary.payableOutstanding, summary.currency],
+    ["Budget Planned", summary.plannedBudget, summary.currency],
+    ["Budget Actual", summary.actualBudget, summary.currency],
+    ["Budget Remaining", summary.remainingBudget, summary.currency],
+    ["Top Revenue Division", summary.topRevenueDivision, ""],
+    ["Top Expense Category", summary.topExpenseCategory, ""]
+  ];
+}
+
+function exportFinanceReportCsv(summary) {
+  exportRowsCsv(
+    `gsn-finance-report-${new Date().toISOString().slice(0, 10)}.csv`,
+    ["Metric", "Value", "Currency"],
+    makeFinanceReportRows(summary).slice(1)
+  );
+}
+
+function exportFinanceReportExcel(summary, draft) {
+  const rows = makeFinanceReportRows(summary);
+  const htmlRows = rows.map((row) => `<tr>${row.map((cell) => `<td>${String(cell ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</td>`).join("")}</tr>`).join("");
+  downloadTextFile(
+    `gsn-finance-report-${new Date().toISOString().slice(0, 10)}.xls`,
+    `<html><head><meta charset="utf-8" /></head><body><h1>${draft.title || "GSN Financial Report"}</h1><p>${draft.report_type || "Financial Summary"}</p><table border="1">${htmlRows}</table></body></html>`,
+    "application/vnd.ms-excel;charset=utf-8"
+  );
+}
+
+function printFinanceReport(summary, draft) {
+  const breakdownRows = (title, rows) => `
+    <h2>${title}</h2>
+    <table>
+      ${Object.entries(rows).map(([name, value]) => `<tr><td>${name}</td><td>${formatMoney(value, summary.currency)}</td></tr>`).join("") || "<tr><td>No data</td><td>-</td></tr>"}
+    </table>
+  `;
+  const metrics = makeFinanceReportRows(summary).slice(1).map(([metric, value, currency]) => `
+    <tr><td>${metric}</td><td>${typeof value === "number" ? formatMoney(value, currency || summary.currency) : value}</td></tr>
+  `).join("");
+  const popup = window.open("", "_blank", "width=900,height=1100");
+  if (!popup) {
+    return;
+  }
+  popup.document.write(`
+    <html>
+      <head>
+        <title>${draft.title || "GSN Financial Report"}</title>
+        <style>
+          body{font-family:Arial,sans-serif;color:#172033;padding:42px;}
+          header{display:flex;justify-content:space-between;gap:24px;border-bottom:6px solid #6b4dff;padding-bottom:22px;margin-bottom:24px;}
+          h1{margin:0;font-size:32px;color:#1f2460;} h2{margin:24px 0 10px;color:#1f2460;font-size:18px;}
+          p{color:#667085;} table{width:100%;border-collapse:collapse;margin-top:8px;} td,th{border-bottom:1px solid #d9dce8;padding:12px;text-align:left;} td:last-child{text-align:right;font-weight:700;}
+          .total{margin-top:24px;background:#6b4dff;color:white;padding:18px 20px;text-align:right;font-size:22px;font-weight:800;}
+        </style>
+      </head>
+      <body>
+        <header><div><strong>Garda Samudra Nusantara</strong><h1>${draft.title || "Financial Report"}</h1><p>${draft.report_type || "Financial Summary"} | ${draft.date_from || "-"} to ${draft.date_to || "-"}</p></div><div>Generated<br/>${new Date().toLocaleDateString()}</div></header>
+        <table>${metrics}</table>
+        <div class="total">Net Profit: ${formatMoney(summary.netProfit, summary.currency)}</div>
+        ${breakdownRows("Revenue Breakdown", summary.revenueByDivision)}
+        ${breakdownRows("Expense Breakdown", summary.expenseByCategory)}
+        <script>window.print();</script>
+      </body>
+    </html>
+  `);
+  popup.document.close();
 }
 
 function formatAuditValue(value) {
@@ -473,6 +598,28 @@ function financeTransactionToDraft(item = {}) {
   };
 }
 
+function bankAccountToDraft(item = {}) {
+  return {
+    account_name: item.account_name || "",
+    bank_name: item.bank_name || "",
+    account_number: item.account_number || "",
+    currency: item.currency || "IDR",
+    current_balance: String(item.current_balance ?? ""),
+    status: item.status || "Active"
+  };
+}
+
+function pettyCashToDraft(item = {}) {
+  return {
+    cash_date: String(item.cash_date || "").slice(0, 10),
+    description: item.description || "",
+    amount: String(item.amount ?? ""),
+    currency: item.currency || "IDR",
+    responsible_person: item.responsible_person || "",
+    status: item.status || "Recorded"
+  };
+}
+
 function financeRevenueToDraft(item = {}) {
   return {
     invoice_number: item.invoice_number || "",
@@ -597,6 +744,22 @@ export default function AdminDashboard() {
     payment_method: "Bank Transfer",
     reference_number: ""
   });
+  const [bankAccountDraft, setBankAccountDraft] = useState({
+    account_name: "",
+    bank_name: "",
+    account_number: "",
+    currency: "IDR",
+    current_balance: "",
+    status: "Active"
+  });
+  const [pettyCashDraft, setPettyCashDraft] = useState({
+    cash_date: new Date().toISOString().slice(0, 10),
+    description: "",
+    amount: "",
+    currency: "IDR",
+    responsible_person: "",
+    status: "Recorded"
+  });
   const [revenueDraft, setRevenueDraft] = useState({
     invoice_number: "",
     buyer_name: "",
@@ -652,8 +815,9 @@ export default function AdminDashboard() {
   const [financialReportDraft, setFinancialReportDraft] = useState({
     report_type: "Financial Summary",
     title: "GSN Financial Summary",
-    date_from: "",
-    date_to: new Date().toISOString().slice(0, 10)
+    period_preset: "This Month",
+    date_from: getPeriodRange("This Month").from,
+    date_to: getPeriodRange("This Month").to
   });
   const [quotationDraft, setQuotationDraft] = useState({
     quotation_number: "",
@@ -848,6 +1012,8 @@ export default function AdminDashboard() {
       investor: investorToDraft,
       quotation: quotationToDraft,
       financeTransaction: financeTransactionToDraft,
+      bankAccount: bankAccountToDraft,
+      pettyCash: pettyCashToDraft,
       financeRevenue: financeRevenueToDraft,
       financeExpense: financeExpenseToDraft,
       financeReceivable: financeReceivableToDraft,
@@ -1276,6 +1442,63 @@ export default function AdminDashboard() {
     await loadDashboard(savedCredentials);
   }
 
+  async function saveBankAccount() {
+    setNotice("");
+
+    const response = await fetch("/api/admin/finance/bank-accounts", {
+      method: "POST",
+      headers: {
+        ...authHeaders(savedCredentials),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(bankAccountDraft)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to save bank account.");
+      return;
+    }
+
+    setNotice("Bank account saved.");
+    setBankAccountDraft((current) => ({
+      ...current,
+      account_name: "",
+      bank_name: "",
+      account_number: "",
+      current_balance: ""
+    }));
+    await loadDashboard(savedCredentials);
+  }
+
+  async function savePettyCash() {
+    setNotice("");
+
+    const response = await fetch("/api/admin/finance/petty-cash", {
+      method: "POST",
+      headers: {
+        ...authHeaders(savedCredentials),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(pettyCashDraft)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to save petty cash record.");
+      return;
+    }
+
+    setNotice("Petty cash record saved.");
+    setPettyCashDraft((current) => ({
+      ...current,
+      cash_date: new Date().toISOString().slice(0, 10),
+      description: "",
+      amount: ""
+    }));
+    await loadDashboard(savedCredentials);
+  }
+
   function updateRevenueDraft(field, value) {
     setRevenueDraft((current) => {
       const next = { ...current, [field]: value };
@@ -1477,6 +1700,9 @@ export default function AdminDashboard() {
         ...financialReportDraft,
         filters: {
           currency: "IDR",
+          period_preset: financialReportDraft.period_preset,
+          date_from: financialReportDraft.date_from,
+          date_to: financialReportDraft.date_to,
           source: "admin_finance_dashboard"
         },
         report_data: financialReportSummary
@@ -1517,6 +1743,7 @@ export default function AdminDashboard() {
   const finance = data?.finance || null;
   const financeTransactions = finance?.transactions || [];
   const bankAccounts = finance?.bankAccounts || [];
+  const pettyCash = finance?.pettyCash || [];
   const financeRevenues = finance?.revenues || [];
   const financeExpenses = finance?.expenses || [];
   const receivables = finance?.receivables || [];
@@ -1666,11 +1893,13 @@ export default function AdminDashboard() {
 
   const financialReportSummary = useMemo(() => {
     const currency = "IDR";
-    const revenueItems = financeRevenues.filter((item) => (item.currency || currency) === currency);
-    const expenseItems = financeExpenses.filter((item) => (item.currency || currency) === currency);
-    const transactionItems = financeTransactions.filter((item) => (item.currency || currency) === currency);
-    const receivableItems = receivables.filter((item) => (item.currency || currency) === currency);
-    const payableItems = payables.filter((item) => (item.currency || currency) === currency);
+    const from = financialReportDraft.date_from;
+    const to = financialReportDraft.date_to;
+    const revenueItems = financeRevenues.filter((item) => (item.currency || currency) === currency && isInDateRange(item.transaction_date || item.created_at, from, to));
+    const expenseItems = financeExpenses.filter((item) => (item.currency || currency) === currency && isInDateRange(item.expense_date || item.created_at, from, to));
+    const transactionItems = financeTransactions.filter((item) => (item.currency || currency) === currency && isInDateRange(item.transaction_date || item.created_at, from, to));
+    const receivableItems = receivables.filter((item) => (item.currency || currency) === currency && (!item.due_date || isInDateRange(item.due_date || item.created_at, from, to)));
+    const payableItems = payables.filter((item) => (item.currency || currency) === currency && (!item.due_date || isInDateRange(item.due_date || item.created_at, from, to)));
     const budgetItems = budgets.filter((item) => (item.currency || currency) === currency);
     const revenueByDivision = revenueItems.reduce((totals, item) => {
       const key = item.division || "Uncategorized";
@@ -1718,9 +1947,11 @@ export default function AdminDashboard() {
       topExpenseCategory: sortedExpenseCategory[0]?.[0] || "-",
       revenueByDivision,
       expenseByCategory,
+      dateFrom: from,
+      dateTo: to,
       generatedAt: new Date().toISOString()
     };
-  }, [budgets, financeExpenses, financeRevenues, financeTransactions, payables, receivables]);
+  }, [budgets, financeExpenses, financeRevenues, financialReportDraft.date_from, financialReportDraft.date_to, financeTransactions, payables, receivables]);
 
   const chartData = useMemo(() => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -1766,6 +1997,8 @@ export default function AdminDashboard() {
     investor: "Investor Inquiry",
     quotation: "Quotation Request",
     financeTransaction: "Finance Transaction",
+    bankAccount: "Bank Account",
+    pettyCash: "Petty Cash",
     financeRevenue: "Revenue Record",
     financeExpense: "Expense Record",
     financeReceivable: "Accounts Receivable",
@@ -1779,6 +2012,14 @@ export default function AdminDashboard() {
       transaction_type: ["Cash In", "Cash Out"],
       currency: financeCurrencies,
       payment_method: paymentMethods
+    },
+    bankAccount: {
+      currency: financeCurrencies,
+      status: bankAccountStatuses
+    },
+    pettyCash: {
+      currency: financeCurrencies,
+      status: pettyCashStatuses
     },
     financeRevenue: {
       division: revenueDivisions,
@@ -1864,6 +2105,22 @@ export default function AdminDashboard() {
       ["currency", "Currency", "select"],
       ["payment_method", "Payment Method", "select"],
       ["reference_number", "Reference Number"]
+    ],
+    bankAccount: [
+      ["account_name", "Account Name"],
+      ["bank_name", "Bank Name"],
+      ["account_number", "Account Number"],
+      ["currency", "Currency", "select"],
+      ["current_balance", "Current Balance"],
+      ["status", "Status", "select"]
+    ],
+    pettyCash: [
+      ["cash_date", "Date", "date"],
+      ["description", "Description", "textarea"],
+      ["amount", "Amount"],
+      ["currency", "Currency", "select"],
+      ["responsible_person", "Responsible Person"],
+      ["status", "Status", "select"]
     ],
     financeRevenue: [
       ["invoice_number", "Invoice Number"],
@@ -2511,6 +2768,58 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              <div className="admin-panel">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Bank Accounts</p>
+                    <h2>Company Balances</h2>
+                  </div>
+                  <button onClick={saveBankAccount} type="button">Save Bank</button>
+                </div>
+                <div className="admin-settings-form compact">
+                  <label>Account Name<input value={bankAccountDraft.account_name} onChange={(event) => setBankAccountDraft((current) => ({ ...current, account_name: event.target.value }))} placeholder="GSN Operating Account" /></label>
+                  <label>Bank Name<input value={bankAccountDraft.bank_name} onChange={(event) => setBankAccountDraft((current) => ({ ...current, bank_name: event.target.value }))} placeholder="Bank name" /></label>
+                  <label>Account Number<input value={bankAccountDraft.account_number} onChange={(event) => setBankAccountDraft((current) => ({ ...current, account_number: event.target.value }))} placeholder="Optional" /></label>
+                  <label>Balance<input inputMode="decimal" value={bankAccountDraft.current_balance} onChange={(event) => setBankAccountDraft((current) => ({ ...current, current_balance: event.target.value }))} placeholder="0" /></label>
+                  <label>Currency
+                    <select value={bankAccountDraft.currency} onChange={(event) => setBankAccountDraft((current) => ({ ...current, currency: event.target.value }))}>
+                      {financeCurrencies.map((currency) => <option key={currency}>{currency}</option>)}
+                    </select>
+                  </label>
+                  <label>Status
+                    <select value={bankAccountDraft.status} onChange={(event) => setBankAccountDraft((current) => ({ ...current, status: event.target.value }))}>
+                      {bankAccountStatuses.map((status) => <option key={status}>{status}</option>)}
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Petty Cash</p>
+                    <h2>Reimburse & Cash Opname</h2>
+                  </div>
+                  <button onClick={savePettyCash} type="button">Save Petty Cash</button>
+                </div>
+                <div className="admin-settings-form compact">
+                  <label>Date<input type="date" value={pettyCashDraft.cash_date} onChange={(event) => setPettyCashDraft((current) => ({ ...current, cash_date: event.target.value }))} /></label>
+                  <label>Amount<input inputMode="decimal" value={pettyCashDraft.amount} onChange={(event) => setPettyCashDraft((current) => ({ ...current, amount: event.target.value }))} placeholder="0" /></label>
+                  <label>Currency
+                    <select value={pettyCashDraft.currency} onChange={(event) => setPettyCashDraft((current) => ({ ...current, currency: event.target.value }))}>
+                      {financeCurrencies.map((currency) => <option key={currency}>{currency}</option>)}
+                    </select>
+                  </label>
+                  <label>Responsible Person<input value={pettyCashDraft.responsible_person} onChange={(event) => setPettyCashDraft((current) => ({ ...current, responsible_person: event.target.value }))} placeholder="Dapi / Pici / staff" /></label>
+                  <label>Status
+                    <select value={pettyCashDraft.status} onChange={(event) => setPettyCashDraft((current) => ({ ...current, status: event.target.value }))}>
+                      {pettyCashStatuses.map((status) => <option key={status}>{status}</option>)}
+                    </select>
+                  </label>
+                  <label className="wide">Description<textarea value={pettyCashDraft.description} onChange={(event) => setPettyCashDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Cash purpose, reimburse note, or cash opname result" /></label>
+                </div>
+              </div>
+
               <div className="admin-panel wide">
                 <div className="admin-panel-header">
                   <div>
@@ -2694,6 +3003,62 @@ export default function AdminDashboard() {
               <div className="admin-panel wide">
                 <div className="admin-panel-header">
                   <div>
+                    <p>Bank & Petty Cash Monitor</p>
+                    <h2>Liquidity Records</h2>
+                  </div>
+                  <span className="admin-muted">Bank balances, reimburse, and cash opname tracking</span>
+                </div>
+                <div className="admin-split-tables">
+                  <div className="admin-table-wrap">
+                    <table>
+                      <thead><tr><th>Account</th><th>Bank</th><th>Balance</th><th>Status</th><th>Actions</th></tr></thead>
+                      <tbody>
+                        {bankAccounts.slice(0, 8).map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.account_name || "-"}</td>
+                            <td>{item.bank_name || "-"}</td>
+                            <td>{formatMoney(item.current_balance, item.currency || "IDR")}</td>
+                            <td>{item.status || "Active"}</td>
+                            <td>
+                              <div className="admin-table-actions">
+                                <button onClick={() => openModal("bankAccount", item)} type="button">Edit</button>
+                                <button className="danger" onClick={() => openDeleteModal("bankAccount", item)} type="button">Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {!bankAccounts.length ? <p className="admin-empty table">No bank account records yet.</p> : null}
+                  </div>
+                  <div className="admin-table-wrap">
+                    <table>
+                      <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+                      <tbody>
+                        {pettyCash.slice(0, 8).map((item) => (
+                          <tr key={item.id}>
+                            <td>{formatDate(item.cash_date || item.created_at)}</td>
+                            <td>{item.description || "-"}</td>
+                            <td>{formatMoney(item.amount, item.currency || "IDR")}</td>
+                            <td>{item.status || "Recorded"}</td>
+                            <td>
+                              <div className="admin-table-actions">
+                                <button onClick={() => openModal("pettyCash", item)} type="button">Edit</button>
+                                <button className="danger" onClick={() => openDeleteModal("pettyCash", item)} type="button">Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {!pettyCash.length ? <p className="admin-empty table">No petty cash records yet.</p> : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-panel wide">
+                <div className="admin-panel-header">
+                  <div>
                     <p>Revenue Records</p>
                     <h2>Recent Sales Revenue</h2>
                   </div>
@@ -2769,6 +3134,8 @@ export default function AdminDashboard() {
                           <td>{item.status || "Draft"}</td>
                           <td>
                             <div className="admin-table-actions">
+                              {["Draft", "Pending Approval"].includes(item.status || "Draft") ? <button onClick={() => updateFinanceRecord("financeExpense", item.id, { status: "Approved" }).then((ok) => ok ? setNotice("Expense approved.") : null)} type="button">Approve</button> : null}
+                              {item.status !== "Rejected" ? <button onClick={() => updateFinanceRecord("financeExpense", item.id, { status: "Rejected" }).then((ok) => ok ? setNotice("Expense rejected.") : null)} type="button">Reject</button> : null}
                               <button onClick={() => openModal("financeExpense", item)} type="button">Edit</button>
                               <button className="danger" onClick={() => openDeleteModal("financeExpense", item)} type="button">Delete</button>
                             </div>
@@ -2923,7 +3290,12 @@ export default function AdminDashboard() {
                     <p>Financial Reports</p>
                     <h2>Profit, Cash Flow, and Budget Summary</h2>
                   </div>
-                  <button onClick={saveFinancialReport} type="button">Save Report</button>
+                  <div className="admin-actions">
+                    <button onClick={() => printFinanceReport(financialReportSummary, financialReportDraft)} type="button">PDF / Print</button>
+                    <button onClick={() => exportFinanceReportCsv(financialReportSummary)} type="button">CSV</button>
+                    <button onClick={() => exportFinanceReportExcel(financialReportSummary, financialReportDraft)} type="button">Excel</button>
+                    <button onClick={saveFinancialReport} type="button">Save Report</button>
+                  </div>
                 </div>
                 <div className="admin-settings-form finance-form">
                   <label>Report Type
@@ -2932,6 +3304,23 @@ export default function AdminDashboard() {
                     </select>
                   </label>
                   <label>Report Title<input value={financialReportDraft.title} onChange={(event) => setFinancialReportDraft((current) => ({ ...current, title: event.target.value }))} placeholder="GSN Financial Summary" /></label>
+                  <label>Period
+                    <select
+                      value={financialReportDraft.period_preset}
+                      onChange={(event) => {
+                        const preset = event.target.value;
+                        const range = preset === "Custom" ? { from: financialReportDraft.date_from, to: financialReportDraft.date_to } : getPeriodRange(preset);
+                        setFinancialReportDraft((current) => ({
+                          ...current,
+                          period_preset: preset,
+                          date_from: range.from,
+                          date_to: range.to
+                        }));
+                      }}
+                    >
+                      {financePeriodPresets.map((preset) => <option key={preset}>{preset}</option>)}
+                    </select>
+                  </label>
                   <label>Date From<input type="date" value={financialReportDraft.date_from} onChange={(event) => setFinancialReportDraft((current) => ({ ...current, date_from: event.target.value }))} /></label>
                   <label>Date To<input type="date" value={financialReportDraft.date_to} onChange={(event) => setFinancialReportDraft((current) => ({ ...current, date_to: event.target.value }))} /></label>
                 </div>

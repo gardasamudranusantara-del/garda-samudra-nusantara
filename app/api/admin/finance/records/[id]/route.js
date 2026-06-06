@@ -6,6 +6,14 @@ const financeRecordFields = {
     text: ["transaction_type", "transaction_date", "category", "description", "currency", "payment_method", "reference_number"],
     number: ["amount"]
   },
+  bank_accounts: {
+    text: ["account_name", "bank_name", "account_number", "currency", "status"],
+    number: ["current_balance"]
+  },
+  petty_cash: {
+    text: ["cash_date", "description", "currency", "responsible_person", "status"],
+    number: ["amount"]
+  },
   revenues: {
     text: ["invoice_number", "buyer_name", "country", "division", "category", "product", "unit", "currency", "transaction_date", "status"],
     number: ["quantity", "unit_price", "total_revenue"]
