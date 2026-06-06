@@ -35,12 +35,20 @@ const financeTypeTables = {
   financeExpense: "expenses",
   financeReceivable: "receivables",
   financePayable: "payables",
+  paymentMatch: "payment_matches",
+  supplierPayment: "supplier_payments",
+  taxRecord: "tax_records",
+  exchangeRate: "exchange_rates",
   financeBudget: "budgets",
   financeReport: "financial_reports"
 };
 const financePeriodPresets = ["This Month", "This Quarter", "This Year", "Custom"];
 const pettyCashStatuses = ["Recorded", "Reimburse", "Cash Opname", "Pending Review"];
 const bankAccountStatuses = ["Active", "Inactive", "Closed"];
+const paymentMatchStatuses = ["Matched", "Partial", "Unmatched", "Reconciled"];
+const supplierPaymentStatuses = ["Scheduled", "Paid", "Partial", "Completed", "Cancelled"];
+const taxTypes = ["PPN", "Withholding Tax", "Export Tax", "Income Tax", "Customs / Duty", "Other"];
+const taxStatuses = ["Draft", "Prepared", "Submitted", "Paid", "Overdue"];
 const expenseCatalog = {
   "Operational Expense": ["Office Supplies", "Internet", "Utilities", "Office Rent", "Bank Charges"],
   "Technology Expense": ["Domain", "Hosting", "CRM", "Supabase", "Cloud Services", "ChatGPT", "Canva", "Google Workspace"],
@@ -677,6 +685,61 @@ function financePayableToDraft(item = {}) {
   };
 }
 
+function paymentMatchToDraft(item = {}) {
+  return {
+    payment_date: String(item.payment_date || "").slice(0, 10),
+    invoice_number: item.invoice_number || "",
+    buyer_name: item.buyer_name || "",
+    amount: String(item.amount ?? ""),
+    currency: item.currency || "IDR",
+    payment_method: item.payment_method || "",
+    proof_url: item.proof_url || "",
+    status: item.status || "Matched",
+    notes: item.notes || ""
+  };
+}
+
+function supplierPaymentToDraft(item = {}) {
+  return {
+    payment_date: String(item.payment_date || "").slice(0, 10),
+    supplier_name: item.supplier_name || "",
+    supplier_account: item.supplier_account || "",
+    invoice_number: item.invoice_number || "",
+    amount: String(item.amount ?? ""),
+    currency: item.currency || "IDR",
+    payment_method: item.payment_method || "",
+    proof_url: item.proof_url || "",
+    status: item.status || "Scheduled",
+    notes: item.notes || ""
+  };
+}
+
+function taxRecordToDraft(item = {}) {
+  return {
+    tax_period: item.tax_period || "",
+    tax_type: item.tax_type || "PPN",
+    reference_number: item.reference_number || "",
+    taxable_amount: String(item.taxable_amount ?? ""),
+    tax_amount: String(item.tax_amount ?? ""),
+    currency: item.currency || "IDR",
+    document_url: item.document_url || "",
+    due_date: String(item.due_date || "").slice(0, 10),
+    status: item.status || "Draft",
+    notes: item.notes || ""
+  };
+}
+
+function exchangeRateToDraft(item = {}) {
+  return {
+    rate_date: String(item.rate_date || "").slice(0, 10),
+    base_currency: item.base_currency || "IDR",
+    target_currency: item.target_currency || "USD",
+    rate: String(item.rate ?? ""),
+    source: item.source || "",
+    notes: item.notes || ""
+  };
+}
+
 function financeBudgetToDraft(item = {}) {
   return {
     fiscal_year: String(item.fiscal_year || new Date().getFullYear()),
@@ -804,6 +867,51 @@ export default function AdminDashboard() {
     currency: "IDR",
     due_date: "",
     status: "Unpaid"
+  });
+  const [paymentMatchDraft, setPaymentMatchDraft] = useState({
+    payment_date: new Date().toISOString().slice(0, 10),
+    receivable_id: "",
+    invoice_number: "",
+    buyer_name: "",
+    amount: "",
+    currency: "IDR",
+    payment_method: "Bank Transfer",
+    proof_url: "",
+    status: "Matched",
+    notes: ""
+  });
+  const [supplierPaymentDraft, setSupplierPaymentDraft] = useState({
+    payment_date: new Date().toISOString().slice(0, 10),
+    payable_id: "",
+    supplier_name: "",
+    supplier_account: "",
+    invoice_number: "",
+    amount: "",
+    currency: "IDR",
+    payment_method: "Bank Transfer",
+    proof_url: "",
+    status: "Scheduled",
+    notes: ""
+  });
+  const [taxDraft, setTaxDraft] = useState({
+    tax_period: new Date().toISOString().slice(0, 7),
+    tax_type: "PPN",
+    reference_number: "",
+    taxable_amount: "",
+    tax_amount: "",
+    currency: "IDR",
+    document_url: "",
+    due_date: "",
+    status: "Draft",
+    notes: ""
+  });
+  const [exchangeRateDraft, setExchangeRateDraft] = useState({
+    rate_date: new Date().toISOString().slice(0, 10),
+    base_currency: "IDR",
+    target_currency: "USD",
+    rate: "",
+    source: "",
+    notes: ""
   });
   const [budgetDraft, setBudgetDraft] = useState({
     fiscal_year: String(new Date().getFullYear()),
@@ -1018,6 +1126,10 @@ export default function AdminDashboard() {
       financeExpense: financeExpenseToDraft,
       financeReceivable: financeReceivableToDraft,
       financePayable: financePayableToDraft,
+      paymentMatch: paymentMatchToDraft,
+      supplierPayment: supplierPaymentToDraft,
+      taxRecord: taxRecordToDraft,
+      exchangeRate: exchangeRateToDraft,
       financeBudget: financeBudgetToDraft,
       financeReport: financeReportToDraft
     };
@@ -1660,6 +1772,146 @@ export default function AdminDashboard() {
     await loadDashboard(savedCredentials);
   }
 
+  function selectReceivableForMatch(receivableId) {
+    const item = receivables.find((record) => record.id === receivableId);
+    setPaymentMatchDraft((current) => ({
+      ...current,
+      receivable_id: receivableId,
+      invoice_number: item?.invoice_number || "",
+      buyer_name: item?.buyer_name || "",
+      amount: item ? String(item.amount ?? "") : current.amount,
+      currency: item?.currency || current.currency
+    }));
+  }
+
+  function selectPayableForPayment(payableId) {
+    const item = payables.find((record) => record.id === payableId);
+    setSupplierPaymentDraft((current) => ({
+      ...current,
+      payable_id: payableId,
+      supplier_name: item?.supplier_name || "",
+      invoice_number: item?.invoice_number || "",
+      amount: item ? String(item.amount ?? "") : current.amount,
+      currency: item?.currency || current.currency
+    }));
+  }
+
+  async function savePaymentMatch() {
+    setNotice("");
+
+    const response = await fetch("/api/admin/finance/payment-matches", {
+      method: "POST",
+      headers: {
+        ...authHeaders(savedCredentials),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(paymentMatchDraft)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to save payment match.");
+      return;
+    }
+
+    setNotice("Buyer payment matched.");
+    setPaymentMatchDraft((current) => ({
+      ...current,
+      receivable_id: "",
+      invoice_number: "",
+      buyer_name: "",
+      amount: "",
+      proof_url: "",
+      notes: ""
+    }));
+    await loadDashboard(savedCredentials);
+  }
+
+  async function saveSupplierPayment() {
+    setNotice("");
+
+    const response = await fetch("/api/admin/finance/supplier-payments", {
+      method: "POST",
+      headers: {
+        ...authHeaders(savedCredentials),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(supplierPaymentDraft)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to save supplier payment.");
+      return;
+    }
+
+    setNotice("Supplier payment recorded.");
+    setSupplierPaymentDraft((current) => ({
+      ...current,
+      payable_id: "",
+      supplier_name: "",
+      supplier_account: "",
+      invoice_number: "",
+      amount: "",
+      proof_url: "",
+      notes: ""
+    }));
+    await loadDashboard(savedCredentials);
+  }
+
+  async function saveTaxRecord() {
+    setNotice("");
+
+    const response = await fetch("/api/admin/finance/tax-records", {
+      method: "POST",
+      headers: {
+        ...authHeaders(savedCredentials),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(taxDraft)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to save tax record.");
+      return;
+    }
+
+    setNotice("Tax record saved.");
+    setTaxDraft((current) => ({
+      ...current,
+      reference_number: "",
+      taxable_amount: "",
+      tax_amount: "",
+      document_url: "",
+      notes: ""
+    }));
+    await loadDashboard(savedCredentials);
+  }
+
+  async function saveExchangeRate() {
+    setNotice("");
+
+    const response = await fetch("/api/admin/finance/exchange-rates", {
+      method: "POST",
+      headers: {
+        ...authHeaders(savedCredentials),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(exchangeRateDraft)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to save exchange rate.");
+      return;
+    }
+
+    setNotice("Exchange rate saved.");
+    setExchangeRateDraft((current) => ({ ...current, rate: "", source: "", notes: "" }));
+    await loadDashboard(savedCredentials);
+  }
+
   async function saveFinanceBudget() {
     setNotice("");
 
@@ -1748,6 +2000,10 @@ export default function AdminDashboard() {
   const financeExpenses = finance?.expenses || [];
   const receivables = finance?.receivables || [];
   const payables = finance?.payables || [];
+  const paymentMatches = finance?.paymentMatches || [];
+  const supplierPayments = finance?.supplierPayments || [];
+  const taxRecords = finance?.taxRecords || [];
+  const exchangeRates = finance?.exchangeRates || [];
   const budgets = finance?.budgets || [];
   const financialReports = finance?.financialReports || [];
   const financePermissions = finance?.financePermissions || [];
@@ -1953,6 +2209,24 @@ export default function AdminDashboard() {
     };
   }, [budgets, financeExpenses, financeRevenues, financialReportDraft.date_from, financialReportDraft.date_to, financeTransactions, payables, receivables]);
 
+  const currencyConversionSummary = useMemo(() => {
+    const latestRates = new Map();
+    exchangeRates.forEach((item) => {
+      const key = `${item.base_currency}-${item.target_currency}`;
+      if (!latestRates.has(key)) {
+        latestRates.set(key, Number(item.rate || 1));
+      }
+    });
+    const usdRate = latestRates.get("IDR-USD") || 0;
+    const sgdRate = latestRates.get("IDR-SGD") || 0;
+    return {
+      usdRate,
+      sgdRate,
+      netProfitUsd: usdRate ? financialReportSummary.netProfit * usdRate : 0,
+      netProfitSgd: sgdRate ? financialReportSummary.netProfit * sgdRate : 0
+    };
+  }, [exchangeRates, financialReportSummary.netProfit]);
+
   const chartData = useMemo(() => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const monthly = new Map();
@@ -2003,6 +2277,10 @@ export default function AdminDashboard() {
     financeExpense: "Expense Record",
     financeReceivable: "Accounts Receivable",
     financePayable: "Accounts Payable",
+    paymentMatch: "Buyer Payment Match",
+    supplierPayment: "Supplier Payment",
+    taxRecord: "Tax & Compliance Record",
+    exchangeRate: "Exchange Rate",
     financeBudget: "Budget Record",
     financeReport: "Financial Report"
   };
@@ -2039,6 +2317,25 @@ export default function AdminDashboard() {
     financePayable: {
       currency: financeCurrencies,
       status: payableStatuses
+    },
+    paymentMatch: {
+      currency: financeCurrencies,
+      payment_method: paymentMethods,
+      status: paymentMatchStatuses
+    },
+    supplierPayment: {
+      currency: financeCurrencies,
+      payment_method: paymentMethods,
+      status: supplierPaymentStatuses
+    },
+    taxRecord: {
+      tax_type: taxTypes,
+      currency: financeCurrencies,
+      status: taxStatuses
+    },
+    exchangeRate: {
+      base_currency: financeCurrencies,
+      target_currency: financeCurrencies
     },
     financeBudget: {
       budget_category: budgetCategories,
@@ -2166,6 +2463,49 @@ export default function AdminDashboard() {
       ["currency", "Currency", "select"],
       ["due_date", "Due Date", "date"],
       ["status", "Status", "select"]
+    ],
+    paymentMatch: [
+      ["payment_date", "Payment Date", "date"],
+      ["invoice_number", "Invoice Number"],
+      ["buyer_name", "Buyer Name"],
+      ["amount", "Amount"],
+      ["currency", "Currency", "select"],
+      ["payment_method", "Payment Method", "select"],
+      ["proof_url", "Proof URL"],
+      ["status", "Status", "select"],
+      ["notes", "Notes", "textarea"]
+    ],
+    supplierPayment: [
+      ["payment_date", "Payment Date", "date"],
+      ["supplier_name", "Supplier Name"],
+      ["supplier_account", "Supplier Account"],
+      ["invoice_number", "Invoice Number"],
+      ["amount", "Amount"],
+      ["currency", "Currency", "select"],
+      ["payment_method", "Payment Method", "select"],
+      ["proof_url", "Proof URL"],
+      ["status", "Status", "select"],
+      ["notes", "Notes", "textarea"]
+    ],
+    taxRecord: [
+      ["tax_period", "Tax Period"],
+      ["tax_type", "Tax Type", "select"],
+      ["reference_number", "Reference Number"],
+      ["taxable_amount", "Taxable Amount"],
+      ["tax_amount", "Tax Amount"],
+      ["currency", "Currency", "select"],
+      ["document_url", "Document URL"],
+      ["due_date", "Due Date", "date"],
+      ["status", "Status", "select"],
+      ["notes", "Notes", "textarea"]
+    ],
+    exchangeRate: [
+      ["rate_date", "Rate Date", "date"],
+      ["base_currency", "Base Currency", "select"],
+      ["target_currency", "Target Currency", "select"],
+      ["rate", "Rate"],
+      ["source", "Source"],
+      ["notes", "Notes", "textarea"]
     ],
     financeBudget: [
       ["fiscal_year", "Fiscal Year"],
@@ -2956,6 +3296,149 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              <div className="admin-panel">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Payment Matching</p>
+                    <h2>Buyer Payment to Invoice</h2>
+                  </div>
+                  <button onClick={savePaymentMatch} type="button">Match Payment</button>
+                </div>
+                <div className="admin-settings-form compact">
+                  <label>AR Invoice
+                    <select value={paymentMatchDraft.receivable_id} onChange={(event) => selectReceivableForMatch(event.target.value)}>
+                      <option value="">Manual / Select invoice</option>
+                      {receivables.map((item) => <option key={item.id} value={item.id}>{item.invoice_number || item.buyer_name || item.id}</option>)}
+                    </select>
+                  </label>
+                  <label>Date<input type="date" value={paymentMatchDraft.payment_date} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, payment_date: event.target.value }))} /></label>
+                  <label>Invoice Number<input value={paymentMatchDraft.invoice_number} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, invoice_number: event.target.value }))} /></label>
+                  <label>Buyer<input value={paymentMatchDraft.buyer_name} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, buyer_name: event.target.value }))} /></label>
+                  <label>Amount<input inputMode="decimal" value={paymentMatchDraft.amount} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, amount: event.target.value }))} /></label>
+                  <label>Currency
+                    <select value={paymentMatchDraft.currency} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, currency: event.target.value }))}>
+                      {financeCurrencies.map((currency) => <option key={currency}>{currency}</option>)}
+                    </select>
+                  </label>
+                  <label>Method
+                    <select value={paymentMatchDraft.payment_method} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, payment_method: event.target.value }))}>
+                      {paymentMethods.map((method) => <option key={method}>{method}</option>)}
+                    </select>
+                  </label>
+                  <label>Status
+                    <select value={paymentMatchDraft.status} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, status: event.target.value }))}>
+                      {paymentMatchStatuses.map((status) => <option key={status}>{status}</option>)}
+                    </select>
+                  </label>
+                  <label className="wide">Proof URL<input value={paymentMatchDraft.proof_url} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, proof_url: event.target.value }))} placeholder="Transfer proof or bank mutation link" /></label>
+                  <label className="wide">Notes<textarea value={paymentMatchDraft.notes} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Supplier Payment</p>
+                    <h2>AP Schedule & History</h2>
+                  </div>
+                  <button onClick={saveSupplierPayment} type="button">Save Payment</button>
+                </div>
+                <div className="admin-settings-form compact">
+                  <label>AP Invoice
+                    <select value={supplierPaymentDraft.payable_id} onChange={(event) => selectPayableForPayment(event.target.value)}>
+                      <option value="">Manual / Select bill</option>
+                      {payables.map((item) => <option key={item.id} value={item.id}>{item.invoice_number || item.supplier_name || item.id}</option>)}
+                    </select>
+                  </label>
+                  <label>Date<input type="date" value={supplierPaymentDraft.payment_date} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, payment_date: event.target.value }))} /></label>
+                  <label>Supplier<input value={supplierPaymentDraft.supplier_name} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, supplier_name: event.target.value }))} /></label>
+                  <label>Supplier Account<input value={supplierPaymentDraft.supplier_account} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, supplier_account: event.target.value }))} placeholder="Bank / VA / account" /></label>
+                  <label>Invoice Number<input value={supplierPaymentDraft.invoice_number} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, invoice_number: event.target.value }))} /></label>
+                  <label>Amount<input inputMode="decimal" value={supplierPaymentDraft.amount} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, amount: event.target.value }))} /></label>
+                  <label>Currency
+                    <select value={supplierPaymentDraft.currency} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, currency: event.target.value }))}>
+                      {financeCurrencies.map((currency) => <option key={currency}>{currency}</option>)}
+                    </select>
+                  </label>
+                  <label>Method
+                    <select value={supplierPaymentDraft.payment_method} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, payment_method: event.target.value }))}>
+                      {paymentMethods.map((method) => <option key={method}>{method}</option>)}
+                    </select>
+                  </label>
+                  <label>Status
+                    <select value={supplierPaymentDraft.status} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, status: event.target.value }))}>
+                      {supplierPaymentStatuses.map((status) => <option key={status}>{status}</option>)}
+                    </select>
+                  </label>
+                  <label className="wide">Proof URL<input value={supplierPaymentDraft.proof_url} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, proof_url: event.target.value }))} /></label>
+                  <label className="wide">Notes<textarea value={supplierPaymentDraft.notes} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Tax & Compliance</p>
+                    <h2>PPN / Export Tax / Legal Docs</h2>
+                  </div>
+                  <button onClick={saveTaxRecord} type="button">Save Tax</button>
+                </div>
+                <div className="admin-settings-form compact">
+                  <label>Period<input value={taxDraft.tax_period} onChange={(event) => setTaxDraft((current) => ({ ...current, tax_period: event.target.value }))} placeholder="2026-06" /></label>
+                  <label>Tax Type
+                    <select value={taxDraft.tax_type} onChange={(event) => setTaxDraft((current) => ({ ...current, tax_type: event.target.value }))}>
+                      {taxTypes.map((type) => <option key={type}>{type}</option>)}
+                    </select>
+                  </label>
+                  <label>Reference<input value={taxDraft.reference_number} onChange={(event) => setTaxDraft((current) => ({ ...current, reference_number: event.target.value }))} /></label>
+                  <label>Taxable Amount<input inputMode="decimal" value={taxDraft.taxable_amount} onChange={(event) => setTaxDraft((current) => ({ ...current, taxable_amount: event.target.value }))} /></label>
+                  <label>Tax Amount<input inputMode="decimal" value={taxDraft.tax_amount} onChange={(event) => setTaxDraft((current) => ({ ...current, tax_amount: event.target.value }))} /></label>
+                  <label>Currency
+                    <select value={taxDraft.currency} onChange={(event) => setTaxDraft((current) => ({ ...current, currency: event.target.value }))}>
+                      {financeCurrencies.map((currency) => <option key={currency}>{currency}</option>)}
+                    </select>
+                  </label>
+                  <label>Due Date<input type="date" value={taxDraft.due_date} onChange={(event) => setTaxDraft((current) => ({ ...current, due_date: event.target.value }))} /></label>
+                  <label>Status
+                    <select value={taxDraft.status} onChange={(event) => setTaxDraft((current) => ({ ...current, status: event.target.value }))}>
+                      {taxStatuses.map((status) => <option key={status}>{status}</option>)}
+                    </select>
+                  </label>
+                  <label className="wide">Document URL<input value={taxDraft.document_url} onChange={(event) => setTaxDraft((current) => ({ ...current, document_url: event.target.value }))} placeholder="Tax document / legal file link" /></label>
+                  <label className="wide">Notes<textarea value={taxDraft.notes} onChange={(event) => setTaxDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Currency Conversion</p>
+                    <h2>Exchange Rates</h2>
+                  </div>
+                  <button onClick={saveExchangeRate} type="button">Save Rate</button>
+                </div>
+                <div className="admin-settings-form compact">
+                  <label>Date<input type="date" value={exchangeRateDraft.rate_date} onChange={(event) => setExchangeRateDraft((current) => ({ ...current, rate_date: event.target.value }))} /></label>
+                  <label>Base
+                    <select value={exchangeRateDraft.base_currency} onChange={(event) => setExchangeRateDraft((current) => ({ ...current, base_currency: event.target.value }))}>
+                      {financeCurrencies.map((currency) => <option key={currency}>{currency}</option>)}
+                    </select>
+                  </label>
+                  <label>Target
+                    <select value={exchangeRateDraft.target_currency} onChange={(event) => setExchangeRateDraft((current) => ({ ...current, target_currency: event.target.value }))}>
+                      {financeCurrencies.map((currency) => <option key={currency}>{currency}</option>)}
+                    </select>
+                  </label>
+                  <label>Rate<input inputMode="decimal" value={exchangeRateDraft.rate} onChange={(event) => setExchangeRateDraft((current) => ({ ...current, rate: event.target.value }))} placeholder="Example: 0.000061" /></label>
+                  <label>Source<input value={exchangeRateDraft.source} onChange={(event) => setExchangeRateDraft((current) => ({ ...current, source: event.target.value }))} placeholder="Bank / BI / manual" /></label>
+                  <label className="wide">Notes<textarea value={exchangeRateDraft.notes} onChange={(event) => setExchangeRateDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
+                </div>
+                <div className="admin-finance-signals">
+                  <article><span>Net Profit USD</span><strong>{currencyConversionSummary.usdRate ? formatMoney(currencyConversionSummary.netProfitUsd, "USD") : "-"}</strong></article>
+                  <article><span>Net Profit SGD</span><strong>{currencyConversionSummary.sgdRate ? formatMoney(currencyConversionSummary.netProfitSgd, "SGD") : "-"}</strong></article>
+                </div>
+              </div>
+
               <div className="admin-panel wide">
                 <div className="admin-panel-header">
                   <div>
@@ -3220,6 +3703,121 @@ export default function AdminDashboard() {
                       </tbody>
                     </table>
                     {!payables.length ? <p className="admin-empty table">No payable records yet.</p> : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-panel wide">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Payment Reconciliation</p>
+                    <h2>Buyer & Supplier Payment History</h2>
+                  </div>
+                  <span className="admin-muted">Invoice matching, payment proof, and payment status</span>
+                </div>
+                <div className="admin-split-tables">
+                  <div className="admin-table-wrap">
+                    <table>
+                      <thead><tr><th>Date</th><th>Invoice</th><th>Buyer</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+                      <tbody>
+                        {paymentMatches.slice(0, 10).map((item) => (
+                          <tr key={item.id}>
+                            <td>{formatDate(item.payment_date || item.created_at)}</td>
+                            <td>{item.invoice_number || "-"}</td>
+                            <td>{item.buyer_name || "-"}</td>
+                            <td>{formatMoney(item.amount, item.currency || "IDR")}</td>
+                            <td>{item.status || "Matched"}</td>
+                            <td>
+                              <div className="admin-table-actions">
+                                <button onClick={() => openModal("paymentMatch", item)} type="button">Edit</button>
+                                <button className="danger" onClick={() => openDeleteModal("paymentMatch", item)} type="button">Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {!paymentMatches.length ? <p className="admin-empty table">No buyer payment matches yet.</p> : null}
+                  </div>
+                  <div className="admin-table-wrap">
+                    <table>
+                      <thead><tr><th>Date</th><th>Supplier</th><th>Invoice</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+                      <tbody>
+                        {supplierPayments.slice(0, 10).map((item) => (
+                          <tr key={item.id}>
+                            <td>{formatDate(item.payment_date || item.created_at)}</td>
+                            <td>{item.supplier_name || "-"}</td>
+                            <td>{item.invoice_number || "-"}</td>
+                            <td>{formatMoney(item.amount, item.currency || "IDR")}</td>
+                            <td>{item.status || "Scheduled"}</td>
+                            <td>
+                              <div className="admin-table-actions">
+                                <button onClick={() => openModal("supplierPayment", item)} type="button">Edit</button>
+                                <button className="danger" onClick={() => openDeleteModal("supplierPayment", item)} type="button">Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {!supplierPayments.length ? <p className="admin-empty table">No supplier payment records yet.</p> : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="admin-panel wide">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Compliance & Currency</p>
+                    <h2>Tax Records and Exchange Rates</h2>
+                  </div>
+                  <span className="admin-muted">Tax due dates, legal docs, and manual exchange rates</span>
+                </div>
+                <div className="admin-split-tables">
+                  <div className="admin-table-wrap">
+                    <table>
+                      <thead><tr><th>Period</th><th>Type</th><th>Tax</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead>
+                      <tbody>
+                        {taxRecords.slice(0, 10).map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.tax_period || "-"}</td>
+                            <td>{item.tax_type || "-"}</td>
+                            <td>{formatMoney(item.tax_amount, item.currency || "IDR")}</td>
+                            <td>{item.due_date ? formatDate(item.due_date) : "-"}</td>
+                            <td>{item.status || "Draft"}</td>
+                            <td>
+                              <div className="admin-table-actions">
+                                <button onClick={() => openModal("taxRecord", item)} type="button">Edit</button>
+                                <button className="danger" onClick={() => openDeleteModal("taxRecord", item)} type="button">Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {!taxRecords.length ? <p className="admin-empty table">No tax or compliance records yet.</p> : null}
+                  </div>
+                  <div className="admin-table-wrap">
+                    <table>
+                      <thead><tr><th>Date</th><th>Pair</th><th>Rate</th><th>Source</th><th>Actions</th></tr></thead>
+                      <tbody>
+                        {exchangeRates.slice(0, 10).map((item) => (
+                          <tr key={item.id}>
+                            <td>{formatDate(item.rate_date || item.created_at)}</td>
+                            <td>{item.base_currency} / {item.target_currency}</td>
+                            <td>{item.rate}</td>
+                            <td>{item.source || "-"}</td>
+                            <td>
+                              <div className="admin-table-actions">
+                                <button onClick={() => openModal("exchangeRate", item)} type="button">Edit</button>
+                                <button className="danger" onClick={() => openDeleteModal("exchangeRate", item)} type="button">Delete</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {!exchangeRates.length ? <p className="admin-empty table">No exchange rates saved yet.</p> : null}
                   </div>
                 </div>
               </div>

@@ -234,6 +234,69 @@ create table if not exists public.payables (
   status text not null default 'Unpaid'
 );
 
+create table if not exists public.payment_matches (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  payment_date date not null default current_date,
+  invoice_number text,
+  buyer_name text,
+  receivable_id uuid,
+  cash_transaction_id uuid,
+  amount numeric(18,2) not null default 0,
+  currency text not null default 'IDR',
+  payment_method text,
+  proof_url text,
+  status text not null default 'Matched',
+  notes text,
+  created_by text
+);
+
+create table if not exists public.supplier_payments (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  payment_date date not null default current_date,
+  supplier_name text,
+  supplier_account text,
+  payable_id uuid,
+  invoice_number text,
+  amount numeric(18,2) not null default 0,
+  currency text not null default 'IDR',
+  payment_method text,
+  proof_url text,
+  status text not null default 'Scheduled',
+  notes text,
+  created_by text
+);
+
+create table if not exists public.tax_records (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  tax_period text,
+  tax_type text not null,
+  reference_number text,
+  taxable_amount numeric(18,2) not null default 0,
+  tax_amount numeric(18,2) not null default 0,
+  currency text not null default 'IDR',
+  document_url text,
+  due_date date,
+  status text not null default 'Draft',
+  notes text,
+  created_by text
+);
+
+create table if not exists public.exchange_rates (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  rate_date date not null default current_date,
+  base_currency text not null default 'IDR',
+  target_currency text not null,
+  rate numeric(18,6) not null default 1,
+  source text,
+  notes text,
+  created_by text,
+  unique(rate_date, base_currency, target_currency)
+);
+
 create table if not exists public.budgets (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -335,6 +398,13 @@ create index if not exists receivables_due_date_idx on public.receivables (due_d
 create index if not exists receivables_status_idx on public.receivables (status);
 create index if not exists payables_due_date_idx on public.payables (due_date);
 create index if not exists payables_status_idx on public.payables (status);
+create index if not exists payment_matches_invoice_idx on public.payment_matches (invoice_number);
+create index if not exists payment_matches_date_idx on public.payment_matches (payment_date desc);
+create index if not exists supplier_payments_invoice_idx on public.supplier_payments (invoice_number);
+create index if not exists supplier_payments_date_idx on public.supplier_payments (payment_date desc);
+create index if not exists tax_records_period_idx on public.tax_records (tax_period);
+create index if not exists tax_records_status_idx on public.tax_records (status);
+create index if not exists exchange_rates_date_idx on public.exchange_rates (rate_date desc);
 create index if not exists budgets_year_idx on public.budgets (fiscal_year);
 create index if not exists finance_permissions_user_idx on public.finance_permissions (user_id);
 create index if not exists finance_access_logs_created_at_idx on public.finance_access_logs (created_at desc);
@@ -365,6 +435,10 @@ alter table public.expense_subcategories enable row level security;
 alter table public.expenses enable row level security;
 alter table public.receivables enable row level security;
 alter table public.payables enable row level security;
+alter table public.payment_matches enable row level security;
+alter table public.supplier_payments enable row level security;
+alter table public.tax_records enable row level security;
+alter table public.exchange_rates enable row level security;
 alter table public.budgets enable row level security;
 alter table public.financial_reports enable row level security;
 alter table public.investor_reports enable row level security;

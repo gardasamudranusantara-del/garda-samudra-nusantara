@@ -30,6 +30,22 @@ const financeRecordFields = {
     text: ["supplier_name", "commodity", "invoice_number", "currency", "due_date", "status"],
     number: ["amount"]
   },
+  payment_matches: {
+    text: ["payment_date", "invoice_number", "buyer_name", "currency", "payment_method", "proof_url", "status", "notes"],
+    number: ["amount"]
+  },
+  supplier_payments: {
+    text: ["payment_date", "supplier_name", "supplier_account", "invoice_number", "currency", "payment_method", "proof_url", "status", "notes"],
+    number: ["amount"]
+  },
+  tax_records: {
+    text: ["tax_period", "tax_type", "reference_number", "currency", "document_url", "due_date", "status", "notes"],
+    number: ["taxable_amount", "tax_amount"]
+  },
+  exchange_rates: {
+    text: ["rate_date", "base_currency", "target_currency", "source", "notes"],
+    number: ["rate"]
+  },
   budgets: {
     text: ["budget_category", "currency"],
     number: ["fiscal_year", "planned_budget", "actual_spending", "remaining_budget"]
