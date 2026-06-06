@@ -460,6 +460,18 @@ function getAuditChanges(activity) {
     .filter((change) => typeof change.before !== "undefined" || typeof change.after !== "undefined");
 }
 
+function isFinanceActivity(activity) {
+  const metadata = activity.metadata || {};
+  const auditText = [
+    metadata.action,
+    metadata.referenceType,
+    activity.path,
+    activity.label
+  ].filter(Boolean).join(" ");
+
+  return /finance|expense|revenue|receivable|payable|payment|supplier|tax|compliance|exchange|budget|bank|petty|attachment/i.test(auditText);
+}
+
 function makeQuotationNumber(index, year = new Date().getFullYear()) {
   return `GSN-QTN-${year}-${String(index).padStart(4, "0")}`;
 }
@@ -942,6 +954,13 @@ export default function AdminDashboard() {
     from: "",
     to: ""
   });
+  const [financeAuditFilters, setFinanceAuditFilters] = useState({
+    admin: "All",
+    action: "All",
+    from: "",
+    to: ""
+  });
+  const [uploadingFinanceField, setUploadingFinanceField] = useState("");
 
   function authHeaders(activeCredentials = savedCredentials || credentials) {
     return {
@@ -1679,6 +1698,42 @@ export default function AdminDashboard() {
     });
   }
 
+  async function uploadFinanceAttachment(event, updateDraft, field, kind) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const uploadKey = `${kind}-${field}`;
+    setUploadingFinanceField(uploadKey);
+    setNotice("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("kind", kind);
+
+      const response = await fetch("/api/admin/finance/upload", {
+        method: "POST",
+        headers: authHeaders(savedCredentials),
+        body: formData
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Unable to upload finance attachment.");
+      }
+
+      updateDraft((current) => ({ ...current, [field]: result.url || "" }));
+      setNotice("Attachment uploaded and linked to the record.");
+    } catch (error) {
+      setNotice(error.message);
+    } finally {
+      event.target.value = "";
+      setUploadingFinanceField("");
+    }
+  }
+
   async function saveFinanceExpense() {
     setNotice("");
 
@@ -2259,6 +2314,21 @@ export default function AdminDashboard() {
     });
   }, [adminActivities, activityFilters]);
   const latestAdminActivities = useMemo(() => filteredAdminActivities.slice(0, 40), [filteredAdminActivities]);
+  const financeAdminActivities = useMemo(() => adminActivities.filter(isFinanceActivity), [adminActivities]);
+  const financeAuditAdminOptions = useMemo(() => ["All", ...new Set(financeAdminActivities.map((activity) => activity.metadata?.admin).filter(Boolean))], [financeAdminActivities]);
+  const financeAuditActionOptions = useMemo(() => ["All", ...new Set(financeAdminActivities.map((activity) => activity.metadata?.action).filter(Boolean))], [financeAdminActivities]);
+  const filteredFinanceActivities = useMemo(() => {
+    const fromTime = financeAuditFilters.from ? new Date(`${financeAuditFilters.from}T00:00:00`).getTime() : 0;
+    const toTime = financeAuditFilters.to ? new Date(`${financeAuditFilters.to}T23:59:59`).getTime() : Infinity;
+
+    return financeAdminActivities.filter((activity) => {
+      const created = new Date(activity.created_at || 0).getTime();
+      const matchesAdmin = financeAuditFilters.admin === "All" || activity.metadata?.admin === financeAuditFilters.admin;
+      const matchesAction = financeAuditFilters.action === "All" || activity.metadata?.action === financeAuditFilters.action;
+      return matchesAdmin && matchesAction && created >= fromTime && created <= toTime;
+    });
+  }, [financeAdminActivities, financeAuditFilters]);
+  const latestFinanceActivities = useMemo(() => filteredFinanceActivities.slice(0, 50), [filteredFinanceActivities]);
   const unreadNotifications = notifications.filter((item) => !item.is_read);
   const mostClicked = chartData.clicks[0]?.[0] || "-";
   const conversionRate = getConversionRate(leads, events);
@@ -3237,7 +3307,11 @@ export default function AdminDashboard() {
                       {expenseStatuses.map((status) => <option key={status}>{status}</option>)}
                     </select>
                   </label>
-                  <label className="wide">Receipt URL<input value={expenseDraft.receipt_url} onChange={(event) => updateExpenseDraft("receipt_url", event.target.value)} placeholder="Optional receipt/document link" /></label>
+                  <label className="wide">Receipt URL
+                    <input value={expenseDraft.receipt_url} onChange={(event) => updateExpenseDraft("receipt_url", event.target.value)} placeholder="Optional receipt/document link" />
+                    <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" onChange={(event) => uploadFinanceAttachment(event, setExpenseDraft, "receipt_url", "expense")} />
+                    <small>{uploadingFinanceField === "expense-receipt_url" ? "Uploading receipt..." : "Upload receipt, invoice, transfer proof, or document."}</small>
+                  </label>
                   <label className="wide">Description<textarea value={expenseDraft.description} onChange={(event) => updateExpenseDraft("description", event.target.value)} placeholder="Expense purpose, business context, or approval note" /></label>
                 </div>
               </div>
@@ -3330,7 +3404,11 @@ export default function AdminDashboard() {
                       {paymentMatchStatuses.map((status) => <option key={status}>{status}</option>)}
                     </select>
                   </label>
-                  <label className="wide">Proof URL<input value={paymentMatchDraft.proof_url} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, proof_url: event.target.value }))} placeholder="Transfer proof or bank mutation link" /></label>
+                  <label className="wide">Proof URL
+                    <input value={paymentMatchDraft.proof_url} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, proof_url: event.target.value }))} placeholder="Transfer proof or bank mutation link" />
+                    <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" onChange={(event) => uploadFinanceAttachment(event, setPaymentMatchDraft, "proof_url", "payment")} />
+                    <small>{uploadingFinanceField === "payment-proof_url" ? "Uploading payment proof..." : "Upload buyer payment proof or bank mutation."}</small>
+                  </label>
                   <label className="wide">Notes<textarea value={paymentMatchDraft.notes} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
                 </div>
               </div>
@@ -3370,7 +3448,11 @@ export default function AdminDashboard() {
                       {supplierPaymentStatuses.map((status) => <option key={status}>{status}</option>)}
                     </select>
                   </label>
-                  <label className="wide">Proof URL<input value={supplierPaymentDraft.proof_url} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, proof_url: event.target.value }))} /></label>
+                  <label className="wide">Proof URL
+                    <input value={supplierPaymentDraft.proof_url} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, proof_url: event.target.value }))} />
+                    <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" onChange={(event) => uploadFinanceAttachment(event, setSupplierPaymentDraft, "proof_url", "supplier")} />
+                    <small>{uploadingFinanceField === "supplier-proof_url" ? "Uploading supplier proof..." : "Upload supplier transfer proof or payment document."}</small>
+                  </label>
                   <label className="wide">Notes<textarea value={supplierPaymentDraft.notes} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
                 </div>
               </div>
@@ -3404,7 +3486,11 @@ export default function AdminDashboard() {
                       {taxStatuses.map((status) => <option key={status}>{status}</option>)}
                     </select>
                   </label>
-                  <label className="wide">Document URL<input value={taxDraft.document_url} onChange={(event) => setTaxDraft((current) => ({ ...current, document_url: event.target.value }))} placeholder="Tax document / legal file link" /></label>
+                  <label className="wide">Document URL
+                    <input value={taxDraft.document_url} onChange={(event) => setTaxDraft((current) => ({ ...current, document_url: event.target.value }))} placeholder="Tax document / legal file link" />
+                    <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" onChange={(event) => uploadFinanceAttachment(event, setTaxDraft, "document_url", "tax")} />
+                    <small>{uploadingFinanceField === "tax-document_url" ? "Uploading tax document..." : "Upload tax, legal, or compliance document."}</small>
+                  </label>
                   <label className="wide">Notes<textarea value={taxDraft.notes} onChange={(event) => setTaxDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
                 </div>
               </div>
@@ -4003,6 +4089,79 @@ export default function AdminDashboard() {
                   <article><strong>Investor Reports</strong><span>{investorReports.length} saved investor report records.</span></article>
                   <article><strong>Budgets</strong><span>{budgets.length} budget planning records prepared.</span></article>
                   <article><strong>Audit Logs</strong><span>{financeAccessLogs.length} finance access events recorded.</span></article>
+                </div>
+              </div>
+
+              <div className="admin-panel wide">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Finance Audit Trail</p>
+                    <h2>Before / After Transaction Changes</h2>
+                  </div>
+                  <button
+                    disabled={!latestFinanceActivities.length}
+                    onClick={() => exportRowsCsv(
+                      `gsn-finance-audit-${new Date().toISOString().slice(0, 10)}.csv`,
+                      ["Created At", "Admin", "Role", "Action", "Label", "Reference Type", "Reference ID", "Changed Fields", "Before", "After", "Details"],
+                      latestFinanceActivities.map((activity) => {
+                        const changes = getAuditChanges(activity);
+                        return [
+                          activity.created_at || "",
+                          activity.metadata?.admin || "",
+                          activity.metadata?.role || "",
+                          activity.metadata?.action || "",
+                          activity.label || "",
+                          activity.metadata?.referenceType || activity.path || "",
+                          activity.metadata?.referenceId || "",
+                          changes.map((change) => change.field).join("; "),
+                          changes.map((change) => `${change.field}: ${formatAuditValue(change.before)}`).join("; "),
+                          changes.map((change) => `${change.field}: ${formatAuditValue(change.after)}`).join("; "),
+                          JSON.stringify(activity.metadata || {})
+                        ];
+                      })
+                    )}
+                    type="button"
+                  >
+                    Export Finance Audit
+                  </button>
+                </div>
+                <div className="admin-filter-row activity">
+                  <select value={financeAuditFilters.admin} onChange={(event) => setFinanceAuditFilters((current) => ({ ...current, admin: event.target.value }))}>
+                    {financeAuditAdminOptions.map((admin) => <option key={admin}>{admin}</option>)}
+                  </select>
+                  <select value={financeAuditFilters.action} onChange={(event) => setFinanceAuditFilters((current) => ({ ...current, action: event.target.value }))}>
+                    {financeAuditActionOptions.map((action) => <option key={action}>{action}</option>)}
+                  </select>
+                  <input type="date" value={financeAuditFilters.from} onChange={(event) => setFinanceAuditFilters((current) => ({ ...current, from: event.target.value }))} />
+                  <input type="date" value={financeAuditFilters.to} onChange={(event) => setFinanceAuditFilters((current) => ({ ...current, to: event.target.value }))} />
+                  <button onClick={() => setFinanceAuditFilters({ admin: "All", action: "All", from: "", to: "" })} type="button">Reset</button>
+                </div>
+                <div className="admin-event-list">
+                  {latestFinanceActivities.map((activity) => {
+                    const changes = getAuditChanges(activity);
+                    return (
+                      <article key={activity.id}>
+                        <strong>{activity.metadata?.admin || "admin"} <span className="admin-role-chip">{activity.metadata?.role || "role"}</span></strong>
+                        <span>{activity.label || activity.metadata?.action || "Finance activity"}</span>
+                        <em>{activity.metadata?.referenceType || activity.path || "finance"} {activity.metadata?.referenceId ? `| ${activity.metadata.referenceId}` : ""}</em>
+                        {changes.length ? (
+                          <div className="admin-audit-diff">
+                            {changes.slice(0, 8).map((change) => (
+                              <div key={change.field}>
+                                <b>{change.field}</b>
+                                <span>{formatAuditValue(change.before)}</span>
+                                <i>to</i>
+                                <strong>{formatAuditValue(change.after)}</strong>
+                              </div>
+                            ))}
+                            {changes.length > 8 ? <small>+{changes.length - 8} more changed fields</small> : null}
+                          </div>
+                        ) : <small>No field-level diff for this activity.</small>}
+                        <small>{formatDate(activity.created_at)}</small>
+                      </article>
+                    );
+                  })}
+                  {!latestFinanceActivities.length ? <p className="admin-empty">No finance audit activity found for this filter.</p> : null}
                 </div>
               </div>
             </section>
