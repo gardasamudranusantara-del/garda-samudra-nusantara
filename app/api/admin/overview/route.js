@@ -1,5 +1,5 @@
-import { getAdminSettings, isSupabaseConfigured, listAdminActivities, listInquiries, listInvestorInquiries, listNotifications, listQuotationDocuments, listQuotationRequests, listTrackingEvents } from "@/lib/gsnDataStore";
-import { isAdminAuthorized } from "@/lib/adminAuth";
+import { getAdminSettings, isSupabaseConfigured, listAdminActivities, listFinanceSnapshot, listInquiries, listInvestorInquiries, listNotifications, listQuotationDocuments, listQuotationRequests, listTrackingEvents } from "@/lib/gsnDataStore";
+import { canAccessFinance, getAuthorizedAdmin } from "@/lib/adminAuth";
 
 function summarize(inquiries, events, investorInquiries = [], quotationRequests = []) {
   const highPriority = inquiries.filter((item) => item.lead_priority === "High").length;
@@ -29,7 +29,9 @@ function summarize(inquiries, events, investorInquiries = [], quotationRequests 
 }
 
 export async function GET(request) {
-  if (!(await isAdminAuthorized(request))) {
+  const admin = await getAuthorizedAdmin(request);
+
+  if (!admin) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -44,11 +46,12 @@ export async function GET(request) {
       settings: null,
       events: [],
       adminActivities: [],
+      finance: null,
       summary: summarize([], [], [], [])
     });
   }
 
-  const [inquiries, investorInquiries, quotationRequests, quotationDocuments, notifications, settings, events, adminActivities] = await Promise.all([
+  const [inquiries, investorInquiries, quotationRequests, quotationDocuments, notifications, settings, events, adminActivities, finance] = await Promise.all([
     listInquiries(),
     listInvestorInquiries(),
     listQuotationRequests(),
@@ -56,7 +59,8 @@ export async function GET(request) {
     listNotifications(),
     getAdminSettings(),
     listTrackingEvents(),
-    listAdminActivities()
+    listAdminActivities(),
+    canAccessFinance(admin) ? listFinanceSnapshot() : Promise.resolve(null)
   ]);
 
   return Response.json({
@@ -69,6 +73,7 @@ export async function GET(request) {
     settings,
     events,
     adminActivities,
+    finance,
     summary: summarize(inquiries, events, investorInquiries, quotationRequests)
   });
 }

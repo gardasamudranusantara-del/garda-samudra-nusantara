@@ -5,6 +5,10 @@ function cleanUsername(value) {
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40);
 }
 
+function cleanRole(value) {
+  return ["ceo", "cso", "owner", "marketing"].includes(value) ? value : "marketing";
+}
+
 export async function GET(request) {
   const permission = await requireAdminPermission(request, "user_management");
   if (!permission.ok) {
@@ -25,7 +29,7 @@ export async function POST(request) {
   const data = await request.json();
   const username = cleanUsername(data.username);
   const password = String(data.password || "").trim();
-  const role = data.role === "owner" ? "owner" : "marketing";
+  const role = cleanRole(data.role);
 
   if (!username || password.length < 6) {
     return Response.json({ message: "Username and password with at least 6 characters are required." }, { status: 400 });
@@ -70,7 +74,7 @@ export async function PATCH(request) {
     return Response.json({ message: "Username is required." }, { status: 400 });
   }
 
-  if (data.role === "owner" || data.role === "marketing") {
+  if (["ceo", "cso", "owner", "marketing"].includes(data.role)) {
     updates.role = data.role;
   }
   if (typeof data.password === "string" && data.password.trim()) {
@@ -88,6 +92,14 @@ export async function PATCH(request) {
   }
 
   const before = await getStoredAdminUserForAudit(username);
+  if (["ceo", "cso"].includes(before?.role)) {
+    if (updates.role && updates.role !== before.role) {
+      return Response.json({ message: "Executive account cannot be demoted from the dashboard." }, { status: 403 });
+    }
+    if (updates.is_active === false) {
+      return Response.json({ message: "Executive account cannot be suspended from the dashboard." }, { status: 403 });
+    }
+  }
   const result = await updateStoredAdminUser(username, updates);
   const auditUpdates = { ...updates };
   if (auditUpdates.password) {
@@ -126,6 +138,9 @@ export async function DELETE(request) {
   }
 
   const before = await getStoredAdminUserForAudit(username);
+  if (["ceo", "cso"].includes(before?.role)) {
+    return Response.json({ message: "Executive account cannot be deleted from the dashboard." }, { status: 403 });
+  }
   const result = await deleteStoredAdminUser(username);
   await insertAdminActivity({
     admin: permission.admin,

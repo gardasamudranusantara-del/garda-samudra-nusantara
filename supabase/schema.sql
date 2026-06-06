@@ -118,6 +118,195 @@ create table if not exists public.admin_users (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.finance_transactions (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  transaction_type text not null,
+  transaction_date date not null default current_date,
+  category text,
+  description text,
+  amount numeric(18,2) not null default 0,
+  currency text not null default 'IDR',
+  payment_method text,
+  reference_number text,
+  created_by text
+);
+
+create table if not exists public.bank_accounts (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  account_name text not null,
+  bank_name text,
+  account_number text,
+  currency text not null default 'IDR',
+  current_balance numeric(18,2) not null default 0,
+  status text not null default 'Active'
+);
+
+create table if not exists public.petty_cash (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  cash_date date not null default current_date,
+  description text,
+  amount numeric(18,2) not null default 0,
+  currency text not null default 'IDR',
+  responsible_person text,
+  status text not null default 'Recorded'
+);
+
+create table if not exists public.revenues (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  invoice_number text,
+  buyer_name text,
+  country text,
+  division text,
+  category text,
+  product text,
+  quantity numeric(18,3) not null default 0,
+  unit text,
+  unit_price numeric(18,2) not null default 0,
+  currency text not null default 'IDR',
+  total_revenue numeric(18,2) not null default 0,
+  transaction_date date not null default current_date,
+  status text not null default 'Recorded'
+);
+
+create table if not exists public.expense_categories (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name text not null unique,
+  description text
+);
+
+create table if not exists public.expense_subcategories (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  category_id uuid references public.expense_categories(id) on delete cascade,
+  name text not null,
+  description text,
+  unique(category_id, name)
+);
+
+create table if not exists public.expenses (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  expense_date date not null default current_date,
+  expense_category text,
+  expense_subcategory text,
+  vendor text,
+  description text,
+  amount numeric(18,2) not null default 0,
+  currency text not null default 'IDR',
+  payment_method text,
+  receipt_url text,
+  status text not null default 'Draft',
+  created_by text
+);
+
+create table if not exists public.receivables (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  invoice_number text,
+  buyer_name text,
+  commodity text,
+  amount numeric(18,2) not null default 0,
+  currency text not null default 'IDR',
+  due_date date,
+  status text not null default 'Pending'
+);
+
+create table if not exists public.payables (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  supplier_name text,
+  commodity text,
+  invoice_number text,
+  amount numeric(18,2) not null default 0,
+  currency text not null default 'IDR',
+  due_date date,
+  status text not null default 'Unpaid'
+);
+
+create table if not exists public.budgets (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  fiscal_year integer not null,
+  budget_category text not null,
+  planned_budget numeric(18,2) not null default 0,
+  actual_spending numeric(18,2) not null default 0,
+  remaining_budget numeric(18,2) not null default 0,
+  currency text not null default 'IDR'
+);
+
+create table if not exists public.financial_reports (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  report_type text not null,
+  title text,
+  date_from date,
+  date_to date,
+  filters jsonb not null default '{}'::jsonb,
+  report_data jsonb not null default '{}'::jsonb,
+  generated_by text
+);
+
+create table if not exists public.investor_reports (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  title text,
+  reporting_period text,
+  company_metrics jsonb not null default '{}'::jsonb,
+  financial_metrics jsonb not null default '{}'::jsonb,
+  fund_allocation jsonb not null default '{}'::jsonb,
+  generated_by text,
+  status text not null default 'Draft'
+);
+
+create table if not exists public.finance_roles (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  role_name text not null unique,
+  description text
+);
+
+create table if not exists public.finance_permissions (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  user_id text not null,
+  permission_key text not null,
+  granted_by text,
+  unique(user_id, permission_key)
+);
+
+create table if not exists public.finance_access_logs (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  user_id text,
+  action text not null,
+  module text,
+  ip_address text,
+  device text,
+  metadata jsonb not null default '{}'::jsonb
+);
+
+create table if not exists public.finance_invitations (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  email text not null,
+  role text not null,
+  invited_by text,
+  status text not null default 'Pending',
+  expires_at timestamptz
+);
+
 create index if not exists inquiries_created_at_idx on public.inquiries (created_at desc);
 create index if not exists inquiries_status_idx on public.inquiries (status);
 create index if not exists inquiries_priority_idx on public.inquiries (lead_priority);
@@ -135,6 +324,29 @@ create index if not exists admin_notifications_created_at_idx on public.admin_no
 create index if not exists admin_notifications_is_read_idx on public.admin_notifications (is_read);
 create index if not exists admin_settings_updated_at_idx on public.admin_settings (updated_at desc);
 create index if not exists admin_users_role_idx on public.admin_users (role);
+create index if not exists finance_transactions_date_idx on public.finance_transactions (transaction_date desc);
+create index if not exists finance_transactions_type_idx on public.finance_transactions (transaction_type);
+create index if not exists revenues_date_idx on public.revenues (transaction_date desc);
+create index if not exists revenues_division_idx on public.revenues (division);
+create index if not exists revenues_country_idx on public.revenues (country);
+create index if not exists expenses_date_idx on public.expenses (expense_date desc);
+create index if not exists expenses_category_idx on public.expenses (expense_category);
+create index if not exists receivables_due_date_idx on public.receivables (due_date);
+create index if not exists receivables_status_idx on public.receivables (status);
+create index if not exists payables_due_date_idx on public.payables (due_date);
+create index if not exists payables_status_idx on public.payables (status);
+create index if not exists budgets_year_idx on public.budgets (fiscal_year);
+create index if not exists finance_permissions_user_idx on public.finance_permissions (user_id);
+create index if not exists finance_access_logs_created_at_idx on public.finance_access_logs (created_at desc);
+create index if not exists finance_invitations_status_idx on public.finance_invitations (status);
+
+insert into public.finance_roles (role_name, description)
+values
+  ('CEO', 'Full finance ownership and confidential access control.'),
+  ('Finance Manager', 'Finance management access without ownership transfer.'),
+  ('Finance Staff', 'Create and edit assigned finance records.'),
+  ('Investor', 'Read-only investor report access.')
+on conflict (role_name) do update set description = excluded.description;
 
 alter table public.inquiries enable row level security;
 alter table public.tracking_events enable row level security;
@@ -144,6 +356,22 @@ alter table public.quotation_documents enable row level security;
 alter table public.admin_notifications enable row level security;
 alter table public.admin_settings enable row level security;
 alter table public.admin_users enable row level security;
+alter table public.finance_transactions enable row level security;
+alter table public.bank_accounts enable row level security;
+alter table public.petty_cash enable row level security;
+alter table public.revenues enable row level security;
+alter table public.expense_categories enable row level security;
+alter table public.expense_subcategories enable row level security;
+alter table public.expenses enable row level security;
+alter table public.receivables enable row level security;
+alter table public.payables enable row level security;
+alter table public.budgets enable row level security;
+alter table public.financial_reports enable row level security;
+alter table public.investor_reports enable row level security;
+alter table public.finance_roles enable row level security;
+alter table public.finance_permissions enable row level security;
+alter table public.finance_access_logs enable row level security;
+alter table public.finance_invitations enable row level security;
 
 alter table public.quotation_requests add column if not exists quotation_number text;
 alter table public.quotation_documents add column if not exists quotation_number text;
