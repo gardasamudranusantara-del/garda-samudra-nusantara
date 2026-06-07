@@ -27,8 +27,10 @@ export async function POST(request) {
     const receivable = await getFinanceRecord("receivables", data.receivable_id);
     const amount = Number(data.amount || 0);
     const receivableAmount = Number(receivable?.amount || 0);
+    const paidAmount = Number(receivable?.paid_amount || 0) + amount;
     await updateFinanceRecord("receivables", data.receivable_id, {
-      status: amount >= receivableAmount ? "Paid" : "Partial Payment"
+      paid_amount: paidAmount,
+      status: paidAmount >= receivableAmount ? "Paid" : "Partial Payment"
     });
   }
 

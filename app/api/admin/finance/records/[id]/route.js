@@ -19,12 +19,12 @@ const financeRecordFields = {
     number: ["quantity", "unit_price", "total_revenue"]
   },
   expenses: {
-    text: ["expense_date", "expense_category", "expense_subcategory", "vendor", "description", "currency", "payment_method", "receipt_url", "status"],
+    text: ["expense_date", "expense_category", "expense_subcategory", "vendor", "description", "currency", "payment_method", "receipt_url", "status", "approved_by", "approved_at", "approval_note"],
     number: ["amount"]
   },
   receivables: {
-    text: ["invoice_number", "buyer_name", "commodity", "currency", "due_date", "status"],
-    number: ["amount"]
+    text: ["invoice_number", "invoice_date", "quotation_id", "quotation_number", "buyer_name", "commodity", "currency", "due_date", "status"],
+    number: ["amount", "paid_amount"]
   },
   payables: {
     text: ["supplier_name", "commodity", "invoice_number", "currency", "due_date", "status"],

@@ -491,6 +491,20 @@ function getNextQuotationNumber(quotationRequests = [], quotationDocuments = [])
   return makeQuotationNumber(nextIndex, year);
 }
 
+function getFinanceInvoiceNumber(quotation = {}) {
+  if (quotation.quotation_number) {
+    return quotation.quotation_number.replace("GSN-QTN", "GSN-INV");
+  }
+  return `GSN-INV-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+}
+
+function getQuotationProductsText(quotation = {}) {
+  if (Array.isArray(quotation.products) && quotation.products.length) {
+    return quotation.products.join(", ");
+  }
+  return quotation.product_details || quotation.request_summary || "Quoted products";
+}
+
 function buildQuotationSummary(lead, draft) {
   const items = getQuotationItems(draft, lead);
   const products = items.map((item) => item.product).filter(Boolean);
@@ -676,9 +690,13 @@ function financeExpenseToDraft(item = {}) {
 function financeReceivableToDraft(item = {}) {
   return {
     invoice_number: item.invoice_number || "",
+    invoice_date: String(item.invoice_date || "").slice(0, 10),
+    quotation_id: item.quotation_id || "",
+    quotation_number: item.quotation_number || "",
     buyer_name: item.buyer_name || "",
     commodity: item.commodity || "",
     amount: String(item.amount ?? ""),
+    paid_amount: String(item.paid_amount ?? ""),
     currency: item.currency || "IDR",
     due_date: String(item.due_date || "").slice(0, 10),
     status: item.status || "Pending"
@@ -864,12 +882,27 @@ export default function AdminDashboard() {
   });
   const [receivableDraft, setReceivableDraft] = useState({
     invoice_number: "",
+    invoice_date: new Date().toISOString().slice(0, 10),
+    quotation_id: "",
+    quotation_number: "",
+    buyer_name: "",
+    commodity: "",
+    amount: "",
+    paid_amount: "",
+    currency: "IDR",
+    due_date: "",
+    status: "Pending"
+  });
+  const [financeInvoiceDraft, setFinanceInvoiceDraft] = useState({
+    quotation_id: "",
+    quotation_number: "",
+    invoice_number: "",
+    invoice_date: new Date().toISOString().slice(0, 10),
     buyer_name: "",
     commodity: "",
     amount: "",
     currency: "IDR",
-    due_date: "",
-    status: "Pending"
+    due_date: ""
   });
   const [payableDraft, setPayableDraft] = useState({
     supplier_name: "",
@@ -961,6 +994,8 @@ export default function AdminDashboard() {
     to: ""
   });
   const [uploadingFinanceField, setUploadingFinanceField] = useState("");
+  const [expenseApprovalDraft, setExpenseApprovalDraft] = useState({ id: "", status: "", note: "" });
+  const [storageStatus, setStorageStatus] = useState(null);
 
   function authHeaders(activeCredentials = savedCredentials || credentials) {
     return {
@@ -1827,6 +1862,106 @@ export default function AdminDashboard() {
     await loadDashboard(savedCredentials);
   }
 
+  function selectQuotationForFinanceInvoice(quotationId) {
+    const quotation = quotationRequests.find((record) => record.id === quotationId);
+    setFinanceInvoiceDraft((current) => ({
+      ...current,
+      quotation_id: quotationId,
+      quotation_number: quotation?.quotation_number || "",
+      invoice_number: quotation ? getFinanceInvoiceNumber(quotation) : "",
+      buyer_name: quotation?.buyer_name || quotation?.company_name || "",
+      commodity: quotation ? getQuotationProductsText(quotation) : "",
+      amount: "",
+      currency: current.currency || "IDR",
+      due_date: current.due_date
+    }));
+  }
+
+  async function createFinanceInvoiceFromQuotation() {
+    setNotice("");
+
+    const response = await fetch("/api/admin/finance/invoices", {
+      method: "POST",
+      headers: {
+        ...authHeaders(savedCredentials),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(financeInvoiceDraft)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to create finance invoice.");
+      return;
+    }
+
+    setNotice("Finance invoice created and added to Accounts Receivable.");
+    setFinanceInvoiceDraft({
+      quotation_id: "",
+      quotation_number: "",
+      invoice_number: "",
+      invoice_date: new Date().toISOString().slice(0, 10),
+      buyer_name: "",
+      commodity: "",
+      amount: "",
+      currency: "IDR",
+      due_date: ""
+    });
+    await loadDashboard(savedCredentials);
+  }
+
+  function startExpenseApproval(item, status) {
+    setExpenseApprovalDraft({
+      id: item.id,
+      status,
+      note: status === "Approved" ? "Approved for business expense processing." : ""
+    });
+  }
+
+  async function submitExpenseApproval() {
+    if (!expenseApprovalDraft.id || !expenseApprovalDraft.status) {
+      return;
+    }
+
+    setNotice("");
+    const response = await fetch(`/api/admin/finance/expenses/${expenseApprovalDraft.id}/approval`, {
+      method: "POST",
+      headers: {
+        ...authHeaders(savedCredentials),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        status: expenseApprovalDraft.status,
+        approval_note: expenseApprovalDraft.note
+      })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to update expense approval.");
+      return;
+    }
+
+    setNotice(`Expense ${expenseApprovalDraft.status.toLowerCase()}.`);
+    setExpenseApprovalDraft({ id: "", status: "", note: "" });
+    await loadDashboard(savedCredentials);
+  }
+
+  async function checkFinanceStorageStatus() {
+    setNotice("");
+    setStorageStatus({ ready: false, message: "Checking finance document storage..." });
+
+    const response = await fetch("/api/admin/finance/storage-status", {
+      headers: authHeaders(savedCredentials)
+    });
+    const result = await response.json();
+    setStorageStatus(result);
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to check finance storage.");
+    }
+  }
+
   function selectReceivableForMatch(receivableId) {
     const item = receivables.find((record) => record.id === receivableId);
     setPaymentMatchDraft((current) => ({
@@ -2202,6 +2337,60 @@ export default function AdminDashboard() {
     };
   }, [bankAccounts, financeExpenses, financeRevenues, leads, metrics.openLeads.length, payables, quotationRequests.length, receivables]);
 
+  const cashFlowVisual = useMemo(() => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const now = new Date();
+    const months = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      return {
+        key,
+        label: `${monthNames[date.getMonth()]} ${String(date.getFullYear()).slice(-2)}`,
+        cashIn: 0,
+        cashOut: 0
+      };
+    });
+    const byKey = new Map(months.map((item) => [item.key, item]));
+
+    financeTransactions.forEach((item) => {
+      const key = String(item.transaction_date || item.created_at || "").slice(0, 7);
+      const month = byKey.get(key);
+      if (!month) return;
+      const amount = parseAmount(item.amount);
+      if (item.transaction_type === "Cash Out") {
+        month.cashOut += amount;
+      } else {
+        month.cashIn += amount;
+      }
+    });
+
+    financeRevenues.forEach((item) => {
+      const key = String(item.transaction_date || item.created_at || "").slice(0, 7);
+      const month = byKey.get(key);
+      if (month) month.cashIn += parseAmount(item.total_revenue);
+    });
+
+    financeExpenses.forEach((item) => {
+      const key = String(item.expense_date || item.created_at || "").slice(0, 7);
+      const month = byKey.get(key);
+      if (month && item.status !== "Rejected") month.cashOut += parseAmount(item.amount);
+    });
+
+    const rows = months.map((item) => ({
+      ...item,
+      net: item.cashIn - item.cashOut
+    }));
+    const maxFlow = Math.max(1, ...rows.flatMap((item) => [item.cashIn, item.cashOut, Math.abs(item.net)]));
+    const runway = financeMetrics.runway;
+    const warning = runway > 0 && runway <= 2
+      ? "Cash runway is tight. Review expenses and incoming receivables."
+      : runway === 0 && financeMetrics.burnRate > 0
+        ? "No runway detected from current IDR bank balance."
+        : "Cash runway looks stable based on current IDR records.";
+
+    return { rows, maxFlow, warning };
+  }, [financeExpenses, financeMetrics.burnRate, financeMetrics.runway, financeRevenues, financeTransactions]);
+
   const financialReportSummary = useMemo(() => {
     const currency = "IDR";
     const from = financialReportDraft.date_from;
@@ -2514,13 +2703,19 @@ export default function AdminDashboard() {
       ["currency", "Currency", "select"],
       ["payment_method", "Payment Method", "select"],
       ["receipt_url", "Receipt URL"],
-      ["status", "Status", "select"]
+      ["status", "Status", "select"],
+      ["approved_by", "Approved By"],
+      ["approved_at", "Approved At"],
+      ["approval_note", "Approval Note", "textarea"]
     ],
     financeReceivable: [
       ["invoice_number", "Invoice Number"],
+      ["invoice_date", "Invoice Date", "date"],
+      ["quotation_number", "Quotation Number"],
       ["buyer_name", "Buyer Name"],
       ["commodity", "Commodity"],
       ["amount", "Amount"],
+      ["paid_amount", "Paid Amount"],
       ["currency", "Currency", "select"],
       ["due_date", "Due Date", "date"],
       ["status", "Status", "select"]
@@ -3104,6 +3299,33 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              <div className="admin-panel wide">
+                <div className="admin-panel-header compact">
+                  <div>
+                    <p>Cash Flow Visual</p>
+                    <h2>Monthly Inflow / Outflow</h2>
+                  </div>
+                  <span className={financeMetrics.runway > 0 && financeMetrics.runway <= 2 ? "admin-badge high" : "admin-badge low"}>{cashFlowVisual.warning}</span>
+                </div>
+                <div className="admin-report-breakdown">
+                  {cashFlowVisual.rows.map((item) => (
+                    <p key={item.key}>
+                      <span>{item.label}</span>
+                      <strong>{formatMoney(item.net, "IDR")}</strong>
+                      <small style={{ display: "grid", gap: 4, minWidth: 180 }}>
+                        <i style={{ background: "rgba(87, 255, 190, 0.32)", borderRadius: 999, height: 7, width: `${Math.max(4, (item.cashIn / cashFlowVisual.maxFlow) * 100)}%` }} />
+                        <i style={{ background: "rgba(255, 107, 107, 0.34)", borderRadius: 999, height: 7, width: `${Math.max(4, (item.cashOut / cashFlowVisual.maxFlow) * 100)}%` }} />
+                      </small>
+                    </p>
+                  ))}
+                </div>
+                <div className="admin-finance-signals">
+                  <article><span>Runway Forecast</span><strong>{financeMetrics.runway ? `${financeMetrics.runway} months` : "-"}</strong></article>
+                  <article><span>Current Burn Rate</span><strong>{formatMoney(financeMetrics.burnRate, "IDR")}</strong></article>
+                  <article><span>Open AR</span><strong>{formatMoney(financeMetrics.receivableByCurrency.IDR || 0, "IDR")}</strong></article>
+                </div>
+              </div>
+
               <div className="admin-panel">
                 <div className="admin-panel-header compact"><div><p>Business Metrics</p><h2>Trading Signals</h2></div></div>
                 <div className="admin-finance-signals">
@@ -3131,6 +3353,21 @@ export default function AdminDashboard() {
                     </article>
                   ))}
                   {!financePermissions.length ? <p className="admin-empty">No granular finance permissions assigned yet. CEO-only mode is active.</p> : null}
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Storage Readiness</p>
+                    <h2>Finance Documents</h2>
+                  </div>
+                  <button onClick={checkFinanceStorageStatus} type="button">Check Storage</button>
+                </div>
+                <div className="admin-modal-confirm">
+                  <p>Bucket: <strong>finance-documents</strong></p>
+                  <strong>{storageStatus?.message || "Run a storage check before production upload testing."}</strong>
+                  {storageStatus ? <span className={storageStatus.ready ? "admin-badge low" : "admin-badge high"}>{storageStatus.ready ? "Ready" : "Needs Setup"}</span> : null}
                 </div>
               </div>
 
@@ -3313,6 +3550,36 @@ export default function AdminDashboard() {
                     <small>{uploadingFinanceField === "expense-receipt_url" ? "Uploading receipt..." : "Upload receipt, invoice, transfer proof, or document."}</small>
                   </label>
                   <label className="wide">Description<textarea value={expenseDraft.description} onChange={(event) => updateExpenseDraft("description", event.target.value)} placeholder="Expense purpose, business context, or approval note" /></label>
+                </div>
+              </div>
+
+              <div className="admin-panel wide">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Finance Invoice</p>
+                    <h2>Quotation to Accounts Receivable</h2>
+                  </div>
+                  <button onClick={createFinanceInvoiceFromQuotation} type="button">Create Invoice</button>
+                </div>
+                <div className="admin-settings-form finance-form">
+                  <label>Quotation
+                    <select value={financeInvoiceDraft.quotation_id} onChange={(event) => selectQuotationForFinanceInvoice(event.target.value)}>
+                      <option value="">Select quotation</option>
+                      {quotationRequests.map((item) => <option key={item.id} value={item.id}>{item.quotation_number || item.buyer_name || item.company_name || item.id}</option>)}
+                    </select>
+                  </label>
+                  <label>Quotation Number<input value={financeInvoiceDraft.quotation_number} onChange={(event) => setFinanceInvoiceDraft((current) => ({ ...current, quotation_number: event.target.value }))} placeholder="GSN-QTN-2026-0001" /></label>
+                  <label>Invoice Number<input value={financeInvoiceDraft.invoice_number} onChange={(event) => setFinanceInvoiceDraft((current) => ({ ...current, invoice_number: event.target.value }))} placeholder="GSN-INV-2026-0001" /></label>
+                  <label>Invoice Date<input type="date" value={financeInvoiceDraft.invoice_date} onChange={(event) => setFinanceInvoiceDraft((current) => ({ ...current, invoice_date: event.target.value }))} /></label>
+                  <label>Buyer<input value={financeInvoiceDraft.buyer_name} onChange={(event) => setFinanceInvoiceDraft((current) => ({ ...current, buyer_name: event.target.value }))} /></label>
+                  <label>Amount<input inputMode="decimal" value={financeInvoiceDraft.amount} onChange={(event) => setFinanceInvoiceDraft((current) => ({ ...current, amount: event.target.value }))} placeholder="0" /></label>
+                  <label>Currency
+                    <select value={financeInvoiceDraft.currency} onChange={(event) => setFinanceInvoiceDraft((current) => ({ ...current, currency: event.target.value }))}>
+                      {financeCurrencies.map((currency) => <option key={currency}>{currency}</option>)}
+                    </select>
+                  </label>
+                  <label>Due Date<input type="date" value={financeInvoiceDraft.due_date} onChange={(event) => setFinanceInvoiceDraft((current) => ({ ...current, due_date: event.target.value }))} /></label>
+                  <label className="wide">Commodity<input value={financeInvoiceDraft.commodity} onChange={(event) => setFinanceInvoiceDraft((current) => ({ ...current, commodity: event.target.value }))} placeholder="Products included in the quotation" /></label>
                 </div>
               </div>
 
@@ -3703,8 +3970,8 @@ export default function AdminDashboard() {
                           <td>{item.status || "Draft"}</td>
                           <td>
                             <div className="admin-table-actions">
-                              {["Draft", "Pending Approval"].includes(item.status || "Draft") ? <button onClick={() => updateFinanceRecord("financeExpense", item.id, { status: "Approved" }).then((ok) => ok ? setNotice("Expense approved.") : null)} type="button">Approve</button> : null}
-                              {item.status !== "Rejected" ? <button onClick={() => updateFinanceRecord("financeExpense", item.id, { status: "Rejected" }).then((ok) => ok ? setNotice("Expense rejected.") : null)} type="button">Reject</button> : null}
+                              {["Draft", "Pending Approval"].includes(item.status || "Draft") ? <button onClick={() => startExpenseApproval(item, "Approved")} type="button">Approve</button> : null}
+                              {item.status !== "Rejected" ? <button onClick={() => startExpenseApproval(item, "Rejected")} type="button">Reject</button> : null}
                               <button onClick={() => openModal("financeExpense", item)} type="button">Edit</button>
                               <button className="danger" onClick={() => openDeleteModal("financeExpense", item)} type="button">Delete</button>
                             </div>
@@ -3715,6 +3982,17 @@ export default function AdminDashboard() {
                   </table>
                   {!financeExpenses.length ? <p className="admin-empty table">No expense record has been saved yet.</p> : null}
                 </div>
+                {expenseApprovalDraft.id ? (
+                  <div className="admin-settings-form compact">
+                    <label className="wide">Approval Note
+                      <textarea value={expenseApprovalDraft.note} onChange={(event) => setExpenseApprovalDraft((current) => ({ ...current, note: event.target.value }))} placeholder="Reason, condition, or rejection note" />
+                    </label>
+                    <div className="admin-actions">
+                      <button onClick={submitExpenseApproval} type="button">{expenseApprovalDraft.status} Expense</button>
+                      <button onClick={() => setExpenseApprovalDraft({ id: "", status: "", note: "" })} type="button">Cancel</button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <div className="admin-panel wide">
@@ -3731,9 +4009,11 @@ export default function AdminDashboard() {
                       <thead>
                         <tr>
                           <th>Due Date</th>
+                          <th>Invoice</th>
                           <th>Buyer</th>
                           <th>Commodity</th>
                           <th>Amount</th>
+                          <th>Paid</th>
                           <th>Status</th>
                           <th>Actions</th>
                         </tr>
@@ -3742,9 +4022,11 @@ export default function AdminDashboard() {
                         {receivables.slice(0, 8).map((item) => (
                           <tr key={item.id}>
                             <td>{item.due_date ? formatDate(item.due_date) : "-"}</td>
+                            <td>{item.invoice_number || item.quotation_number || "-"}</td>
                             <td>{item.buyer_name || item.invoice_number || "-"}</td>
                             <td>{item.commodity || "-"}</td>
                             <td>{formatMoney(item.amount, item.currency || "IDR")}</td>
+                            <td>{formatMoney(item.paid_amount || 0, item.currency || "IDR")}</td>
                             <td>{item.status || "Pending"}</td>
                             <td>
                               <div className="admin-table-actions">

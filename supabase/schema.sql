@@ -205,7 +205,10 @@ create table if not exists public.expenses (
   payment_method text,
   receipt_url text,
   status text not null default 'Draft',
-  created_by text
+  created_by text,
+  approved_by text,
+  approved_at timestamptz,
+  approval_note text
 );
 
 create table if not exists public.receivables (
@@ -213,9 +216,13 @@ create table if not exists public.receivables (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   invoice_number text,
+  invoice_date date,
+  quotation_id uuid,
+  quotation_number text,
   buyer_name text,
   commodity text,
   amount numeric(18,2) not null default 0,
+  paid_amount numeric(18,2) not null default 0,
   currency text not null default 'IDR',
   due_date date,
   status text not null default 'Pending'
@@ -451,5 +458,14 @@ alter table public.quotation_requests add column if not exists quotation_number 
 alter table public.quotation_documents add column if not exists quotation_number text;
 alter table public.inquiries add column if not exists assigned_to text;
 alter table public.inquiries add column if not exists follow_up_deadline timestamptz;
+alter table public.expenses add column if not exists approved_by text;
+alter table public.expenses add column if not exists approved_at timestamptz;
+alter table public.expenses add column if not exists approval_note text;
+alter table public.receivables add column if not exists invoice_date date;
+alter table public.receivables add column if not exists quotation_id uuid;
+alter table public.receivables add column if not exists quotation_number text;
+alter table public.receivables add column if not exists paid_amount numeric(18,2) not null default 0;
 create index if not exists quotation_requests_number_idx on public.quotation_requests (quotation_number);
 create index if not exists quotation_documents_number_idx on public.quotation_documents (quotation_number);
+create index if not exists receivables_invoice_number_idx on public.receivables (invoice_number);
+create index if not exists receivables_quotation_number_idx on public.receivables (quotation_number);
