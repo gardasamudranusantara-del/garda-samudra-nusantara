@@ -377,6 +377,18 @@ create table if not exists public.finance_invitations (
   expires_at timestamptz
 );
 
+alter table public.quotation_requests add column if not exists quotation_number text;
+alter table public.quotation_documents add column if not exists quotation_number text;
+alter table public.inquiries add column if not exists assigned_to text;
+alter table public.inquiries add column if not exists follow_up_deadline timestamptz;
+alter table public.expenses add column if not exists approved_by text;
+alter table public.expenses add column if not exists approved_at timestamptz;
+alter table public.expenses add column if not exists approval_note text;
+alter table public.receivables add column if not exists invoice_date date;
+alter table public.receivables add column if not exists quotation_id uuid;
+alter table public.receivables add column if not exists quotation_number text;
+alter table public.receivables add column if not exists paid_amount numeric(18,2) not null default 0;
+
 create index if not exists inquiries_created_at_idx on public.inquiries (created_at desc);
 create index if not exists inquiries_status_idx on public.inquiries (status);
 create index if not exists inquiries_priority_idx on public.inquiries (lead_priority);
@@ -454,17 +466,6 @@ alter table public.finance_permissions enable row level security;
 alter table public.finance_access_logs enable row level security;
 alter table public.finance_invitations enable row level security;
 
-alter table public.quotation_requests add column if not exists quotation_number text;
-alter table public.quotation_documents add column if not exists quotation_number text;
-alter table public.inquiries add column if not exists assigned_to text;
-alter table public.inquiries add column if not exists follow_up_deadline timestamptz;
-alter table public.expenses add column if not exists approved_by text;
-alter table public.expenses add column if not exists approved_at timestamptz;
-alter table public.expenses add column if not exists approval_note text;
-alter table public.receivables add column if not exists invoice_date date;
-alter table public.receivables add column if not exists quotation_id uuid;
-alter table public.receivables add column if not exists quotation_number text;
-alter table public.receivables add column if not exists paid_amount numeric(18,2) not null default 0;
 create index if not exists quotation_requests_number_idx on public.quotation_requests (quotation_number);
 create index if not exists quotation_documents_number_idx on public.quotation_documents (quotation_number);
 create index if not exists receivables_invoice_number_idx on public.receivables (invoice_number);
