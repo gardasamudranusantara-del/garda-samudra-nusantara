@@ -1,5 +1,5 @@
 import { requireAdminPermission } from "@/lib/adminAuth";
-import { insertAdminActivity, insertFinancePayable } from "@/lib/gsnDataStore";
+import { assertFinancePeriodOpen, getNextFinanceNumber, insertAdminActivity, insertFinancePayable } from "@/lib/gsnDataStore";
 
 const payableStatuses = ["Unpaid", "Partial", "Paid", "Overdue"];
 
@@ -20,13 +20,22 @@ export async function POST(request) {
     return Response.json({ message: "Payable amount must be greater than 0." }, { status: 400 });
   }
 
+  const payableDate = String(data.due_date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  try {
+    await assertFinancePeriodOpen(payableDate);
+  } catch (error) {
+    return Response.json({ message: error.message }, { status: 423 });
+  }
+
+  const invoiceNumber = String(data.invoice_number || "").trim().slice(0, 120) || await getNextFinanceNumber("payables", "invoice_number", "GSN-AP");
+
   const result = await insertFinancePayable({
     supplier_name: String(data.supplier_name || "").slice(0, 160),
     commodity: String(data.commodity || "").slice(0, 160),
-    invoice_number: String(data.invoice_number || "").slice(0, 120),
+    invoice_number: invoiceNumber,
     amount,
     currency: ["IDR", "USD", "SGD"].includes(data.currency) ? data.currency : "IDR",
-    due_date: data.due_date ? String(data.due_date).slice(0, 10) : null,
+    due_date: data.due_date ? payableDate : null,
     status: payableStatuses.includes(data.status) ? data.status : "Unpaid"
   });
 
@@ -40,7 +49,7 @@ export async function POST(request) {
       after: {
         supplier_name: data.supplier_name || "",
         commodity: data.commodity || "",
-        invoice_number: data.invoice_number || "",
+        invoice_number: invoiceNumber,
         amount,
         currency: data.currency || "IDR",
         due_date: data.due_date || "",

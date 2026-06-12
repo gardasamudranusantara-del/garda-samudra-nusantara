@@ -5,7 +5,9 @@ import { useMemo, useState } from "react";
 const statuses = ["New", "Contacted", "Negotiation", "Quotation Sent", "Converted", "Closed"];
 const priorities = ["All", "High", "Medium", "Low"];
 const statusFilters = ["All", ...statuses];
-const modules = ["Leads", "Investors", "Quotations", "Analytics", "Finance", "Activity", "Settings", "Users"];
+const modules = ["Leads", "Investors", "Quotations", "Analytics", "Finance", "Attendance", "Activity", "Settings", "Users"];
+const attendanceStatuses = ["Present", "Remote", "Field Visit", "Permission", "Sick", "Leave"];
+const attendanceWorkModes = ["Office", "Remote", "Field", "Hybrid"];
 const financeMenus = [
   "Dashboard Overview",
   "Cash Management",
@@ -22,7 +24,7 @@ const financeCurrencies = ["IDR", "USD", "SGD"];
 const cashInCategories = ["Founder Capital", "Investor Capital", "Sales Revenue", "Commission Revenue", "Other Income"];
 const cashOutCategories = ["Operational", "Marketing", "Payroll", "Technology", "Logistics", "Travel", "Legal"];
 const paymentMethods = ["Bank Transfer", "Cash", "Virtual Account", "Card", "E-Wallet", "Other"];
-const receivableStatuses = ["Pending", "Partial Payment", "Paid", "Overdue"];
+const receivableStatuses = ["Draft", "Sent", "Partially Paid", "Paid", "Overdue", "Cancelled"];
 const payableStatuses = ["Unpaid", "Partial", "Paid", "Overdue"];
 const expenseStatuses = ["Draft", "Pending Approval", "Approved", "Rejected"];
 const budgetCategories = ["Operations", "Marketing", "Technology", "Human Resources", "Logistics", "Business Development", "Legal"];
@@ -498,6 +500,44 @@ function getFinanceInvoiceNumber(quotation = {}) {
   return `GSN-INV-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
 }
 
+function makeFinanceNumber(prefix, index, year = new Date().getFullYear()) {
+  return `${prefix}-${year}-${String(index).padStart(4, "0")}`;
+}
+
+function getNextFinanceNumber(records = [], prefix = "GSN-INV") {
+  const year = new Date().getFullYear();
+  const existing = records
+    .map((item) => String(item.invoice_number || ""))
+    .map((value) => value.match(new RegExp(`^${prefix}-${year}-(\\d{4})$`))?.[1])
+    .filter(Boolean)
+    .map((value) => Number(value));
+  return makeFinanceNumber(prefix, existing.length ? Math.max(...existing) + 1 : records.length + 1, year);
+}
+
+function daysUntil(value) {
+  if (!value) {
+    return null;
+  }
+
+  const today = new Date(new Date().toISOString().slice(0, 10)).getTime();
+  const target = new Date(String(value).slice(0, 10)).getTime();
+  if (Number.isNaN(target)) {
+    return null;
+  }
+
+  return Math.ceil((target - today) / 86400000);
+}
+
+function isPreviewableImage(url = "") {
+  return /\.(png|jpe?g|webp)(\?.*)?$/i.test(String(url));
+}
+
+function getDocumentName(url = "") {
+  const clean = String(url).split("?")[0];
+  const name = clean.split("/").pop() || "Finance document";
+  return decodeURIComponent(name).replace(/^\d+-/, "");
+}
+
 function getQuotationProductsText(quotation = {}) {
   if (Array.isArray(quotation.products) && quotation.products.length) {
     return quotation.products.join(", ");
@@ -699,7 +739,7 @@ function financeReceivableToDraft(item = {}) {
     paid_amount: String(item.paid_amount ?? ""),
     currency: item.currency || "IDR",
     due_date: String(item.due_date || "").slice(0, 10),
-    status: item.status || "Pending"
+    status: item.status || "Draft"
   };
 }
 
@@ -827,6 +867,12 @@ export default function AdminDashboard() {
   const [modal, setModal] = useState(null);
   const [userAccounts, setUserAccounts] = useState([]);
   const [userDraft, setUserDraft] = useState({ username: "", password: "", role: "marketing" });
+  const [attendanceDraft, setAttendanceDraft] = useState({
+    status: "Present",
+    work_mode: "Office",
+    location: "",
+    notes: ""
+  });
   const [financeDraft, setFinanceDraft] = useState({
     transaction_type: "Cash In",
     transaction_date: new Date().toISOString().slice(0, 10),
@@ -891,7 +937,7 @@ export default function AdminDashboard() {
     paid_amount: "",
     currency: "IDR",
     due_date: "",
-    status: "Pending"
+    status: "Draft"
   });
   const [financeInvoiceDraft, setFinanceInvoiceDraft] = useState({
     quotation_id: "",
@@ -971,6 +1017,12 @@ export default function AdminDashboard() {
     period_preset: "This Month",
     date_from: getPeriodRange("This Month").from,
     date_to: getPeriodRange("This Month").to
+  });
+  const [financeLockDraft, setFinanceLockDraft] = useState({
+    period_label: new Date().toISOString().slice(0, 7),
+    date_from: getPeriodRange("This Month").from,
+    date_to: getPeriodRange("This Month").to,
+    lock_note: ""
   });
   const [quotationDraft, setQuotationDraft] = useState({
     quotation_number: "",
@@ -1070,6 +1122,30 @@ export default function AdminDashboard() {
       const result = await response.json();
       setUserAccounts(result.accounts || []);
     }
+  }
+
+  async function saveAttendance(action) {
+    const response = await fetch("/api/admin/attendance", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(savedCredentials)
+      },
+      body: JSON.stringify({
+        ...attendanceDraft,
+        action,
+        attendance_date: new Date().toISOString().slice(0, 10)
+      })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to save attendance. Run the latest Supabase schema first.");
+      return;
+    }
+
+    setNotice(action === "check_out" ? "Check-out saved." : "Check-in saved.");
+    await loadDashboard(savedCredentials);
   }
 
   async function saveUserAccount() {
@@ -1769,6 +1845,51 @@ export default function AdminDashboard() {
     }
   }
 
+  function renderFinanceDocumentPreview(url, label = "Document") {
+    if (!url) {
+      return null;
+    }
+
+    return (
+      <div className="admin-document-preview">
+        {isPreviewableImage(url) ? <img src={url} alt={`${label} preview`} /> : <span>{String(url).toLowerCase().includes(".pdf") ? "PDF" : "FILE"}</span>}
+        <div>
+          <strong>{label}</strong>
+          <small>{getDocumentName(url)}</small>
+          <a href={url} target="_blank" rel="noreferrer">Open document</a>
+        </div>
+      </div>
+    );
+  }
+
+  function scrollToFinanceForm(id) {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function testFinanceOwnerAlerts() {
+    setNotice("");
+
+    const response = await fetch("/api/admin/finance/test-notifications", {
+      method: "POST",
+      headers: authHeaders(savedCredentials)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to test finance owner alerts.");
+      return;
+    }
+
+    const summary = (result.results || [])
+      .map((item) => `${item.channel}: ${item.ok ? "sent" : item.skipped || item.status || "failed"}`)
+      .join(", ");
+    setNotice(`Finance owner alert test completed. ${summary}`);
+  }
+
   async function saveFinanceExpense() {
     setNotice("");
 
@@ -1802,6 +1923,10 @@ export default function AdminDashboard() {
 
   async function saveFinanceReceivable() {
     setNotice("");
+    const payload = {
+      ...receivableDraft,
+      invoice_number: receivableDraft.invoice_number || getNextFinanceNumber(receivables, "GSN-INV")
+    };
 
     const response = await fetch("/api/admin/finance/receivables", {
       method: "POST",
@@ -1809,7 +1934,7 @@ export default function AdminDashboard() {
         ...authHeaders(savedCredentials),
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(receivableDraft)
+      body: JSON.stringify(payload)
     });
     const result = await response.json();
 
@@ -1826,13 +1951,17 @@ export default function AdminDashboard() {
       commodity: "",
       amount: "",
       due_date: "",
-      status: "Pending"
+      status: "Draft"
     }));
     await loadDashboard(savedCredentials);
   }
 
   async function saveFinancePayable() {
     setNotice("");
+    const payload = {
+      ...payableDraft,
+      invoice_number: payableDraft.invoice_number || getNextFinanceNumber(payables, "GSN-AP")
+    };
 
     const response = await fetch("/api/admin/finance/payables", {
       method: "POST",
@@ -1840,7 +1969,7 @@ export default function AdminDashboard() {
         ...authHeaders(savedCredentials),
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(payableDraft)
+      body: JSON.stringify(payload)
     });
     const result = await response.json();
 
@@ -1960,6 +2089,25 @@ export default function AdminDashboard() {
     if (!response.ok) {
       setNotice(result.message || "Unable to check finance storage.");
     }
+  }
+
+  async function prepareFinanceStorage() {
+    setNotice("");
+    setStorageStatus({ ready: false, message: "Preparing finance document storage..." });
+
+    const response = await fetch("/api/admin/finance/storage-status", {
+      method: "POST",
+      headers: authHeaders(savedCredentials)
+    });
+    const result = await response.json();
+    setStorageStatus(result);
+
+    if (!response.ok || !result.ready) {
+      setNotice(result.message || "Unable to prepare finance storage.");
+      return;
+    }
+
+    setNotice(result.message || "Finance document storage is ready.");
   }
 
   function selectReceivableForMatch(receivableId) {
@@ -2161,6 +2309,57 @@ export default function AdminDashboard() {
     await loadDashboard(savedCredentials);
   }
 
+  async function saveFinancePeriodLock() {
+    setNotice("");
+
+    const response = await fetch("/api/admin/finance/period-locks", {
+      method: "POST",
+      headers: {
+        ...authHeaders(savedCredentials),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(financeLockDraft)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to lock finance period.");
+      return;
+    }
+
+    setNotice(`Finance period ${financeLockDraft.period_label} locked.`);
+    setFinanceLockDraft((current) => ({
+      ...current,
+      lock_note: ""
+    }));
+    await loadDashboard(savedCredentials);
+  }
+
+  async function reopenFinancePeriodLock(item) {
+    setNotice("");
+
+    const response = await fetch("/api/admin/finance/period-locks", {
+      method: "PATCH",
+      headers: {
+        ...authHeaders(savedCredentials),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        id: item.id,
+        lock_note: `Reopened by ${adminProfile?.username || "admin"} for official correction.`
+      })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to reopen finance period.");
+      return;
+    }
+
+    setNotice(`Finance period ${item.period_label} reopened.`);
+    await loadDashboard(savedCredentials);
+  }
+
   function updateSetting(path, value) {
     setSettingsDraft((current) => {
       const next = structuredClone(current);
@@ -2182,6 +2381,7 @@ export default function AdminDashboard() {
   const notifications = data?.notifications || [];
   const events = data?.events || [];
   const adminActivities = data?.adminActivities || [];
+  const attendanceRecords = data?.attendanceRecords || [];
   const finance = data?.finance || null;
   const financeTransactions = finance?.transactions || [];
   const bankAccounts = finance?.bankAccounts || [];
@@ -2199,6 +2399,7 @@ export default function AdminDashboard() {
   const financePermissions = finance?.financePermissions || [];
   const financeAccessLogs = finance?.financeAccessLogs || [];
   const investorReports = finance?.investorReports || [];
+  const financePeriodLocks = finance?.financePeriodLocks || [];
   const isCeo = adminProfile?.role === "ceo";
   const isCso = adminProfile?.role === "cso";
   const isOwner = adminProfile?.role === "owner";
@@ -2206,6 +2407,15 @@ export default function AdminDashboard() {
   const canUseFinance = (isCeo || isCso) && Boolean(finance);
   const canDelete = isExecutive;
   const canUseSettings = isExecutive;
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayAttendance = attendanceRecords.filter((record) => String(record.attendance_date || record.created_at || "").slice(0, 10) === todayKey);
+  const currentAttendance = todayAttendance.find((record) => record.username === adminProfile?.username);
+  const attendanceSummary = {
+    totalToday: todayAttendance.length,
+    present: todayAttendance.filter((record) => ["Present", "Remote", "Field Visit"].includes(record.status)).length,
+    permission: todayAttendance.filter((record) => ["Permission", "Sick", "Leave"].includes(record.status)).length,
+    notCheckedOut: todayAttendance.filter((record) => record.check_in_at && !record.check_out_at).length
+  };
   const visibleModules = modules.filter((module) => {
     if (module === "Finance") {
       return isCeo || isCso;
@@ -2336,6 +2546,71 @@ export default function AdminDashboard() {
       countriesReached: new Set(leads.map((lead) => lead.country).filter(Boolean)).size
     };
   }, [bankAccounts, financeExpenses, financeRevenues, leads, metrics.openLeads.length, payables, quotationRequests.length, receivables]);
+
+  const financeReminders = useMemo(() => {
+    const arItems = receivables
+      .filter((item) => !["Paid", "Cancelled"].includes(item.status))
+      .map((item) => ({ ...item, kind: "AR", days: daysUntil(item.due_date) }))
+      .filter((item) => item.days !== null && item.days <= 3)
+      .sort((a, b) => a.days - b.days);
+    const apItems = payables
+      .filter((item) => !["Paid", "Cancelled"].includes(item.status))
+      .map((item) => ({ ...item, kind: "AP", days: daysUntil(item.due_date) }))
+      .filter((item) => item.days !== null && item.days <= 3)
+      .sort((a, b) => a.days - b.days);
+    const pendingApproval = financeExpenses
+      .filter((item) => item.status === "Pending Approval")
+      .sort((a, b) => new Date(a.expense_date || a.created_at || 0) - new Date(b.expense_date || b.created_at || 0));
+
+    return {
+      arItems,
+      apItems,
+      pendingApproval,
+      total: arItems.length + apItems.length + pendingApproval.length
+    };
+  }, [financeExpenses, payables, receivables]);
+
+  const closingChecklist = useMemo(() => {
+    const from = financeLockDraft.date_from;
+    const to = financeLockDraft.date_to;
+    const today = new Date().toISOString().slice(0, 10);
+    const periodReceivables = receivables.filter((item) => isInDateRange(item.invoice_date || item.due_date || item.created_at, from, to));
+    const periodPayables = payables.filter((item) => isInDateRange(item.due_date || item.created_at, from, to));
+    const periodExpenses = financeExpenses.filter((item) => isInDateRange(item.expense_date || item.created_at, from, to));
+    const hasReport = financialReports.some((item) => item.date_from === from && item.date_to === to);
+    const bankReady = bankAccounts.some((item) => item.status === "Active" && parseAmount(item.current_balance) >= 0);
+    const unpaidAr = periodReceivables.filter((item) => !["Paid", "Cancelled"].includes(item.status));
+    const overdueAp = periodPayables.filter((item) => !["Paid", "Cancelled"].includes(item.status) && item.due_date && item.due_date < today);
+    const pendingExpenses = periodExpenses.filter((item) => item.status === "Pending Approval");
+
+    return [
+      {
+        label: "AR unpaid cleared",
+        ok: unpaidAr.length === 0,
+        detail: unpaidAr.length ? `${unpaidAr.length} buyer invoice still open.` : "No open AR inside selected period."
+      },
+      {
+        label: "AP overdue reviewed",
+        ok: overdueAp.length === 0,
+        detail: overdueAp.length ? `${overdueAp.length} supplier bill overdue.` : "No overdue AP inside selected period."
+      },
+      {
+        label: "Expense approvals completed",
+        ok: pendingExpenses.length === 0,
+        detail: pendingExpenses.length ? `${pendingExpenses.length} expense waiting approval.` : "No pending expense approval."
+      },
+      {
+        label: "Financial report saved",
+        ok: hasReport,
+        detail: hasReport ? "Report exists for this date range." : "Save a finance report for this period before final lock."
+      },
+      {
+        label: "Bank balance recorded",
+        ok: bankReady,
+        detail: bankReady ? "At least one active bank account is recorded." : "Add active bank account balance before closing."
+      }
+    ];
+  }, [bankAccounts, financeExpenses, financeLockDraft.date_from, financeLockDraft.date_to, financialReports, payables, receivables]);
 
   const cashFlowVisual = useMemo(() => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -3299,6 +3574,97 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              <div className="admin-panel wide admin-mobile-finance-flow">
+                <div className="admin-panel-header compact">
+                  <div>
+                    <p>Quick Finance Flow</p>
+                    <h2>Choose What You Want to Record</h2>
+                  </div>
+                  <span className="admin-muted">Mobile-first shortcuts</span>
+                </div>
+                <div className="admin-finance-steps">
+                  <button onClick={() => scrollToFinanceForm("finance-cash-form")} type="button"><span>01</span><strong>Cash In / Out</strong><small>Record bank or cash movement.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-revenue-form")} type="button"><span>02</span><strong>Revenue</strong><small>Save buyer sales revenue.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-expense-form")} type="button"><span>03</span><strong>Expense</strong><small>Upload receipt and request approval.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-ar-ap-form")} type="button"><span>04</span><strong>AR / AP</strong><small>Track buyer invoices and supplier bills.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-payment-form")} type="button"><span>05</span><strong>Payment</strong><small>Match buyer or supplier payments.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-report-form")} type="button"><span>06</span><strong>Report</strong><small>Generate monthly finance report.</small></button>
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-header compact">
+                  <div>
+                    <p>Finance Reminder</p>
+                    <h2>Due Dates & Approvals</h2>
+                  </div>
+                  <div className="admin-actions">
+                    <button onClick={testFinanceOwnerAlerts} type="button">Test Owner Alerts</button>
+                    <span className={financeReminders.total ? "admin-badge high" : "admin-badge low"}>{financeReminders.total} active</span>
+                  </div>
+                </div>
+                <div className="admin-event-list compact">
+                  {financeReminders.arItems.slice(0, 4).map((item) => (
+                    <article key={`ar-${item.id}`}>
+                      <strong>{item.invoice_number || item.buyer_name || "Buyer invoice"}</strong>
+                      <span>{item.days < 0 ? `${Math.abs(item.days)} day overdue` : item.days === 0 ? "Due today" : `Due in ${item.days} day(s)`}</span>
+                      <em>AR | {item.buyer_name || "-"} | {formatMoney(item.amount, item.currency || "IDR")}</em>
+                    </article>
+                  ))}
+                  {financeReminders.apItems.slice(0, 4).map((item) => (
+                    <article key={`ap-${item.id}`}>
+                      <strong>{item.invoice_number || item.supplier_name || "Supplier bill"}</strong>
+                      <span>{item.days < 0 ? `${Math.abs(item.days)} day overdue` : item.days === 0 ? "Due today" : `Due in ${item.days} day(s)`}</span>
+                      <em>AP | {item.supplier_name || "-"} | {formatMoney(item.amount, item.currency || "IDR")}</em>
+                    </article>
+                  ))}
+                  {financeReminders.pendingApproval.slice(0, 4).map((item) => (
+                    <article key={`expense-${item.id}`}>
+                      <strong>{item.expense_category || "Expense approval"}</strong>
+                      <span>Pending approval</span>
+                      <em>{item.vendor || "-"} | {formatMoney(item.amount, item.currency || "IDR")}</em>
+                    </article>
+                  ))}
+                  {!financeReminders.total ? <p className="admin-empty">No overdue invoice, AP due soon, or pending expense approval.</p> : null}
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Monthly Closing</p>
+                    <h2>Lock Finance Period</h2>
+                  </div>
+                  <button onClick={saveFinancePeriodLock} type="button">Lock Period</button>
+                </div>
+                <div className="admin-settings-form compact">
+                  <label>Period Label<input value={financeLockDraft.period_label} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, period_label: event.target.value }))} placeholder="2026-06" /></label>
+                  <label>Date From<input type="date" value={financeLockDraft.date_from} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, date_from: event.target.value }))} /></label>
+                  <label>Date To<input type="date" value={financeLockDraft.date_to} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, date_to: event.target.value }))} /></label>
+                  <label className="wide">Closing Note<textarea value={financeLockDraft.lock_note} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, lock_note: event.target.value }))} placeholder="Example: June report approved by CEO/CSO." /></label>
+                </div>
+                <div className="admin-finance-signals">
+                  {closingChecklist.map((item) => (
+                    <article key={item.label}>
+                      <span>{item.label}</span>
+                      <strong>{item.ok ? "Ready" : "Review"}</strong>
+                      <small>{item.detail}</small>
+                    </article>
+                  ))}
+                </div>
+                <div className="admin-finance-signals">
+                  {financePeriodLocks.slice(0, 4).map((item) => (
+                    <article key={item.id}>
+                      <span>{item.period_label}</span>
+                      <strong>{item.status}</strong>
+                      <small>{item.date_from} to {item.date_to}</small>
+                      {item.status === "Locked" ? <button className="ghost" onClick={() => reopenFinancePeriodLock(item)} type="button">Reopen</button> : null}
+                    </article>
+                  ))}
+                  {!financePeriodLocks.length ? <article><span>No locked periods yet</span><strong>Open</strong><small>Use this after monthly review.</small></article> : null}
+                </div>
+              </div>
+
               <div className="admin-panel wide">
                 <div className="admin-panel-header compact">
                   <div>
@@ -3362,7 +3728,10 @@ export default function AdminDashboard() {
                     <p>Storage Readiness</p>
                     <h2>Finance Documents</h2>
                   </div>
-                  <button onClick={checkFinanceStorageStatus} type="button">Check Storage</button>
+                  <div className="admin-actions">
+                    <button onClick={checkFinanceStorageStatus} type="button">Check Storage</button>
+                    <button onClick={prepareFinanceStorage} type="button">Prepare Bucket</button>
+                  </div>
                 </div>
                 <div className="admin-modal-confirm">
                   <p>Bucket: <strong>finance-documents</strong></p>
@@ -3371,7 +3740,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="admin-panel wide">
+              <div className="admin-panel wide" id="finance-cash-form">
                 <div className="admin-panel-header">
                   <div>
                     <p>Cash Management</p>
@@ -3548,6 +3917,7 @@ export default function AdminDashboard() {
                     <input value={expenseDraft.receipt_url} onChange={(event) => updateExpenseDraft("receipt_url", event.target.value)} placeholder="Optional receipt/document link" />
                     <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" onChange={(event) => uploadFinanceAttachment(event, setExpenseDraft, "receipt_url", "expense")} />
                     <small>{uploadingFinanceField === "expense-receipt_url" ? "Uploading receipt..." : "Upload receipt, invoice, transfer proof, or document."}</small>
+                    {renderFinanceDocumentPreview(expenseDraft.receipt_url, "Expense receipt")}
                   </label>
                   <label className="wide">Description<textarea value={expenseDraft.description} onChange={(event) => updateExpenseDraft("description", event.target.value)} placeholder="Expense purpose, business context, or approval note" /></label>
                 </div>
@@ -3583,7 +3953,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="admin-panel">
+              <div className="admin-panel" id="finance-ar-ap-form">
                 <div className="admin-panel-header">
                   <div>
                     <p>Accounts Receivable</p>
@@ -3592,7 +3962,7 @@ export default function AdminDashboard() {
                   <button onClick={saveFinanceReceivable} type="button">Save AR</button>
                 </div>
                 <div className="admin-settings-form compact">
-                  <label>Invoice Number<input value={receivableDraft.invoice_number} onChange={(event) => setReceivableDraft((current) => ({ ...current, invoice_number: event.target.value }))} placeholder="INV-GSN-2026-0001" /></label>
+                  <label>Invoice Number<input value={receivableDraft.invoice_number} onChange={(event) => setReceivableDraft((current) => ({ ...current, invoice_number: event.target.value }))} placeholder={getNextFinanceNumber(receivables, "GSN-INV")} /></label>
                   <label>Buyer Name<input value={receivableDraft.buyer_name} onChange={(event) => setReceivableDraft((current) => ({ ...current, buyer_name: event.target.value }))} placeholder="Buyer or company" /></label>
                   <label>Commodity<input value={receivableDraft.commodity} onChange={(event) => setReceivableDraft((current) => ({ ...current, commodity: event.target.value }))} placeholder="Product / commodity" /></label>
                   <label>Amount<input inputMode="decimal" value={receivableDraft.amount} onChange={(event) => setReceivableDraft((current) => ({ ...current, amount: event.target.value }))} placeholder="0" /></label>
@@ -3620,7 +3990,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="admin-settings-form compact">
                   <label>Supplier Name<input value={payableDraft.supplier_name} onChange={(event) => setPayableDraft((current) => ({ ...current, supplier_name: event.target.value }))} placeholder="Supplier or vendor" /></label>
-                  <label>Invoice Number<input value={payableDraft.invoice_number} onChange={(event) => setPayableDraft((current) => ({ ...current, invoice_number: event.target.value }))} placeholder="Supplier invoice number" /></label>
+                  <label>Invoice Number<input value={payableDraft.invoice_number} onChange={(event) => setPayableDraft((current) => ({ ...current, invoice_number: event.target.value }))} placeholder={getNextFinanceNumber(payables, "GSN-AP")} /></label>
                   <label>Commodity<input value={payableDraft.commodity} onChange={(event) => setPayableDraft((current) => ({ ...current, commodity: event.target.value }))} placeholder="Product / service / commodity" /></label>
                   <label>Amount<input inputMode="decimal" value={payableDraft.amount} onChange={(event) => setPayableDraft((current) => ({ ...current, amount: event.target.value }))} placeholder="0" /></label>
                   <label>Currency
@@ -3637,7 +4007,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="admin-panel">
+              <div className="admin-panel" id="finance-payment-form">
                 <div className="admin-panel-header">
                   <div>
                     <p>Payment Matching</p>
@@ -3675,6 +4045,7 @@ export default function AdminDashboard() {
                     <input value={paymentMatchDraft.proof_url} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, proof_url: event.target.value }))} placeholder="Transfer proof or bank mutation link" />
                     <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" onChange={(event) => uploadFinanceAttachment(event, setPaymentMatchDraft, "proof_url", "payment")} />
                     <small>{uploadingFinanceField === "payment-proof_url" ? "Uploading payment proof..." : "Upload buyer payment proof or bank mutation."}</small>
+                    {renderFinanceDocumentPreview(paymentMatchDraft.proof_url, "Buyer payment proof")}
                   </label>
                   <label className="wide">Notes<textarea value={paymentMatchDraft.notes} onChange={(event) => setPaymentMatchDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
                 </div>
@@ -3719,6 +4090,7 @@ export default function AdminDashboard() {
                     <input value={supplierPaymentDraft.proof_url} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, proof_url: event.target.value }))} />
                     <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" onChange={(event) => uploadFinanceAttachment(event, setSupplierPaymentDraft, "proof_url", "supplier")} />
                     <small>{uploadingFinanceField === "supplier-proof_url" ? "Uploading supplier proof..." : "Upload supplier transfer proof or payment document."}</small>
+                    {renderFinanceDocumentPreview(supplierPaymentDraft.proof_url, "Supplier payment proof")}
                   </label>
                   <label className="wide">Notes<textarea value={supplierPaymentDraft.notes} onChange={(event) => setSupplierPaymentDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
                 </div>
@@ -3757,6 +4129,7 @@ export default function AdminDashboard() {
                     <input value={taxDraft.document_url} onChange={(event) => setTaxDraft((current) => ({ ...current, document_url: event.target.value }))} placeholder="Tax document / legal file link" />
                     <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" onChange={(event) => uploadFinanceAttachment(event, setTaxDraft, "document_url", "tax")} />
                     <small>{uploadingFinanceField === "tax-document_url" ? "Uploading tax document..." : "Upload tax, legal, or compliance document."}</small>
+                    {renderFinanceDocumentPreview(taxDraft.document_url, "Tax document")}
                   </label>
                   <label className="wide">Notes<textarea value={taxDraft.notes} onChange={(event) => setTaxDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
                 </div>
@@ -3801,7 +4174,7 @@ export default function AdminDashboard() {
                   <span className="admin-muted">Export PDF / Excel / CSV planned for next finance phase</span>
                 </div>
                 <div className="admin-table-wrap">
-                  <table>
+                  <table className="admin-mobile-cards">
                     <thead>
                       <tr>
                         <th>Date</th>
@@ -3816,13 +4189,13 @@ export default function AdminDashboard() {
                     <tbody>
                       {financeTransactions.slice(0, 10).map((item) => (
                         <tr key={item.id}>
-                          <td>{formatDate(item.transaction_date || item.created_at)}</td>
-                          <td>{item.transaction_type || "-"}</td>
-                          <td>{item.category || "-"}</td>
-                          <td>{item.description || "-"}</td>
-                          <td>{formatMoney(item.amount, item.currency || "IDR")}</td>
-                          <td>{item.reference_number || "-"}</td>
-                          <td>
+                          <td data-label="Date">{formatDate(item.transaction_date || item.created_at)}</td>
+                          <td data-label="Type">{item.transaction_type || "-"}</td>
+                          <td data-label="Category">{item.category || "-"}</td>
+                          <td data-label="Description">{item.description || "-"}</td>
+                          <td data-label="Amount">{formatMoney(item.amount, item.currency || "IDR")}</td>
+                          <td data-label="Reference">{item.reference_number || "-"}</td>
+                          <td data-label="Actions">
                             <div className="admin-table-actions">
                               <button onClick={() => openModal("financeTransaction", item)} type="button">Edit</button>
                               <button className="danger" onClick={() => openDeleteModal("financeTransaction", item)} type="button">Delete</button>
@@ -3846,16 +4219,16 @@ export default function AdminDashboard() {
                 </div>
                 <div className="admin-split-tables">
                   <div className="admin-table-wrap">
-                    <table>
+                    <table className="admin-mobile-cards">
                       <thead><tr><th>Account</th><th>Bank</th><th>Balance</th><th>Status</th><th>Actions</th></tr></thead>
                       <tbody>
                         {bankAccounts.slice(0, 8).map((item) => (
                           <tr key={item.id}>
-                            <td>{item.account_name || "-"}</td>
-                            <td>{item.bank_name || "-"}</td>
-                            <td>{formatMoney(item.current_balance, item.currency || "IDR")}</td>
-                            <td>{item.status || "Active"}</td>
-                            <td>
+                            <td data-label="Account">{item.account_name || "-"}</td>
+                            <td data-label="Bank">{item.bank_name || "-"}</td>
+                            <td data-label="Balance">{formatMoney(item.current_balance, item.currency || "IDR")}</td>
+                            <td data-label="Status">{item.status || "Active"}</td>
+                            <td data-label="Actions">
                               <div className="admin-table-actions">
                                 <button onClick={() => openModal("bankAccount", item)} type="button">Edit</button>
                                 <button className="danger" onClick={() => openDeleteModal("bankAccount", item)} type="button">Delete</button>
@@ -3868,16 +4241,16 @@ export default function AdminDashboard() {
                     {!bankAccounts.length ? <p className="admin-empty table">No bank account records yet.</p> : null}
                   </div>
                   <div className="admin-table-wrap">
-                    <table>
+                    <table className="admin-mobile-cards">
                       <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
                       <tbody>
                         {pettyCash.slice(0, 8).map((item) => (
                           <tr key={item.id}>
-                            <td>{formatDate(item.cash_date || item.created_at)}</td>
-                            <td>{item.description || "-"}</td>
-                            <td>{formatMoney(item.amount, item.currency || "IDR")}</td>
-                            <td>{item.status || "Recorded"}</td>
-                            <td>
+                            <td data-label="Date">{formatDate(item.cash_date || item.created_at)}</td>
+                            <td data-label="Description">{item.description || "-"}</td>
+                            <td data-label="Amount">{formatMoney(item.amount, item.currency || "IDR")}</td>
+                            <td data-label="Status">{item.status || "Recorded"}</td>
+                            <td data-label="Actions">
                               <div className="admin-table-actions">
                                 <button onClick={() => openModal("pettyCash", item)} type="button">Edit</button>
                                 <button className="danger" onClick={() => openDeleteModal("pettyCash", item)} type="button">Delete</button>
@@ -3892,7 +4265,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="admin-panel wide">
+              <div className="admin-panel wide" id="finance-revenue-form">
                 <div className="admin-panel-header">
                   <div>
                     <p>Revenue Records</p>
@@ -3901,7 +4274,7 @@ export default function AdminDashboard() {
                   <span className="admin-muted">Prepared for CSV / Excel / PDF export</span>
                 </div>
                 <div className="admin-table-wrap">
-                  <table>
+                  <table className="admin-mobile-cards">
                     <thead>
                       <tr>
                         <th>Date</th>
@@ -3917,14 +4290,14 @@ export default function AdminDashboard() {
                     <tbody>
                       {financeRevenues.slice(0, 10).map((item) => (
                         <tr key={item.id}>
-                          <td>{formatDate(item.transaction_date || item.created_at)}</td>
-                          <td>{item.invoice_number || "-"}</td>
-                          <td>{item.buyer_name || "-"}</td>
-                          <td>{item.division || "-"}</td>
-                          <td>{item.product || "-"}</td>
-                          <td>{item.quantity || "-"} {item.unit || ""}</td>
-                          <td>{formatMoney(item.total_revenue, item.currency || "IDR")}</td>
-                          <td>
+                          <td data-label="Date">{formatDate(item.transaction_date || item.created_at)}</td>
+                          <td data-label="Invoice">{item.invoice_number || "-"}</td>
+                          <td data-label="Buyer">{item.buyer_name || "-"}</td>
+                          <td data-label="Division">{item.division || "-"}</td>
+                          <td data-label="Product">{item.product || "-"}</td>
+                          <td data-label="Quantity">{item.quantity || "-"} {item.unit || ""}</td>
+                          <td data-label="Total">{formatMoney(item.total_revenue, item.currency || "IDR")}</td>
+                          <td data-label="Actions">
                             <div className="admin-table-actions">
                               <button onClick={() => openModal("financeRevenue", item)} type="button">Edit</button>
                               <button className="danger" onClick={() => openDeleteModal("financeRevenue", item)} type="button">Delete</button>
@@ -3938,7 +4311,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="admin-panel wide">
+              <div className="admin-panel wide" id="finance-expense-form">
                 <div className="admin-panel-header">
                   <div>
                     <p>Expense Records</p>
@@ -3947,7 +4320,7 @@ export default function AdminDashboard() {
                   <span className="admin-muted">Prepared for approval workflow, receipt upload, and export</span>
                 </div>
                 <div className="admin-table-wrap">
-                  <table>
+                  <table className="admin-mobile-cards">
                     <thead>
                       <tr>
                         <th>Date</th>
@@ -3962,13 +4335,13 @@ export default function AdminDashboard() {
                     <tbody>
                       {financeExpenses.slice(0, 10).map((item) => (
                         <tr key={item.id}>
-                          <td>{formatDate(item.expense_date || item.created_at)}</td>
-                          <td>{item.expense_category || "-"}</td>
-                          <td>{item.expense_subcategory || "-"}</td>
-                          <td>{item.vendor || "-"}</td>
-                          <td>{formatMoney(item.amount, item.currency || "IDR")}</td>
-                          <td>{item.status || "Draft"}</td>
-                          <td>
+                          <td data-label="Date">{formatDate(item.expense_date || item.created_at)}</td>
+                          <td data-label="Category">{item.expense_category || "-"}</td>
+                          <td data-label="Subcategory">{item.expense_subcategory || "-"}</td>
+                          <td data-label="Vendor">{item.vendor || "-"}</td>
+                          <td data-label="Amount">{formatMoney(item.amount, item.currency || "IDR")}</td>
+                          <td data-label="Status">{item.status || "Draft"}</td>
+                          <td data-label="Actions">
                             <div className="admin-table-actions">
                               {["Draft", "Pending Approval"].includes(item.status || "Draft") ? <button onClick={() => startExpenseApproval(item, "Approved")} type="button">Approve</button> : null}
                               {item.status !== "Rejected" ? <button onClick={() => startExpenseApproval(item, "Rejected")} type="button">Reject</button> : null}
@@ -4005,7 +4378,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="admin-split-tables">
                   <div className="admin-table-wrap">
-                    <table>
+                    <table className="admin-mobile-cards">
                       <thead>
                         <tr>
                           <th>Due Date</th>
@@ -4021,14 +4394,14 @@ export default function AdminDashboard() {
                       <tbody>
                         {receivables.slice(0, 8).map((item) => (
                           <tr key={item.id}>
-                            <td>{item.due_date ? formatDate(item.due_date) : "-"}</td>
-                            <td>{item.invoice_number || item.quotation_number || "-"}</td>
-                            <td>{item.buyer_name || item.invoice_number || "-"}</td>
-                            <td>{item.commodity || "-"}</td>
-                            <td>{formatMoney(item.amount, item.currency || "IDR")}</td>
-                            <td>{formatMoney(item.paid_amount || 0, item.currency || "IDR")}</td>
-                            <td>{item.status || "Pending"}</td>
-                            <td>
+                            <td data-label="Due Date">{item.due_date ? formatDate(item.due_date) : "-"}</td>
+                            <td data-label="Invoice">{item.invoice_number || item.quotation_number || "-"}</td>
+                            <td data-label="Buyer">{item.buyer_name || item.invoice_number || "-"}</td>
+                            <td data-label="Commodity">{item.commodity || "-"}</td>
+                            <td data-label="Amount">{formatMoney(item.amount, item.currency || "IDR")}</td>
+                            <td data-label="Paid">{formatMoney(item.paid_amount || 0, item.currency || "IDR")}</td>
+                            <td data-label="Status">{item.status || "Draft"}</td>
+                            <td data-label="Actions">
                               <div className="admin-table-actions">
                                 <button onClick={() => openModal("financeReceivable", item)} type="button">Edit</button>
                                 <button className="danger" onClick={() => openDeleteModal("financeReceivable", item)} type="button">Delete</button>
@@ -4041,7 +4414,7 @@ export default function AdminDashboard() {
                     {!receivables.length ? <p className="admin-empty table">No receivable records yet.</p> : null}
                   </div>
                   <div className="admin-table-wrap">
-                    <table>
+                    <table className="admin-mobile-cards">
                       <thead>
                         <tr>
                           <th>Due Date</th>
@@ -4055,12 +4428,12 @@ export default function AdminDashboard() {
                       <tbody>
                         {payables.slice(0, 8).map((item) => (
                           <tr key={item.id}>
-                            <td>{item.due_date ? formatDate(item.due_date) : "-"}</td>
-                            <td>{item.supplier_name || item.invoice_number || "-"}</td>
-                            <td>{item.commodity || "-"}</td>
-                            <td>{formatMoney(item.amount, item.currency || "IDR")}</td>
-                            <td>{item.status || "Unpaid"}</td>
-                            <td>
+                            <td data-label="Due Date">{item.due_date ? formatDate(item.due_date) : "-"}</td>
+                            <td data-label="Supplier">{item.supplier_name || item.invoice_number || "-"}</td>
+                            <td data-label="Commodity">{item.commodity || "-"}</td>
+                            <td data-label="Amount">{formatMoney(item.amount, item.currency || "IDR")}</td>
+                            <td data-label="Status">{item.status || "Unpaid"}</td>
+                            <td data-label="Actions">
                               <div className="admin-table-actions">
                                 <button onClick={() => openModal("financePayable", item)} type="button">Edit</button>
                                 <button className="danger" onClick={() => openDeleteModal("financePayable", item)} type="button">Delete</button>
@@ -4250,7 +4623,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="admin-panel wide">
+              <div className="admin-panel wide" id="finance-report-form">
                 <div className="admin-panel-header">
                   <div>
                     <p>Financial Reports</p>
@@ -4444,6 +4817,122 @@ export default function AdminDashboard() {
                     );
                   })}
                   {!latestFinanceActivities.length ? <p className="admin-empty">No finance audit activity found for this filter.</p> : null}
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {activeModule === "Attendance" ? (
+            <section className="admin-attendance-grid">
+              <div className="admin-panel admin-attendance-hero">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Attendance</p>
+                    <h2>Daily Staff Check-In</h2>
+                  </div>
+                  <span className={`admin-priority ${currentAttendance?.check_in_at ? "medium" : "low"}`}>
+                    {currentAttendance?.check_in_at ? "Checked In" : "Not Checked In"}
+                  </span>
+                </div>
+                <div className="admin-attendance-actions">
+                  <button onClick={() => saveAttendance("check_in")} type="button">Check In</button>
+                  <button className="ghost" disabled={!currentAttendance?.check_in_at} onClick={() => saveAttendance("check_out")} type="button">Check Out</button>
+                </div>
+                <div className="admin-form-grid attendance">
+                  <label>
+                    Status
+                    <select value={attendanceDraft.status} onChange={(event) => setAttendanceDraft((current) => ({ ...current, status: event.target.value }))}>
+                      {attendanceStatuses.map((status) => <option key={status}>{status}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Work Mode
+                    <select value={attendanceDraft.work_mode} onChange={(event) => setAttendanceDraft((current) => ({ ...current, work_mode: event.target.value }))}>
+                      {attendanceWorkModes.map((mode) => <option key={mode}>{mode}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    Location
+                    <input value={attendanceDraft.location} onChange={(event) => setAttendanceDraft((current) => ({ ...current, location: event.target.value }))} placeholder="Office, remote city, buyer visit..." />
+                  </label>
+                  <label className="wide">
+                    Notes
+                    <textarea value={attendanceDraft.notes} onChange={(event) => setAttendanceDraft((current) => ({ ...current, notes: event.target.value }))} placeholder="Daily work note, visit agenda, permission reason..." />
+                  </label>
+                </div>
+                <div className="admin-attendance-current">
+                  <article><span>Today</span><strong>{todayKey}</strong></article>
+                  <article><span>Check In</span><strong>{formatDate(currentAttendance?.check_in_at)}</strong></article>
+                  <article><span>Check Out</span><strong>{formatDate(currentAttendance?.check_out_at)}</strong></article>
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-header compact"><div><p>Today Summary</p><h2>Team Attendance</h2></div></div>
+                <div className="admin-attendance-metrics">
+                  <article><span>Total Today</span><strong>{attendanceSummary.totalToday}</strong></article>
+                  <article><span>Present / Remote</span><strong>{attendanceSummary.present}</strong></article>
+                  <article><span>Permission</span><strong>{attendanceSummary.permission}</strong></article>
+                  <article><span>Not Checked Out</span><strong>{attendanceSummary.notCheckedOut}</strong></article>
+                </div>
+              </div>
+
+              <div className="admin-panel admin-table-panel wide">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Attendance Log</p>
+                    <h2>Recent Records</h2>
+                  </div>
+                  <button
+                    disabled={!attendanceRecords.length}
+                    onClick={() => exportRowsCsv(
+                      `gsn-attendance-${new Date().toISOString().slice(0, 10)}.csv`,
+                      ["Date", "Username", "Role", "Status", "Work Mode", "Check In", "Check Out", "Location", "Notes"],
+                      attendanceRecords.map((record) => [
+                        record.attendance_date || "",
+                        record.username || "",
+                        record.role || "",
+                        record.status || "",
+                        record.work_mode || "",
+                        record.check_in_at || "",
+                        record.check_out_at || "",
+                        record.location || "",
+                        record.notes || ""
+                      ])
+                    )}
+                    type="button"
+                  >
+                    Export CSV
+                  </button>
+                </div>
+                <div className="admin-table-wrap">
+                  <table className="admin-mobile-cards attendance">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>User</th>
+                        <th>Status</th>
+                        <th>Work Mode</th>
+                        <th>Check In</th>
+                        <th>Check Out</th>
+                        <th>Location</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {attendanceRecords.map((record) => (
+                        <tr key={record.id}>
+                          <td data-label="Date">{record.attendance_date || "-"}</td>
+                          <td data-label="User"><strong>{record.username || "-"}</strong><span>{record.role || "-"}</span></td>
+                          <td data-label="Status"><span className={`admin-priority ${["Permission", "Sick", "Leave"].includes(record.status) ? "medium" : "low"}`}>{record.status || "-"}</span></td>
+                          <td data-label="Work Mode">{record.work_mode || "-"}</td>
+                          <td data-label="Check In">{formatDate(record.check_in_at)}</td>
+                          <td data-label="Check Out">{formatDate(record.check_out_at)}</td>
+                          <td data-label="Location">{record.location || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!attendanceRecords.length ? <p className="admin-empty table">No attendance records yet. Run the latest Supabase schema, then check in from this page.</p> : null}
                 </div>
               </div>
             </section>

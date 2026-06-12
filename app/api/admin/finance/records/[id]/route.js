@@ -1,5 +1,5 @@
 import { requireAdminPermission } from "@/lib/adminAuth";
-import { deleteFinanceRecord, getFinanceRecord, insertAdminActivity, updateFinanceRecord } from "@/lib/gsnDataStore";
+import { assertFinancePeriodOpen, deleteFinanceRecord, getFinanceRecord, insertAdminActivity, updateFinanceRecord } from "@/lib/gsnDataStore";
 
 const financeRecordFields = {
   finance_transactions: {
@@ -53,8 +53,35 @@ const financeRecordFields = {
   financial_reports: {
     text: ["report_type", "title", "date_from", "date_to", "generated_by"],
     json: ["filters", "report_data"]
+  },
+  finance_period_locks: {
+    text: ["period_label", "date_from", "date_to", "status", "locked_by", "lock_note", "updated_at"]
   }
 };
+
+const financeDateFields = {
+  finance_transactions: "transaction_date",
+  petty_cash: "cash_date",
+  revenues: "transaction_date",
+  expenses: "expense_date",
+  receivables: "invoice_date",
+  payables: "due_date",
+  payment_matches: "payment_date",
+  supplier_payments: "payment_date",
+  tax_records: "due_date",
+  exchange_rates: "rate_date",
+  financial_reports: "date_from"
+};
+
+async function assertRecordPeriodOpen(table, before, updates = {}) {
+  const dateField = financeDateFields[table];
+  if (!dateField) {
+    return;
+  }
+
+  const targetDate = updates[dateField] || before?.[dateField] || before?.created_at;
+  await assertFinancePeriodOpen(targetDate);
+}
 
 function cleanFinanceUpdates(table, data) {
   const config = financeRecordFields[table];
@@ -104,6 +131,12 @@ export async function PATCH(request, { params }) {
   }
 
   const before = await getFinanceRecord(table, params.id);
+  try {
+    await assertRecordPeriodOpen(table, before, updates);
+  } catch (error) {
+    return Response.json({ message: error.message }, { status: 423 });
+  }
+
   const result = await updateFinanceRecord(table, params.id, updates);
   await insertAdminActivity({
     admin: permission.admin,
@@ -133,6 +166,12 @@ export async function DELETE(request, { params }) {
   }
 
   const before = await getFinanceRecord(table, params.id);
+  try {
+    await assertRecordPeriodOpen(table, before);
+  } catch (error) {
+    return Response.json({ message: error.message }, { status: 423 });
+  }
+
   const result = await deleteFinanceRecord(table, params.id);
   await insertAdminActivity({
     admin: permission.admin,

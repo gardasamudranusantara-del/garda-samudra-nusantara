@@ -1,5 +1,5 @@
 import { requireAdminPermission } from "@/lib/adminAuth";
-import { getFinanceRecord, insertAdminActivity, insertPaymentMatch, updateFinanceRecord } from "@/lib/gsnDataStore";
+import { assertFinancePeriodOpen, getFinanceRecord, insertAdminActivity, insertPaymentMatch, updateFinanceRecord } from "@/lib/gsnDataStore";
 
 export async function POST(request) {
   const permission = await requireAdminPermission(request, "finance_access");
@@ -8,8 +8,15 @@ export async function POST(request) {
   }
 
   const data = await request.json();
+  const paymentDate = String(data.payment_date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  try {
+    await assertFinancePeriodOpen(paymentDate);
+  } catch (error) {
+    return Response.json({ message: error.message }, { status: 423 });
+  }
+
   const result = await insertPaymentMatch({
-    payment_date: String(data.payment_date || new Date().toISOString().slice(0, 10)).slice(0, 10),
+    payment_date: paymentDate,
     invoice_number: String(data.invoice_number || "").slice(0, 160),
     buyer_name: String(data.buyer_name || "").slice(0, 160),
     receivable_id: data.receivable_id || null,
@@ -30,7 +37,7 @@ export async function POST(request) {
     const paidAmount = Number(receivable?.paid_amount || 0) + amount;
     await updateFinanceRecord("receivables", data.receivable_id, {
       paid_amount: paidAmount,
-      status: paidAmount >= receivableAmount ? "Paid" : "Partial Payment"
+      status: paidAmount >= receivableAmount ? "Paid" : "Partially Paid"
     });
   }
 

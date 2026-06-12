@@ -1,5 +1,5 @@
 import { requireAdminPermission } from "@/lib/adminAuth";
-import { getQuotationRequest, insertAdminActivity, insertFinanceReceivable, updateQuotationRequest } from "@/lib/gsnDataStore";
+import { assertFinancePeriodOpen, getNextFinanceNumber, getQuotationRequest, insertAdminActivity, insertFinanceReceivable, updateQuotationRequest } from "@/lib/gsnDataStore";
 
 function cleanInvoiceNumber(value, fallback) {
   return String(value || fallback || "")
@@ -32,12 +32,19 @@ export async function POST(request) {
   const quotationNumber = quotation.quotation_number || data.quotation_number || "";
   const fallbackInvoiceNumber = quotationNumber
     ? quotationNumber.replace("GSN-QTN", "GSN-INV")
-    : `GSN-INV-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+    : await getNextFinanceNumber("receivables", "invoice_number", "GSN-INV");
   const invoiceNumber = cleanInvoiceNumber(data.invoice_number, fallbackInvoiceNumber);
+  const invoiceDate = String(data.invoice_date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+
+  try {
+    await assertFinancePeriodOpen(invoiceDate);
+  } catch (error) {
+    return Response.json({ message: error.message }, { status: 423 });
+  }
 
   const result = await insertFinanceReceivable({
     invoice_number: invoiceNumber,
-    invoice_date: String(data.invoice_date || new Date().toISOString().slice(0, 10)).slice(0, 10),
+    invoice_date: invoiceDate,
     quotation_id: quotation.id,
     quotation_number: quotationNumber,
     buyer_name: String(data.buyer_name || quotation.buyer_name || quotation.company_name || "Buyer").slice(0, 160),
@@ -46,7 +53,7 @@ export async function POST(request) {
     paid_amount: 0,
     currency: ["IDR", "USD", "SGD"].includes(data.currency) ? data.currency : "IDR",
     due_date: data.due_date || null,
-    status: "Pending"
+    status: "Sent"
   });
 
   await updateQuotationRequest(quotation.id, { status: "Accepted" });
@@ -65,7 +72,7 @@ export async function POST(request) {
         quotation_number: quotationNumber,
         amount,
         currency: data.currency || "IDR",
-        status: "Pending"
+        status: "Sent"
       }
     }
   });

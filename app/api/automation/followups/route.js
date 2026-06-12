@@ -1,6 +1,6 @@
 import { isAutomationAuthorized } from "@/lib/automationAuth";
 import { hasAdminPermission } from "@/lib/adminAuth";
-import { insertNotification, isSupabaseConfigured, listNotifications, listOpenInquiries, updateInquiry } from "@/lib/gsnDataStore";
+import { insertNotification, isSupabaseConfigured, listFinanceSnapshot, listNotifications, listOpenInquiries, updateInquiry } from "@/lib/gsnDataStore";
 import { notifyOwner } from "@/lib/ownerNotifications";
 
 const thresholds = [
@@ -25,6 +25,27 @@ function makeKey(type, referenceId) {
   return `${type}:${referenceId}`;
 }
 
+function daysUntil(value) {
+  if (!value) {
+    return null;
+  }
+
+  const today = new Date(new Date().toISOString().slice(0, 10)).getTime();
+  const target = new Date(String(value).slice(0, 10)).getTime();
+  if (Number.isNaN(target)) {
+    return null;
+  }
+
+  return Math.ceil((target - today) / 86400000);
+}
+
+function financeSeverity(days) {
+  if (days === null) return "Review";
+  if (days < 0) return "Overdue";
+  if (days === 0) return "Due Today";
+  return "Due Soon";
+}
+
 export async function GET(request) {
   if (!isAutomationAuthorized(request) && !(await hasAdminPermission(request, "automation"))) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
@@ -34,14 +55,15 @@ export async function GET(request) {
     return Response.json({ configured: false, created: 0, message: "Supabase is not configured." });
   }
 
-  const [inquiries, notifications] = await Promise.all([
+  const [inquiries, notifications, finance] = await Promise.all([
     listOpenInquiries(),
-    listNotifications()
+    listNotifications(),
+    listFinanceSnapshot()
   ]);
 
   const existing = new Set(
     notifications
-      .filter((item) => item.reference_type === "follow_up" && item.reference_id)
+      .filter((item) => ["follow_up", "finance_reminder"].includes(item.reference_type) && item.reference_id)
       .map((item) => makeKey(item.type, item.reference_id))
   );
 
@@ -92,6 +114,66 @@ export async function GET(request) {
       created.push(result?.[0] || { type: threshold.type, reference_id: inquiry.id });
       existing.add(key);
     }
+  }
+
+  const financeReminders = [
+    ...(finance?.receivables || [])
+      .filter((item) => !["Paid", "Cancelled"].includes(item.status))
+      .map((item) => ({ ...item, module: "AR", type: "Finance AR Reminder", days: daysUntil(item.due_date) }))
+      .filter((item) => item.days !== null && item.days <= 3),
+    ...(finance?.payables || [])
+      .filter((item) => !["Paid", "Cancelled"].includes(item.status))
+      .map((item) => ({ ...item, module: "AP", type: "Finance AP Reminder", days: daysUntil(item.due_date) }))
+      .filter((item) => item.days !== null && item.days <= 3),
+    ...(finance?.expenses || [])
+      .filter((item) => item.status === "Pending Approval")
+      .map((item) => ({ ...item, module: "Expense", type: "Finance Expense Approval", days: null }))
+  ];
+
+  for (const item of financeReminders) {
+    if (!item.id) {
+      continue;
+    }
+
+    const key = makeKey(item.type, item.id);
+    if (existing.has(key)) {
+      continue;
+    }
+
+    const title = item.module === "AR"
+      ? item.invoice_number || item.buyer_name || "Buyer invoice"
+      : item.module === "AP"
+        ? item.invoice_number || item.supplier_name || "Supplier bill"
+        : item.expense_category || "Expense approval";
+    const severity = financeSeverity(item.days);
+    const amount = `${item.currency || "IDR"} ${Number(item.amount || 0).toLocaleString("en")}`;
+    const message = item.module === "Expense"
+      ? `${title} is waiting for finance approval.`
+      : `${title} is ${severity.toLowerCase()}${item.days !== null ? ` (${item.days < 0 ? `${Math.abs(item.days)} days overdue` : item.days === 0 ? "due today" : `due in ${item.days} days`})` : ""}.`;
+
+    const result = await insertNotification({
+      type: item.type,
+      title,
+      message,
+      reference_type: "finance_reminder",
+      reference_id: item.id
+    });
+
+    await notifyOwner({
+      title: `GSN Finance ${severity}: ${item.module}`,
+      message,
+      channels: ["email", "telegram", "whatsapp"],
+      lines: [
+        `Record: ${title}`,
+        `Amount: ${amount}`,
+        `Status: ${item.status || "-"}`,
+        `Due date: ${item.due_date || "-"}`,
+        `Owner action: ${item.module === "Expense" ? "Approve or reject expense." : "Review payment status and follow up."}`
+      ]
+    });
+
+    created.push(result?.[0] || { type: item.type, reference_id: item.id });
+    existing.add(key);
   }
 
   return Response.json({

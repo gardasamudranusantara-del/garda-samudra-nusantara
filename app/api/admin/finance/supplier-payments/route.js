@@ -1,5 +1,5 @@
 import { requireAdminPermission } from "@/lib/adminAuth";
-import { getFinanceRecord, insertAdminActivity, insertSupplierPayment, updateFinanceRecord } from "@/lib/gsnDataStore";
+import { assertFinancePeriodOpen, getFinanceRecord, insertAdminActivity, insertSupplierPayment, updateFinanceRecord } from "@/lib/gsnDataStore";
 
 export async function POST(request) {
   const permission = await requireAdminPermission(request, "finance_access");
@@ -8,8 +8,15 @@ export async function POST(request) {
   }
 
   const data = await request.json();
+  const paymentDate = String(data.payment_date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  try {
+    await assertFinancePeriodOpen(paymentDate);
+  } catch (error) {
+    return Response.json({ message: error.message }, { status: 423 });
+  }
+
   const result = await insertSupplierPayment({
-    payment_date: String(data.payment_date || new Date().toISOString().slice(0, 10)).slice(0, 10),
+    payment_date: paymentDate,
     supplier_name: String(data.supplier_name || "").slice(0, 160),
     supplier_account: String(data.supplier_account || "").slice(0, 240),
     payable_id: data.payable_id || null,

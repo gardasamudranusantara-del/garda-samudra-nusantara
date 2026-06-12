@@ -21,6 +21,36 @@ function cleanKind(kind = "general") {
   return allowedKinds.has(kind) ? kind : "general";
 }
 
+async function ensureBucket(supabaseUrl, supabaseServiceKey) {
+  const response = await fetch(`${supabaseUrl}/storage/v1/bucket/${bucketName}`, {
+    headers: {
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      apikey: supabaseServiceKey
+    }
+  });
+
+  if (response.ok) {
+    return true;
+  }
+
+  const createResponse = await fetch(`${supabaseUrl}/storage/v1/bucket`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      apikey: supabaseServiceKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      id: bucketName,
+      name: bucketName,
+      public: true,
+      file_size_limit: maxFileSize
+    })
+  });
+
+  return createResponse.ok;
+}
+
 export async function POST(request) {
   const permission = await requireAdminPermission(request, "finance_access");
   if (!permission.ok) {
@@ -44,6 +74,8 @@ export async function POST(request) {
   }
 
   const { supabaseUrl, supabaseServiceKey } = getSupabaseStorageConfig();
+  await ensureBucket(supabaseUrl, supabaseServiceKey);
+
   const today = new Date().toISOString().slice(0, 10);
   const objectPath = `finance/${kind}/${today}/${Date.now()}-${cleanFileName(file.name)}`;
   const uploadUrl = `${supabaseUrl}/storage/v1/object/${bucketName}/${objectPath}`;

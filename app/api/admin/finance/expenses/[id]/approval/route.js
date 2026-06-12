@@ -1,5 +1,5 @@
 import { requireAdminPermission } from "@/lib/adminAuth";
-import { getFinanceRecord, insertAdminActivity, updateFinanceRecord } from "@/lib/gsnDataStore";
+import { assertFinancePeriodOpen, getFinanceRecord, insertAdminActivity, updateFinanceRecord } from "@/lib/gsnDataStore";
 
 const approvalStatuses = new Set(["Approved", "Rejected"]);
 
@@ -19,6 +19,12 @@ export async function POST(request, { params }) {
   const before = await getFinanceRecord("expenses", params.id);
   if (!before) {
     return Response.json({ message: "Expense record was not found." }, { status: 404 });
+  }
+
+  try {
+    await assertFinancePeriodOpen(before.expense_date || before.created_at);
+  } catch (error) {
+    return Response.json({ message: error.message }, { status: 423 });
   }
 
   const updates = {

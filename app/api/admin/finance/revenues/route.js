@@ -1,5 +1,5 @@
 import { requireAdminPermission } from "@/lib/adminAuth";
-import { insertAdminActivity, insertFinanceRevenue } from "@/lib/gsnDataStore";
+import { assertFinancePeriodOpen, getNextFinanceNumber, insertAdminActivity, insertFinanceRevenue } from "@/lib/gsnDataStore";
 
 export async function POST(request) {
   const permission = await requireAdminPermission(request, "finance_access");
@@ -20,8 +20,17 @@ export async function POST(request) {
     return Response.json({ message: "Total revenue must be greater than 0." }, { status: 400 });
   }
 
+  const transactionDate = String(data.transaction_date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  try {
+    await assertFinancePeriodOpen(transactionDate);
+  } catch (error) {
+    return Response.json({ message: error.message }, { status: 423 });
+  }
+
+  const invoiceNumber = String(data.invoice_number || "").trim().slice(0, 120) || await getNextFinanceNumber("revenues", "invoice_number", "GSN-INV");
+
   const result = await insertFinanceRevenue({
-    invoice_number: String(data.invoice_number || "").slice(0, 120),
+    invoice_number: invoiceNumber,
     buyer_name: String(data.buyer_name || "").slice(0, 160),
     country: String(data.country || "").slice(0, 120),
     division: String(data.division || "").slice(0, 80),
@@ -32,7 +41,7 @@ export async function POST(request) {
     unit_price: Number.isFinite(unitPrice) ? unitPrice : 0,
     currency: ["IDR", "USD", "SGD"].includes(data.currency) ? data.currency : "IDR",
     total_revenue: totalRevenue,
-    transaction_date: String(data.transaction_date || new Date().toISOString().slice(0, 10)).slice(0, 10),
+    transaction_date: transactionDate,
     status: String(data.status || "Recorded").slice(0, 80)
   });
 
@@ -44,7 +53,7 @@ export async function POST(request) {
     referenceId: result?.[0]?.id || null,
     metadata: {
       after: {
-        invoice_number: data.invoice_number || "",
+        invoice_number: invoiceNumber,
         buyer_name: data.buyer_name || "",
         division: data.division || "",
         product: data.product || "",

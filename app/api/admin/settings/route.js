@@ -1,12 +1,12 @@
 import { isAdminAuthorized, requireAdminPermission } from "@/lib/adminAuth";
-import { getAdminSettings, insertAdminActivity, upsertAdminSettings } from "@/lib/gsnDataStore";
+import { getAdminSettings, getEffectiveAdminSettings, insertAdminActivity, upsertAdminSettings } from "@/lib/gsnDataStore";
 
 export async function GET(request) {
   if (!(await isAdminAuthorized(request))) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const settings = await getAdminSettings();
+  const settings = await getEffectiveAdminSettings();
   return Response.json({ settings });
 }
 

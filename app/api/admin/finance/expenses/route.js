@@ -1,5 +1,5 @@
 import { requireAdminPermission } from "@/lib/adminAuth";
-import { insertAdminActivity, insertFinanceExpense } from "@/lib/gsnDataStore";
+import { assertFinancePeriodOpen, insertAdminActivity, insertFinanceExpense } from "@/lib/gsnDataStore";
 
 const expenseStatuses = ["Draft", "Pending Approval", "Approved", "Rejected"];
 
@@ -20,8 +20,15 @@ export async function POST(request) {
     return Response.json({ message: "Expense category is required." }, { status: 400 });
   }
 
+  const expenseDate = String(data.expense_date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  try {
+    await assertFinancePeriodOpen(expenseDate);
+  } catch (error) {
+    return Response.json({ message: error.message }, { status: 423 });
+  }
+
   const result = await insertFinanceExpense({
-    expense_date: String(data.expense_date || new Date().toISOString().slice(0, 10)).slice(0, 10),
+    expense_date: expenseDate,
     expense_category: String(data.expense_category || "").slice(0, 120),
     expense_subcategory: String(data.expense_subcategory || "").slice(0, 120),
     vendor: String(data.vendor || "").slice(0, 160),

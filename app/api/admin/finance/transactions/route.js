@@ -1,5 +1,5 @@
 import { requireAdminPermission } from "@/lib/adminAuth";
-import { insertAdminActivity, insertFinanceTransaction } from "@/lib/gsnDataStore";
+import { assertFinancePeriodOpen, insertAdminActivity, insertFinanceTransaction } from "@/lib/gsnDataStore";
 
 export async function POST(request) {
   const permission = await requireAdminPermission(request, "finance_access");
@@ -14,9 +14,16 @@ export async function POST(request) {
     return Response.json({ message: "Amount must be greater than 0." }, { status: 400 });
   }
 
+  const transactionDate = String(data.transaction_date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  try {
+    await assertFinancePeriodOpen(transactionDate);
+  } catch (error) {
+    return Response.json({ message: error.message }, { status: 423 });
+  }
+
   const result = await insertFinanceTransaction({
     transaction_type: data.transaction_type === "Cash Out" ? "Cash Out" : "Cash In",
-    transaction_date: String(data.transaction_date || new Date().toISOString().slice(0, 10)).slice(0, 10),
+    transaction_date: transactionDate,
     category: String(data.category || "").slice(0, 120),
     description: String(data.description || "").slice(0, 420),
     amount,
