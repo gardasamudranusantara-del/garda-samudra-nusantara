@@ -1,0 +1,16 @@
+alter table if exists public.finance_transactions enable row level security;
+alter table if exists public.bank_accounts enable row level security;
+alter table if exists public.petty_cash enable row level security;
+alter table if exists public.revenues enable row level security;
+alter table if exists public.expenses enable row level security;
+alter table if exists public.receivables enable row level security;
+alter table if exists public.payables enable row level security;
+alter table if exists public.payment_matches enable row level security;
+alter table if exists public.supplier_payments enable row level security;
+alter table if exists public.tax_records enable row level security;
+alter table if exists public.exchange_rates enable row level security;
+alter table if exists public.budgets enable row level security;
+alter table if exists public.financial_reports enable row level security;
+alter table if exists public.investor_reports enable row level security;
+alter table if exists public.finance_access_logs enable row level security;
+alter table if exists public.finance_period_locks enable row level security;

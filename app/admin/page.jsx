@@ -9,19 +9,18 @@ const modules = ["Leads", "Buyers", "Suppliers", "Documents", "Investors", "Quot
 const adminRoleOptions = [
   { value: "ceo", label: "CEO", description: "Full owner access: company control, finance, users, settings, delete actions, and automation." },
   { value: "cso", label: "CSO", description: "Full owner access: strategy, investors, finance, users, settings, delete actions, and automation." },
-  { value: "system_admin", label: "System Admin", description: "System access: settings, users, automation, and activity log without confidential finance access." },
-  { value: "cfo", label: "CFO", description: "Finance executive access: all finance modules, reports, approvals, and financial exports." },
-  { value: "finance_manager", label: "Finance Manager", description: "Finance management access: cash, revenue, expense, AR/AP, reports, and approvals." },
-  { value: "finance_staff", label: "Finance Staff", description: "Finance staff access: finance records, uploads, reports, and payment tracking without closing controls." },
-  { value: "operations_manager", label: "Operations Manager", description: "Operations access: leads, buyers, suppliers, documents, quotations, and follow-up activity." },
-  { value: "sales_manager", label: "Sales Manager", description: "Sales access: leads, investors, quotation workflow, PDF download, and activity log." },
+  { value: "finance", label: "Finance", description: "Finance access: finance dashboard, reports, approvals, AR/AP, expense, and export controls." },
+  { value: "procurement", label: "Procurement", description: "Procurement access: buyer, supplier, procurement documents, and quotation coordination without finance access." },
   { value: "marketing", label: "Marketing", description: "Marketing access: leads, quotations, analytics, activity log, and PDF download only." },
+  { value: "hr", label: "HR", description: "HR access: attendance, users, HR records, and activity monitoring without finance access." },
+  { value: "staff", label: "Staff", description: "Staff access: limited operational dashboard visibility without finance access." },
   { value: "viewer", label: "Viewer", description: "Read-only dashboard access for monitoring data without editing records." }
 ];
 const adminRoleDescriptions = Object.fromEntries(adminRoleOptions.map((role) => [role.value, role.description]));
 const adminRoleLabels = Object.fromEntries(adminRoleOptions.map((role) => [role.value, role.label]));
-const executiveRoleIds = ["ceo", "cso", "owner", "system_admin"];
-const financeRoleIds = ["ceo", "cso", "owner", "cfo", "finance_manager", "finance_staff"];
+const executiveRoleIds = ["ceo", "cso", "owner"];
+const financeRoleIds = ["ceo", "cso", "owner", "finance"];
+const userManagerRoleIds = ["ceo", "cso", "owner", "hr"];
 const attendanceStatuses = ["Present", "Remote", "Field Visit", "Permission", "Sick", "Leave"];
 const attendanceWorkModes = ["Office", "Remote", "Field", "Hybrid"];
 const buyerStages = ["New", "Qualified", "Repeat Buyer", "Active", "Dormant", "Inactive"];
@@ -2726,6 +2725,7 @@ export default function AdminDashboard() {
   const canUseFinance = financeRoleIds.includes(currentRole) && Boolean(finance);
   const canDelete = isExecutive;
   const canUseSettings = isExecutive;
+  const canManageUsers = userManagerRoleIds.includes(currentRole);
   const todayKey = new Date().toISOString().slice(0, 10);
   const todayAttendance = attendanceRecords.filter((record) => String(record.attendance_date || record.created_at || "").slice(0, 10) === todayKey);
   const currentAttendance = todayAttendance.find((record) => record.username === adminProfile?.username);
@@ -2742,8 +2742,11 @@ export default function AdminDashboard() {
     if (module === "Investors") {
       return isExecutive;
     }
-    if (["Settings", "Users"].includes(module)) {
+    if (module === "Settings") {
       return isExecutive;
+    }
+    if (module === "Users") {
+      return canManageUsers;
     }
     return true;
   });
@@ -5672,7 +5675,7 @@ export default function AdminDashboard() {
             </section>
           ) : null}
 
-          {activeModule === "Users" && isExecutive ? (
+          {activeModule === "Users" && canManageUsers ? (
             <section className="admin-settings-grid">
               <div className="admin-panel">
                 <div className="admin-panel-header">
@@ -5730,8 +5733,8 @@ export default function AdminDashboard() {
                 </div>
                 <div className="admin-modal-confirm">
                   <p>Recommended staff roles:</p>
-                  <strong>Sales Manager, Finance Staff, Operations Manager</strong>
-                  <p>Use CEO/CSO only for owner accounts. Staff roles keep finance, users, settings, and delete access separated.</p>
+                  <strong>Finance, Procurement, Marketing, HR, Staff, Viewer</strong>
+                  <p>Use CEO/CSO only for owner accounts. Finance is restricted to CEO, CSO, and Finance roles only.</p>
                 </div>
               </div>
             </section>

@@ -5,13 +5,11 @@ const adminRoleIds = [
   "ceo",
   "cso",
   "owner",
-  "system_admin",
-  "cfo",
-  "finance_manager",
-  "finance_staff",
-  "operations_manager",
-  "sales_manager",
+  "finance",
+  "procurement",
   "marketing",
+  "hr",
+  "staff",
   "viewer"
 ];
 
