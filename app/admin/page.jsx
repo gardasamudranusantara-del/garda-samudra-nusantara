@@ -3215,7 +3215,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="admin-table-wrap">
-                <table>
+                <table className="admin-mobile-cards">
                   <thead>
                     <tr>
                       <th>Date</th>
@@ -3232,15 +3232,15 @@ export default function AdminDashboard() {
                   <tbody>
                     {filteredLeads.map((lead) => (
                       <tr className={selected?.id === lead.id ? "is-selected" : ""} key={lead.id} onClick={() => setSelected(lead)}>
-                        <td>{formatDate(lead.created_at)}</td>
-                        <td><strong>{lead.full_name || "-"}</strong><span>{lead.company_name || lead.email || "-"}</span></td>
-                        <td>{getLeadType(lead)}</td>
-                        <td>{lead.country || "-"}</td>
-                        <td>{normalizeProducts(lead).length ? normalizeProducts(lead).join(", ") : "-"}</td>
-                        <td><span className={`admin-priority ${getPriority(lead).toLowerCase()}`}>{getPriority(lead)}</span></td>
-                        <td>{getStatus(lead)}</td>
-                        <td>{lead.assigned_to || "Unassigned"}</td>
-                        <td>{lead.follow_up_deadline ? formatDate(lead.follow_up_deadline) : "-"}</td>
+                        <td data-label="Date">{formatDate(lead.created_at)}</td>
+                        <td data-label="Lead"><strong>{lead.full_name || "-"}</strong><span>{lead.company_name || lead.email || "-"}</span></td>
+                        <td data-label="Type">{getLeadType(lead)}</td>
+                        <td data-label="Country">{lead.country || "-"}</td>
+                        <td data-label="Products">{normalizeProducts(lead).length ? normalizeProducts(lead).join(", ") : "-"}</td>
+                        <td data-label="Priority"><span className={`admin-priority ${getPriority(lead).toLowerCase()}`}>{getPriority(lead)}</span></td>
+                        <td data-label="Status">{getStatus(lead)}</td>
+                        <td data-label="Owner">{lead.assigned_to || "Unassigned"}</td>
+                        <td data-label="Deadline">{lead.follow_up_deadline ? formatDate(lead.follow_up_deadline) : "-"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -3368,7 +3368,7 @@ export default function AdminDashboard() {
                 </button>
               </div>
               <div className="admin-table-wrap">
-                <table>
+                <table className="admin-mobile-cards">
                   <thead>
                     <tr>
                       <th>Date</th>
@@ -3383,17 +3383,17 @@ export default function AdminDashboard() {
                   <tbody>
                     {investorInquiries.map((item) => (
                       <tr key={item.id}>
-                        <td>{formatDate(item.created_at)}</td>
-                        <td><strong>{item.full_name || "-"}</strong><span>{item.company_name || item.email || "-"}</span></td>
-                        <td>{item.country || "-"}</td>
-                        <td>{item.investment_interest || "-"}</td>
-                        <td>
+                        <td data-label="Date">{formatDate(item.created_at)}</td>
+                        <td data-label="Investor"><strong>{item.full_name || "-"}</strong><span>{item.company_name || item.email || "-"}</span></td>
+                        <td data-label="Country">{item.country || "-"}</td>
+                        <td data-label="Interest">{item.investment_interest || "-"}</td>
+                        <td data-label="Status">
                           <select value={item.status || "New"} onChange={(event) => updateInvestor(item.id, { status: event.target.value })}>
                             {statuses.map((status) => <option key={status}>{status}</option>)}
                           </select>
                         </td>
-                        <td>{item.message || "-"}</td>
-                        <td>
+                        <td data-label="Message">{item.message || "-"}</td>
+                        <td data-label="Actions">
                           <div className="admin-table-actions">
                             <button onClick={() => openModal("investor", item)} type="button">Edit</button>
                             {canDelete ? <button onClick={() => deleteInvestor(item.id)} type="button">Delete</button> : null}
@@ -4458,17 +4458,17 @@ export default function AdminDashboard() {
                 </div>
                 <div className="admin-split-tables">
                   <div className="admin-table-wrap">
-                    <table>
+                    <table className="admin-mobile-cards">
                       <thead><tr><th>Date</th><th>Invoice</th><th>Buyer</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
                       <tbody>
                         {paymentMatches.slice(0, 10).map((item) => (
                           <tr key={item.id}>
-                            <td>{formatDate(item.payment_date || item.created_at)}</td>
-                            <td>{item.invoice_number || "-"}</td>
-                            <td>{item.buyer_name || "-"}</td>
-                            <td>{formatMoney(item.amount, item.currency || "IDR")}</td>
-                            <td>{item.status || "Matched"}</td>
-                            <td>
+                            <td data-label="Date">{formatDate(item.payment_date || item.created_at)}</td>
+                            <td data-label="Invoice">{item.invoice_number || "-"}</td>
+                            <td data-label="Buyer">{item.buyer_name || "-"}</td>
+                            <td data-label="Amount">{formatMoney(item.amount, item.currency || "IDR")}</td>
+                            <td data-label="Status">{item.status || "Matched"}</td>
+                            <td data-label="Actions">
                               <div className="admin-table-actions">
                                 <button onClick={() => openModal("paymentMatch", item)} type="button">Edit</button>
                                 <button className="danger" onClick={() => openDeleteModal("paymentMatch", item)} type="button">Delete</button>
@@ -4481,17 +4481,17 @@ export default function AdminDashboard() {
                     {!paymentMatches.length ? <p className="admin-empty table">No buyer payment matches yet.</p> : null}
                   </div>
                   <div className="admin-table-wrap">
-                    <table>
+                    <table className="admin-mobile-cards">
                       <thead><tr><th>Date</th><th>Supplier</th><th>Invoice</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
                       <tbody>
                         {supplierPayments.slice(0, 10).map((item) => (
                           <tr key={item.id}>
-                            <td>{formatDate(item.payment_date || item.created_at)}</td>
-                            <td>{item.supplier_name || "-"}</td>
-                            <td>{item.invoice_number || "-"}</td>
-                            <td>{formatMoney(item.amount, item.currency || "IDR")}</td>
-                            <td>{item.status || "Scheduled"}</td>
-                            <td>
+                            <td data-label="Date">{formatDate(item.payment_date || item.created_at)}</td>
+                            <td data-label="Supplier">{item.supplier_name || "-"}</td>
+                            <td data-label="Invoice">{item.invoice_number || "-"}</td>
+                            <td data-label="Amount">{formatMoney(item.amount, item.currency || "IDR")}</td>
+                            <td data-label="Status">{item.status || "Scheduled"}</td>
+                            <td data-label="Actions">
                               <div className="admin-table-actions">
                                 <button onClick={() => openModal("supplierPayment", item)} type="button">Edit</button>
                                 <button className="danger" onClick={() => openDeleteModal("supplierPayment", item)} type="button">Delete</button>
@@ -4516,17 +4516,17 @@ export default function AdminDashboard() {
                 </div>
                 <div className="admin-split-tables">
                   <div className="admin-table-wrap">
-                    <table>
+                    <table className="admin-mobile-cards">
                       <thead><tr><th>Period</th><th>Type</th><th>Tax</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead>
                       <tbody>
                         {taxRecords.slice(0, 10).map((item) => (
                           <tr key={item.id}>
-                            <td>{item.tax_period || "-"}</td>
-                            <td>{item.tax_type || "-"}</td>
-                            <td>{formatMoney(item.tax_amount, item.currency || "IDR")}</td>
-                            <td>{item.due_date ? formatDate(item.due_date) : "-"}</td>
-                            <td>{item.status || "Draft"}</td>
-                            <td>
+                            <td data-label="Period">{item.tax_period || "-"}</td>
+                            <td data-label="Type">{item.tax_type || "-"}</td>
+                            <td data-label="Tax">{formatMoney(item.tax_amount, item.currency || "IDR")}</td>
+                            <td data-label="Due">{item.due_date ? formatDate(item.due_date) : "-"}</td>
+                            <td data-label="Status">{item.status || "Draft"}</td>
+                            <td data-label="Actions">
                               <div className="admin-table-actions">
                                 <button onClick={() => openModal("taxRecord", item)} type="button">Edit</button>
                                 <button className="danger" onClick={() => openDeleteModal("taxRecord", item)} type="button">Delete</button>
@@ -4539,16 +4539,16 @@ export default function AdminDashboard() {
                     {!taxRecords.length ? <p className="admin-empty table">No tax or compliance records yet.</p> : null}
                   </div>
                   <div className="admin-table-wrap">
-                    <table>
+                    <table className="admin-mobile-cards">
                       <thead><tr><th>Date</th><th>Pair</th><th>Rate</th><th>Source</th><th>Actions</th></tr></thead>
                       <tbody>
                         {exchangeRates.slice(0, 10).map((item) => (
                           <tr key={item.id}>
-                            <td>{formatDate(item.rate_date || item.created_at)}</td>
-                            <td>{item.base_currency} / {item.target_currency}</td>
-                            <td>{item.rate}</td>
-                            <td>{item.source || "-"}</td>
-                            <td>
+                            <td data-label="Date">{formatDate(item.rate_date || item.created_at)}</td>
+                            <td data-label="Pair">{item.base_currency} / {item.target_currency}</td>
+                            <td data-label="Rate">{item.rate}</td>
+                            <td data-label="Source">{item.source || "-"}</td>
+                            <td data-label="Actions">
                               <div className="admin-table-actions">
                                 <button onClick={() => openModal("exchangeRate", item)} type="button">Edit</button>
                                 <button className="danger" onClick={() => openDeleteModal("exchangeRate", item)} type="button">Delete</button>
@@ -4710,19 +4710,19 @@ export default function AdminDashboard() {
                   <span className="admin-muted">{financialReports.length} reports saved</span>
                 </div>
                 <div className="admin-table-wrap">
-                  <table>
+                  <table className="admin-mobile-cards">
                     <thead><tr><th>Date</th><th>Type</th><th>Title</th><th>Net Profit</th><th>Generated By</th><th>Actions</th></tr></thead>
                     <tbody>
                       {financialReports.slice(0, 10).map((item) => {
                         const reportData = item.report_data || {};
                         return (
                           <tr key={item.id}>
-                            <td>{formatDate(item.created_at)}</td>
-                            <td>{item.report_type}</td>
-                            <td>{item.title}</td>
-                            <td>{formatMoney(reportData.netProfit || 0, reportData.currency || "IDR")}</td>
-                            <td>{item.generated_by || "-"}</td>
-                            <td>
+                            <td data-label="Date">{formatDate(item.created_at)}</td>
+                            <td data-label="Type">{item.report_type}</td>
+                            <td data-label="Title">{item.title}</td>
+                            <td data-label="Net Profit">{formatMoney(reportData.netProfit || 0, reportData.currency || "IDR")}</td>
+                            <td data-label="Generated By">{item.generated_by || "-"}</td>
+                            <td data-label="Actions">
                               <div className="admin-table-actions">
                                 <button onClick={() => openModal("financeReport", item)} type="button">Edit</button>
                                 <button className="danger" onClick={() => openDeleteModal("financeReport", item)} type="button">Delete</button>
@@ -5074,7 +5074,7 @@ export default function AdminDashboard() {
                   <button onClick={() => runAutomation("/api/automation/followups", "Follow-up automation checked.")} type="button">Run Follow-Up Check</button>
                   <button onClick={() => runAutomation("/api/automation/daily-report", "Daily report sent.")} type="button">Send Daily Report</button>
                 </div>
-                <p className="admin-empty">Vercel Cron runs follow-up checks hourly and sends the daily lead report at 08:00 Jakarta time after deployment.</p>
+                <p className="admin-empty">Vercel Cron runs daily follow-up checks and sends the daily lead report at 08:00 Jakarta time after deployment.</p>
               </div>
 
               <div className="admin-panel admin-future-panel">
