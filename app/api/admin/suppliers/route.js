@@ -1,4 +1,4 @@
-import { requireAdminPermission } from "@/lib/adminAuth";
+import { requireSupplierAccess } from "@/lib/adminAuth";
 import { insertAdminActivity, insertSupplier } from "@/lib/gsnDataStore";
 
 function cleanList(value) {
@@ -9,7 +9,7 @@ function cleanList(value) {
 }
 
 export async function POST(request) {
-  const permission = await requireAdminPermission(request, "edit_leads");
+  const permission = await requireSupplierAccess(request);
   if (!permission.ok) {
     return Response.json({ message: permission.message }, { status: permission.status });
   }

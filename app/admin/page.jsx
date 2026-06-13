@@ -6,21 +6,36 @@ const statuses = ["New", "Contacted", "Negotiation", "Quotation Sent", "Converte
 const priorities = ["All", "High", "Medium", "Low"];
 const statusFilters = ["All", ...statuses];
 const modules = ["Leads", "Buyers", "Suppliers", "Documents", "Investors", "Quotations", "Analytics", "Finance", "Attendance", "Activity", "Settings", "Users"];
+const moduleLabels = {
+  Leads: "Prospek",
+  Buyers: "Buyer",
+  Suppliers: "Supplier",
+  Documents: "Dokumen",
+  Investors: "Investor",
+  Quotations: "Penawaran",
+  Analytics: "Analisis",
+  Finance: "Keuangan",
+  Attendance: "Absensi",
+  Activity: "Aktivitas",
+  Settings: "Pengaturan",
+  Users: "Pengguna"
+};
 const adminRoleOptions = [
-  { value: "ceo", label: "CEO", description: "Full owner access: company control, finance, users, settings, delete actions, and automation." },
-  { value: "cso", label: "CSO", description: "Full owner access: strategy, investors, finance, users, settings, delete actions, and automation." },
-  { value: "finance", label: "Finance", description: "Finance access: finance dashboard, reports, approvals, AR/AP, expense, and export controls." },
-  { value: "procurement", label: "Procurement", description: "Procurement access: buyer, supplier, procurement documents, and quotation coordination without finance access." },
-  { value: "marketing", label: "Marketing", description: "Marketing access: leads, quotations, analytics, activity log, and PDF download only." },
-  { value: "hr", label: "HR", description: "HR access: attendance, users, HR records, and activity monitoring without finance access." },
-  { value: "staff", label: "Staff", description: "Staff access: limited operational dashboard visibility without finance access." },
-  { value: "viewer", label: "Viewer", description: "Read-only dashboard access for monitoring data without editing records." }
+  { value: "ceo", label: "CEO", description: "Akses owner penuh: kontrol perusahaan, keuangan, pengguna, pengaturan, hapus data, dan automation." },
+  { value: "cso", label: "CSO", description: "Akses owner penuh: strategi, investor, keuangan, pengguna, pengaturan, hapus data, dan automation." },
+  { value: "finance", label: "Finance", description: "Akses keuangan: laporan, approval, AR/AP, expense, dan export." },
+  { value: "procurement", label: "Procurement", description: "Akses operasional pembelian dan dokumen procurement tanpa akses keuangan dan supplier database." },
+  { value: "marketing", label: "Marketing", description: "Akses prospek, penawaran, analisis, aktivitas, dan download PDF tanpa akses keuangan." },
+  { value: "hr", label: "HR", description: "Akses absensi, pengguna, catatan HR, dan aktivitas tanpa akses keuangan." },
+  { value: "staff", label: "Staff", description: "Akses operasional terbatas sesuai kebutuhan kerja." },
+  { value: "viewer", label: "Viewer", description: "Akses baca saja untuk memantau data tanpa mengubah record." }
 ];
 const adminRoleDescriptions = Object.fromEntries(adminRoleOptions.map((role) => [role.value, role.description]));
 const adminRoleLabels = Object.fromEntries(adminRoleOptions.map((role) => [role.value, role.label]));
 const executiveRoleIds = ["ceo", "cso", "owner"];
 const financeRoleIds = ["ceo", "cso", "owner", "finance"];
 const userManagerRoleIds = ["ceo", "cso", "owner", "hr"];
+const supplierAccessUsernames = ["dapi", "pici"];
 const attendanceStatuses = ["Present", "Remote", "Field Visit", "Permission", "Sick", "Leave"];
 const attendanceWorkModes = ["Office", "Remote", "Field", "Hybrid"];
 const buyerStages = ["New", "Qualified", "Repeat Buyer", "Active", "Dormant", "Inactive"];
@@ -2818,8 +2833,10 @@ export default function AdminDashboard() {
   const investorReports = finance?.investorReports || [];
   const financePeriodLocks = finance?.financePeriodLocks || [];
   const currentRole = adminProfile?.role || "";
+  const currentUsername = String(adminProfile?.username || "").toLowerCase();
   const isExecutive = executiveRoleIds.includes(currentRole);
   const canUseFinance = financeRoleIds.includes(currentRole) && Boolean(finance);
+  const canViewSuppliers = supplierAccessUsernames.includes(currentUsername);
   const canDelete = isExecutive;
   const canUseSettings = isExecutive;
   const canManageUsers = userManagerRoleIds.includes(currentRole);
@@ -2835,6 +2852,9 @@ export default function AdminDashboard() {
   const visibleModules = modules.filter((module) => {
     if (module === "Finance") {
       return financeRoleIds.includes(currentRole);
+    }
+    if (module === "Suppliers") {
+      return canViewSuppliers;
     }
     if (module === "Investors") {
       return isExecutive;
@@ -3600,20 +3620,20 @@ export default function AdminDashboard() {
     <main className={`admin-shell ${!savedCredentials ? "admin-login-screen" : ""}`}>
       {savedCredentials ? <section className="admin-hero">
         <div>
-          <p>GSN Command Center</p>
-          <h1>Lead Management</h1>
-          <span>Buyer inquiries, quotation requests, NusaBot leads, and follow-up control in one internal workspace.</span>
+          <p>Pusat Kontrol GSN</p>
+          <h1>Ringkasan Operasional</h1>
+          <span>Kelola prospek buyer, penawaran, NusaBot, absensi, dan follow-up dari satu dashboard internal.</span>
           {adminProfile ? <small className="admin-owner-badge">{adminProfile.username} - {adminRoleLabels[adminProfile.role] || adminProfile.role}</small> : null}
         </div>
         <div className="admin-hero-actions">
           {savedCredentials ? (
             <button className="admin-bell" onClick={() => setNotificationsOpen((value) => !value)} type="button">
-              Notifications
+              Notifikasi
               {unreadNotifications.length ? <span>{unreadNotifications.length}</span> : null}
             </button>
           ) : null}
-          {savedCredentials ? <button onClick={() => loadDashboard(savedCredentials)} type="button">{loading ? "Syncing..." : "Refresh"}</button> : null}
-          <a href="/">Open Website</a>
+          {savedCredentials ? <button onClick={() => loadDashboard(savedCredentials)} type="button">{loading ? "Memuat..." : "Muat Ulang"}</button> : null}
+          <a href="/">Buka Website</a>
         </div>
       </section> : null}
 
@@ -3621,10 +3641,10 @@ export default function AdminDashboard() {
         <section className="admin-panel admin-notifications">
           <div className="admin-panel-header">
             <div>
-              <p>Notification Center</p>
-              <h2>Internal Alerts</h2>
+              <p>Pusat Notifikasi</p>
+              <h2>Info Internal</h2>
             </div>
-            <button disabled={!unreadNotifications.length} onClick={() => markNotificationsRead(true)} type="button">Mark All Read</button>
+            <button disabled={!unreadNotifications.length} onClick={() => markNotificationsRead(true)} type="button">Tandai Dibaca</button>
           </div>
           <div className="admin-notification-list">
             {notifications.slice(0, 12).map((item) => (
@@ -3634,7 +3654,7 @@ export default function AdminDashboard() {
                 <small>{item.message || "-"} | {formatDate(item.created_at)}</small>
               </button>
             ))}
-            {!notifications.length ? <p className="admin-empty">No notifications yet.</p> : null}
+            {!notifications.length ? <p className="admin-empty">Belum ada notifikasi.</p> : null}
           </div>
         </section>
       ) : null}
@@ -3646,30 +3666,30 @@ export default function AdminDashboard() {
           </div>
           <div className="admin-login-copy">
             <p>GSN Admin</p>
-            <h2>Welcome Back</h2>
-            <span className="admin-security-note">Internal GSN portal. Authorized access only.</span>
+            <h2>Selamat Datang</h2>
+            <span className="admin-security-note">Portal internal GSN. Hanya untuk akses resmi.</span>
             <form onSubmit={handleLogin}>
               <label>
-                Username
+                Nama Pengguna
                 <input
                   autoComplete="username"
                   value={credentials.username}
                   onChange={(event) => setCredentials((current) => ({ ...current, username: event.target.value }))}
-                  placeholder="Enter username"
+                  placeholder="Masukkan username"
                   type="text"
                 />
               </label>
               <label>
-                Password
+                Kata Sandi
                 <input
                   autoComplete="current-password"
                   value={credentials.password}
                   onChange={(event) => setCredentials((current) => ({ ...current, password: event.target.value }))}
-                  placeholder="Enter password"
+                  placeholder="Masukkan password"
                   type="password"
                 />
               </label>
-              <button disabled={!credentials.username || !credentials.password || loading} type="submit">{loading ? "Signing in..." : "Sign In"}</button>
+              <button disabled={!credentials.username || !credentials.password || loading} type="submit">{loading ? "Memproses..." : "Masuk"}</button>
             </form>
           </div>
           {notice ? <strong>{notice}</strong> : null}
@@ -3680,45 +3700,45 @@ export default function AdminDashboard() {
         <>
           {!data.configured ? (
             <section className="admin-setup-warning">
-              <h2>Supabase is not connected yet.</h2>
-              <p>Add SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_DASHBOARD_ACCOUNTS, and ADMIN_SESSION_SECRET in Vercel to start storing live GSN data securely.</p>
+              <h2>Supabase belum terhubung.</h2>
+              <p>Tambahkan SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_DASHBOARD_ACCOUNTS, dan ADMIN_SESSION_SECRET di Vercel agar data live GSN tersimpan aman.</p>
             </section>
           ) : null}
 
           <section className="admin-metrics crm">
-            <article><span>Total Leads</span><strong>{metrics.totalLeads}</strong></article>
-            <article><span>New Today</span><strong>{metrics.newToday}</strong></article>
-            <article><span>Investor Inquiries</span><strong>{metrics.investorInquiries}</strong></article>
-            <article><span>Quotation Requests</span><strong>{metrics.quotationRequests}</strong></article>
-            <article><span>NusaBot Leads</span><strong>{metrics.nusabotLeads}</strong></article>
-            <article><span>Pending Follow-Ups</span><strong>{metrics.pendingFollowUps}</strong></article>
-            <article><span>High Priority</span><strong>{metrics.highPriority}</strong></article>
+            <article><span>Total Prospek</span><strong>{metrics.totalLeads}</strong></article>
+            <article><span>Masuk Hari Ini</span><strong>{metrics.newToday}</strong></article>
+            <article><span>Investor</span><strong>{metrics.investorInquiries}</strong></article>
+            <article><span>Permintaan Penawaran</span><strong>{metrics.quotationRequests}</strong></article>
+            <article><span>Lead NusaBot</span><strong>{metrics.nusabotLeads}</strong></article>
+            <article><span>Perlu Follow-Up</span><strong>{metrics.pendingFollowUps}</strong></article>
+            <article><span>Prioritas Tinggi</span><strong>{metrics.highPriority}</strong></article>
           </section>
 
           <nav className="admin-module-tabs" aria-label="Admin modules">
             {visibleModules.map((module) => (
               <button className={activeModule === module ? "is-active" : ""} key={module} onClick={() => setActiveModule(module)} type="button">
-                {module}
+                {moduleLabels[module] || module}
               </button>
             ))}
           </nav>
 
           {activeModule === "Leads" ? <section className="admin-chart-grid">
             <div className="admin-panel">
-              <div className="admin-panel-header compact"><div><p>Leads Per Month</p><h2>Monthly Pipeline</h2></div></div>
-              <BarList items={chartData.months} empty="No monthly lead data yet." />
+              <div className="admin-panel-header compact"><div><p>Prospek Bulanan</p><h2>Per Bulan</h2></div></div>
+              <BarList items={chartData.months} empty="Belum ada data prospek bulanan." />
             </div>
             <div className="admin-panel">
-              <div className="admin-panel-header compact"><div><p>Lead Geography</p><h2>Countries</h2></div></div>
-              <BarList items={chartData.countries} empty="No country data yet." />
+              <div className="admin-panel-header compact"><div><p>Negara Buyer</p><h2>Negara</h2></div></div>
+              <BarList items={chartData.countries} empty="Belum ada data negara buyer." />
             </div>
             <div className="admin-panel">
-              <div className="admin-panel-header compact"><div><p>Product Demand</p><h2>Categories</h2></div></div>
-              <BarList items={chartData.products} empty="No product interest yet." />
+              <div className="admin-panel-header compact"><div><p>Minat Produk</p><h2>Produk</h2></div></div>
+              <BarList items={chartData.products} empty="Belum ada minat produk." />
             </div>
             <div className="admin-panel">
-              <div className="admin-panel-header compact"><div><p>Click Analytics</p><h2>Website Actions</h2></div></div>
-              <BarList items={chartData.clicks} empty="No click tracking yet." />
+              <div className="admin-panel-header compact"><div><p>Aktivitas Website</p><h2>Klik Website</h2></div></div>
+              <BarList items={chartData.clicks} empty="Belum ada klik website." />
             </div>
           </section> : null}
 
@@ -4180,25 +4200,25 @@ export default function AdminDashboard() {
           {activeModule === "Analytics" ? (
             <>
               <section className="admin-metrics analytics">
-                <article><span>Total Clicks</span><strong>{events.length}</strong></article>
-                <article><span>Conversion Rate</span><strong>{conversionRate}%</strong></article>
-                <article><span>Most Clicked</span><strong className="text-small">{mostClicked}</strong></article>
-                <article><span>Visitor Actions</span><strong>{new Set(events.map((event) => event.event)).size}</strong></article>
+                <article><span>Total Klik</span><strong>{events.length}</strong></article>
+                <article><span>Rasio Jadi Lead</span><strong>{conversionRate}%</strong></article>
+                <article><span>Paling Sering Diklik</span><strong className="text-small">{mostClicked}</strong></article>
+                <article><span>Jenis Aktivitas</span><strong>{new Set(events.map((event) => event.event)).size}</strong></article>
               </section>
               <section className="admin-chart-grid analytics">
                 <div className="admin-panel">
-                  <div className="admin-panel-header compact"><div><p>Feature Clicks</p><h2>Most Clicked</h2></div></div>
-                  <BarList items={chartData.clicks} empty="No click tracking yet." />
+                  <div className="admin-panel-header compact"><div><p>Klik Fitur</p><h2>Paling Sering Diklik</h2></div></div>
+                  <BarList items={chartData.clicks} empty="Belum ada data klik." />
                 </div>
                 <div className="admin-panel">
-                  <div className="admin-panel-header compact"><div><p>Lead Conversion</p><h2>Lead Sources</h2></div></div>
-                  <BarList items={buildCountMap(leads, (lead) => lead.source || "inquiry_form").slice(0, 7)} empty="No lead source data yet." />
+                  <div className="admin-panel-header compact"><div><p>Sumber Prospek</p><h2>Asal Lead</h2></div></div>
+                  <BarList items={buildCountMap(leads, (lead) => lead.source || "inquiry_form").slice(0, 7)} empty="Belum ada data asal lead." />
                 </div>
                 <div className="admin-panel wide">
                   <div className="admin-panel-header">
                     <div>
-                      <p>Visitor Actions</p>
-                      <h2>Latest Click Timeline</h2>
+                      <p>Aktivitas Terbaru</p>
+                      <h2>Riwayat Klik Website</h2>
                     </div>
                   </div>
                   <div className="admin-event-list">
@@ -4209,7 +4229,7 @@ export default function AdminDashboard() {
                         <small>{formatDate(event.created_at)}</small>
                       </article>
                     ))}
-                    {!latestEvents.length ? <p className="admin-empty">No visitor actions recorded yet.</p> : null}
+                    {!latestEvents.length ? <p className="admin-empty">Belum ada aktivitas website.</p> : null}
                   </div>
                 </div>
               </section>
@@ -5625,8 +5645,8 @@ export default function AdminDashboard() {
             <section className="admin-panel">
               <div className="admin-panel-header">
                 <div>
-                  <p>Activity Log</p>
-                  <h2>Admin Actions</h2>
+                  <p>Riwayat Aktivitas</p>
+                  <h2>Perubahan Dashboard</h2>
                 </div>
                 <button
                   disabled={!latestAdminActivities.length}
@@ -5652,7 +5672,7 @@ export default function AdminDashboard() {
                   )}
                   type="button"
                 >
-                  Export Audit CSV
+                  Export Aktivitas CSV
                 </button>
               </div>
               <div className="admin-filter-row activity">
@@ -5664,7 +5684,7 @@ export default function AdminDashboard() {
                 </select>
                 <input type="date" value={activityFilters.from} onChange={(event) => setActivityFilters((current) => ({ ...current, from: event.target.value }))} />
                 <input type="date" value={activityFilters.to} onChange={(event) => setActivityFilters((current) => ({ ...current, to: event.target.value }))} />
-                <button onClick={() => setActivityFilters({ admin: "All", action: "All", from: "", to: "" })} type="button">Reset</button>
+                <button onClick={() => setActivityFilters({ admin: "All", action: "All", from: "", to: "" })} type="button">Reset Filter</button>
               </div>
               <div className="admin-event-list">
                 {latestAdminActivities.map((activity) => {
@@ -5680,18 +5700,18 @@ export default function AdminDashboard() {
                             <div key={change.field}>
                               <b>{change.field}</b>
                               <span>{formatAuditValue(change.before)}</span>
-                              <i>to</i>
+                              <i>menjadi</i>
                               <strong>{formatAuditValue(change.after)}</strong>
                             </div>
                           ))}
-                          {changes.length > 6 ? <small>+{changes.length - 6} more changed fields</small> : null}
+                          {changes.length > 6 ? <small>+{changes.length - 6} field lain berubah</small> : null}
                         </div>
                       ) : null}
                       <small>{formatDate(activity.created_at)}</small>
                     </article>
                   );
                 })}
-                {!latestAdminActivities.length ? <p className="admin-empty">No admin actions recorded yet.</p> : null}
+                {!latestAdminActivities.length ? <p className="admin-empty">Belum ada aktivitas admin.</p> : null}
               </div>
             </section>
           ) : null}
@@ -5719,18 +5739,18 @@ export default function AdminDashboard() {
                 <div className="admin-panel-header">
                   <div>
                     <p>Preferences</p>
-                    <h2>Notifications & Analytics</h2>
+                    <h2>Notifikasi & Analisis</h2>
                   </div>
                 </div>
                 <div className="admin-toggle-list">
                   {[
-                    ["notification_preferences.new_inquiry", "New inquiry notifications"],
-                    ["notification_preferences.quotation_request", "Quotation request notifications"],
-                    ["notification_preferences.nusabot_lead", "NusaBot lead notifications"],
-                    ["notification_preferences.follow_up_warning", "Follow-up warning notifications"],
-                    ["analytics_settings.track_cta_clicks", "Track CTA clicks"],
-                    ["analytics_settings.track_nusabot", "Track NusaBot activity"],
-                    ["analytics_settings.track_partner_clicks", "Track partnership clicks"]
+                    ["notification_preferences.new_inquiry", "Notifikasi inquiry baru"],
+                    ["notification_preferences.quotation_request", "Notifikasi permintaan penawaran"],
+                    ["notification_preferences.nusabot_lead", "Notifikasi lead NusaBot"],
+                    ["notification_preferences.follow_up_warning", "Notifikasi follow-up"],
+                    ["analytics_settings.track_cta_clicks", "Lacak klik tombol utama"],
+                    ["analytics_settings.track_nusabot", "Lacak aktivitas NusaBot"],
+                    ["analytics_settings.track_partner_clicks", "Lacak klik partnership"]
                   ].map(([path, label]) => {
                     const value = path.split(".").reduce((obj, key) => obj?.[key], settingsDraft);
                     return (
@@ -5870,8 +5890,8 @@ export default function AdminDashboard() {
             <div className="admin-panel">
               <div className="admin-panel-header">
                 <div>
-                  <p>Traffic Signals</p>
-                  <h2>Latest Events</h2>
+                  <p>Aktivitas Website</p>
+                  <h2>Klik Terbaru</h2>
                 </div>
               </div>
               <div className="admin-event-list">
@@ -5882,7 +5902,7 @@ export default function AdminDashboard() {
                     <small>{formatDate(event.created_at)}</small>
                   </article>
                 ))}
-                {!latestEvents.length ? <p className="admin-empty">No visitor actions recorded yet.</p> : null}
+                {!latestEvents.length ? <p className="admin-empty">Belum ada aktivitas website.</p> : null}
               </div>
             </div>
           </section> : null}

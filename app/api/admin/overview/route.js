@@ -1,5 +1,5 @@
 import { getEffectiveAdminSettings, isSupabaseConfigured, listAdminActivities, listAttendanceRecords, listBusinessDocuments, listBuyerProfiles, listFinanceSnapshot, listInquiries, listInvestorInquiries, listNotifications, listQuotationDocuments, listQuotationRequests, listSuppliers, listTrackingEvents } from "@/lib/gsnDataStore";
-import { canAccessFinance, getAuthorizedAdmin } from "@/lib/adminAuth";
+import { canAccessFinance, canAccessSuppliers, getAuthorizedAdmin } from "@/lib/adminAuth";
 
 function summarize(inquiries, events, investorInquiries = [], quotationRequests = []) {
   const highPriority = inquiries.filter((item) => item.lead_priority === "High").length;
@@ -64,7 +64,7 @@ export async function GET(request) {
     getEffectiveAdminSettings(),
     listAttendanceRecords(),
     listBuyerProfiles(),
-    listSuppliers(),
+    canAccessSuppliers(admin) ? listSuppliers() : Promise.resolve([]),
     listBusinessDocuments(),
     listTrackingEvents(),
     listAdminActivities(),

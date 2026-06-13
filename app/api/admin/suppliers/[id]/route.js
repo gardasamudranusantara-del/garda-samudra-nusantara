@@ -1,4 +1,4 @@
-import { requireAdminPermission } from "@/lib/adminAuth";
+import { requireSupplierAccess } from "@/lib/adminAuth";
 import { deleteSupplier, getSupplier, insertAdminActivity, updateSupplier } from "@/lib/gsnDataStore";
 
 function cleanList(value) {
@@ -32,7 +32,7 @@ function cleanUpdates(data = {}) {
 }
 
 export async function PATCH(request, { params }) {
-  const permission = await requireAdminPermission(request, "edit_leads");
+  const permission = await requireSupplierAccess(request);
   if (!permission.ok) {
     return Response.json({ message: permission.message }, { status: permission.status });
   }
@@ -61,7 +61,7 @@ export async function PATCH(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-  const permission = await requireAdminPermission(request, "delete_leads");
+  const permission = await requireSupplierAccess(request);
   if (!permission.ok) {
     return Response.json({ message: permission.message }, { status: permission.status });
   }
