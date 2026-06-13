@@ -3718,7 +3718,59 @@ body {
 }
 
 .admin-form-grid.attendance {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
   margin-top: 8px;
+}
+
+.admin-form-grid.attendance label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: rgba(239, 244, 255, 0.72);
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.admin-form-grid.attendance label.wide {
+  grid-column: 1 / -1;
+}
+
+.admin-form-grid.attendance input,
+.admin-form-grid.attendance select,
+.admin-form-grid.attendance textarea {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(188, 174, 255, 0.2);
+  border-radius: 14px;
+  padding: 11px 13px;
+  background: rgba(3, 5, 18, 0.68);
+  color: #fff;
+  font: inherit;
+  font-size: 0.94rem;
+  letter-spacing: 0;
+  text-transform: none;
+  outline: none;
+}
+
+.admin-form-grid.attendance textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.admin-form-grid.attendance input::placeholder,
+.admin-form-grid.attendance textarea::placeholder {
+  color: rgba(239, 244, 255, 0.38);
+}
+
+.admin-form-grid.attendance input:focus,
+.admin-form-grid.attendance select:focus,
+.admin-form-grid.attendance textarea:focus {
+  border-color: rgba(159, 224, 255, 0.56);
+  box-shadow: 0 0 0 3px rgba(85, 201, 255, 0.12);
 }
 
 .admin-attendance-current,
