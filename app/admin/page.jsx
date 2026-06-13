@@ -6,6 +6,22 @@ const statuses = ["New", "Contacted", "Negotiation", "Quotation Sent", "Converte
 const priorities = ["All", "High", "Medium", "Low"];
 const statusFilters = ["All", ...statuses];
 const modules = ["Leads", "Buyers", "Suppliers", "Documents", "Investors", "Quotations", "Analytics", "Finance", "Attendance", "Activity", "Settings", "Users"];
+const adminRoleOptions = [
+  { value: "ceo", label: "CEO", description: "Full owner access: company control, finance, users, settings, delete actions, and automation." },
+  { value: "cso", label: "CSO", description: "Full owner access: strategy, investors, finance, users, settings, delete actions, and automation." },
+  { value: "system_admin", label: "System Admin", description: "System access: settings, users, automation, and activity log without confidential finance access." },
+  { value: "cfo", label: "CFO", description: "Finance executive access: all finance modules, reports, approvals, and financial exports." },
+  { value: "finance_manager", label: "Finance Manager", description: "Finance management access: cash, revenue, expense, AR/AP, reports, and approvals." },
+  { value: "finance_staff", label: "Finance Staff", description: "Finance staff access: finance records, uploads, reports, and payment tracking without closing controls." },
+  { value: "operations_manager", label: "Operations Manager", description: "Operations access: leads, buyers, suppliers, documents, quotations, and follow-up activity." },
+  { value: "sales_manager", label: "Sales Manager", description: "Sales access: leads, investors, quotation workflow, PDF download, and activity log." },
+  { value: "marketing", label: "Marketing", description: "Marketing access: leads, quotations, analytics, activity log, and PDF download only." },
+  { value: "viewer", label: "Viewer", description: "Read-only dashboard access for monitoring data without editing records." }
+];
+const adminRoleDescriptions = Object.fromEntries(adminRoleOptions.map((role) => [role.value, role.description]));
+const adminRoleLabels = Object.fromEntries(adminRoleOptions.map((role) => [role.value, role.label]));
+const executiveRoleIds = ["ceo", "cso", "owner", "system_admin"];
+const financeRoleIds = ["ceo", "cso", "owner", "cfo", "finance_manager", "finance_staff"];
 const attendanceStatuses = ["Present", "Remote", "Field Visit", "Permission", "Sick", "Leave"];
 const attendanceWorkModes = ["Office", "Remote", "Field", "Hybrid"];
 const buyerStages = ["New", "Qualified", "Repeat Buyer", "Active", "Dormant", "Inactive"];
@@ -2705,11 +2721,9 @@ export default function AdminDashboard() {
   const financeAccessLogs = finance?.financeAccessLogs || [];
   const investorReports = finance?.investorReports || [];
   const financePeriodLocks = finance?.financePeriodLocks || [];
-  const isCeo = adminProfile?.role === "ceo";
-  const isCso = adminProfile?.role === "cso";
-  const isOwner = adminProfile?.role === "owner";
-  const isExecutive = isOwner || isCeo || isCso;
-  const canUseFinance = (isCeo || isCso) && Boolean(finance);
+  const currentRole = adminProfile?.role || "";
+  const isExecutive = executiveRoleIds.includes(currentRole);
+  const canUseFinance = financeRoleIds.includes(currentRole) && Boolean(finance);
   const canDelete = isExecutive;
   const canUseSettings = isExecutive;
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -2723,7 +2737,7 @@ export default function AdminDashboard() {
   };
   const visibleModules = modules.filter((module) => {
     if (module === "Finance") {
-      return isCeo || isCso;
+      return financeRoleIds.includes(currentRole);
     }
     if (module === "Investors") {
       return isExecutive;
@@ -3489,7 +3503,7 @@ export default function AdminDashboard() {
           <p>GSN Command Center</p>
           <h1>Lead Management</h1>
           <span>Buyer inquiries, quotation requests, NusaBot leads, and follow-up control in one internal workspace.</span>
-          {adminProfile ? <small className="admin-owner-badge">{adminProfile.username} - {adminProfile.role}</small> : null}
+          {adminProfile ? <small className="admin-owner-badge">{adminProfile.username} - {adminRoleLabels[adminProfile.role] || adminProfile.role}</small> : null}
         </div>
         <div className="admin-hero-actions">
           {savedCredentials ? (
@@ -5673,16 +5687,15 @@ export default function AdminDashboard() {
                     <article key={account.username}>
                       <div>
                         <strong>{account.username}</strong>
-                        <span>{account.role} | {account.source || "dashboard"} | {account.is_active === false ? "inactive" : "active"}</span>
+                        <span>{adminRoleLabels[account.role] || account.role} | {account.source || "dashboard"} | {account.is_active === false ? "inactive" : "active"}</span>
                       </div>
-                      <small>{account.role === "ceo" ? "CEO / owner access: full dashboard, confidential Finance, settings, users, delete actions, and automation." : account.role === "cso" ? "CSO / owner access: full dashboard, confidential Finance, strategy, users, delete actions, and automation." : account.role === "owner" ? "Owner access: full CRM dashboard, settings, users, delete actions, and automation." : "Marketing access: leads, quotations, analytics, activity log, and PDF download only."}</small>
+                      <small>{adminRoleDescriptions[account.role] || "Custom dashboard access."}</small>
                       {account.source !== "env" ? (
                         <div className="admin-user-actions">
                           <select value={account.role} onChange={(event) => updateUserAccount(account, { role: event.target.value })}>
-                            <option value="ceo">ceo</option>
-                            <option value="cso">cso</option>
-                            <option value="marketing">marketing</option>
-                            <option value="owner">owner</option>
+                            {adminRoleOptions.map((role) => (
+                              <option key={role.value} value={role.value}>{role.label}</option>
+                            ))}
                           </select>
                           <button onClick={() => updateUserAccount(account, { is_active: account.is_active === false })} type="button">
                             {account.is_active === false ? "Activate" : "Deactivate"}
@@ -5708,18 +5721,17 @@ export default function AdminDashboard() {
                   <label>Password<input value={userDraft.password} onChange={(event) => setUserDraft((current) => ({ ...current, password: event.target.value }))} placeholder="minimum 6 characters" type="password" /></label>
                   <label>Role
                     <select value={userDraft.role} onChange={(event) => setUserDraft((current) => ({ ...current, role: event.target.value }))}>
-                      <option value="ceo">ceo</option>
-                      <option value="cso">cso</option>
-                      <option value="marketing">marketing</option>
-                      <option value="owner">owner</option>
+                      {adminRoleOptions.map((role) => (
+                        <option key={role.value} value={role.value}>{role.label}</option>
+                      ))}
                     </select>
                   </label>
                   <button onClick={saveUserAccount} type="button">Save User</button>
                 </div>
                 <div className="admin-modal-confirm">
-                  <p>Recommended staff account:</p>
-                  <strong>marketing / marketing123</strong>
-                  <p>Marketing role can manage leads and quotations, but cannot open Settings, Users, delete records, or run owner automation.</p>
+                  <p>Recommended staff roles:</p>
+                  <strong>Sales Manager, Finance Staff, Operations Manager</strong>
+                  <p>Use CEO/CSO only for owner accounts. Staff roles keep finance, users, settings, and delete access separated.</p>
                 </div>
               </div>
             </section>

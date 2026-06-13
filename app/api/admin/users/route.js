@@ -1,12 +1,26 @@
 import { listAdminAccounts, requireAdminPermission } from "@/lib/adminAuth";
 import { deleteStoredAdminUser, getStoredAdminUserForAudit, insertAdminActivity, updateStoredAdminUser, upsertStoredAdminUser } from "@/lib/gsnDataStore";
 
+const adminRoleIds = [
+  "ceo",
+  "cso",
+  "owner",
+  "system_admin",
+  "cfo",
+  "finance_manager",
+  "finance_staff",
+  "operations_manager",
+  "sales_manager",
+  "marketing",
+  "viewer"
+];
+
 function cleanUsername(value) {
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40);
 }
 
 function cleanRole(value) {
-  return ["ceo", "cso", "owner", "marketing"].includes(value) ? value : "marketing";
+  return adminRoleIds.includes(value) ? value : "marketing";
 }
 
 function userStoreError(error) {
@@ -87,7 +101,7 @@ export async function PATCH(request) {
     return Response.json({ message: "Username is required." }, { status: 400 });
   }
 
-  if (["ceo", "cso", "owner", "marketing"].includes(data.role)) {
+  if (adminRoleIds.includes(data.role)) {
     updates.role = data.role;
   }
   if (typeof data.password === "string" && data.password.trim()) {
@@ -106,7 +120,7 @@ export async function PATCH(request) {
 
   try {
     const before = await getStoredAdminUserForAudit(username);
-    if (["ceo", "cso"].includes(before?.role)) {
+    if (["ceo", "cso", "owner"].includes(before?.role)) {
       if (updates.role && updates.role !== before.role) {
         return Response.json({ message: "Executive account cannot be demoted from the dashboard." }, { status: 403 });
       }
@@ -156,7 +170,7 @@ export async function DELETE(request) {
 
   try {
     const before = await getStoredAdminUserForAudit(username);
-    if (["ceo", "cso"].includes(before?.role)) {
+    if (["ceo", "cso", "owner"].includes(before?.role)) {
       return Response.json({ message: "Executive account cannot be deleted from the dashboard." }, { status: 403 });
     }
     const result = await deleteStoredAdminUser(username);
