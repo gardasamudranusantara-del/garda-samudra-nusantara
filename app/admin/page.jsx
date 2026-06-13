@@ -387,6 +387,14 @@ function downloadTextFile(filename, content, type) {
   URL.revokeObjectURL(url);
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
 function makeFinanceReportRows(summary) {
   return [
     ["Metric", "Value", "Currency"],
@@ -416,12 +424,90 @@ function exportFinanceReportCsv(summary) {
 
 function exportFinanceReportExcel(summary, draft) {
   const rows = makeFinanceReportRows(summary);
-  const htmlRows = rows.map((row) => `<tr>${row.map((cell) => `<td>${String(cell ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</td>`).join("")}</tr>`).join("");
+  const htmlRows = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("");
   downloadTextFile(
     `gsn-finance-report-${new Date().toISOString().slice(0, 10)}.xls`,
-    `<html><head><meta charset="utf-8" /></head><body><h1>${draft.title || "GSN Financial Report"}</h1><p>${draft.report_type || "Financial Summary"}</p><table border="1">${htmlRows}</table></body></html>`,
+    `<html><head><meta charset="utf-8" /></head><body><h1>${escapeHtml(draft.title || "GSN Financial Report")}</h1><p>${escapeHtml(draft.report_type || "Financial Summary")}</p><table border="1">${htmlRows}</table></body></html>`,
     "application/vnd.ms-excel;charset=utf-8"
   );
+}
+
+function makeSavedReportDraft(report) {
+  return {
+    title: report.title || "GSN Financial Report",
+    report_type: report.report_type || "Financial Summary",
+    date_from: report.date_from || report.report_data?.dateFrom || "",
+    date_to: report.date_to || report.report_data?.dateTo || ""
+  };
+}
+
+function makeFinanceTransactionRows(transactions) {
+  return transactions.map((item) => [
+    item.transaction_date || item.created_at || "",
+    item.transaction_type || "",
+    item.category || "",
+    item.description || "",
+    item.amount || 0,
+    item.currency || "IDR",
+    item.payment_method || "",
+    item.reference_number || "",
+    item.created_by || ""
+  ]);
+}
+
+function exportFinanceTransactionsCsv(transactions) {
+  exportRowsCsv(
+    `gsn-finance-transactions-${new Date().toISOString().slice(0, 10)}.csv`,
+    ["Date", "Type", "Category", "Description", "Amount", "Currency", "Payment Method", "Reference", "Created By"],
+    makeFinanceTransactionRows(transactions)
+  );
+}
+
+function exportFinanceTransactionsExcel(transactions) {
+  const rows = [
+    ["Date", "Type", "Category", "Description", "Amount", "Currency", "Payment Method", "Reference", "Created By"],
+    ...makeFinanceTransactionRows(transactions)
+  ];
+  const htmlRows = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("");
+  downloadTextFile(
+    `gsn-finance-transactions-${new Date().toISOString().slice(0, 10)}.xls`,
+    `<html><head><meta charset="utf-8" /></head><body><h1>GSN Finance Transactions</h1><p>Generated ${escapeHtml(new Date().toLocaleDateString())}</p><table border="1">${htmlRows}</table></body></html>`,
+    "application/vnd.ms-excel;charset=utf-8"
+  );
+}
+
+function printFinanceTransactions(transactions) {
+  const rows = makeFinanceTransactionRows(transactions).map((row) => `
+    <tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>
+  `).join("");
+  const popup = window.open("", "_blank", "width=1000,height=900");
+  if (!popup) {
+    return;
+  }
+  popup.document.write(`
+    <html>
+      <head>
+        <title>GSN Finance Transactions</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 32px; color: #111827; }
+          header { display: flex; justify-content: space-between; border-bottom: 3px solid #6d5dfc; padding-bottom: 18px; margin-bottom: 24px; }
+          h1 { margin: 0; color: #26105f; }
+          table { border-collapse: collapse; width: 100%; font-size: 12px; }
+          th { background: #26105f; color: #fff; text-align: left; }
+          th, td { border-bottom: 1px solid #d7d7e4; padding: 10px; }
+        </style>
+      </head>
+      <body>
+        <header><div><strong>Garda Samudra Nusantara</strong><h1>Finance Transactions</h1></div><div>Generated<br/>${escapeHtml(new Date().toLocaleDateString())}</div></header>
+        <table>
+          <thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th>Amount</th><th>Currency</th><th>Payment</th><th>Reference</th><th>Created By</th></tr></thead>
+          <tbody>${rows || "<tr><td colspan='9'>No transactions</td></tr>"}</tbody>
+        </table>
+        <script>window.print();</script>
+      </body>
+    </html>
+  `);
+  popup.document.close();
 }
 
 function printFinanceReport(summary, draft) {
@@ -4761,7 +4847,11 @@ export default function AdminDashboard() {
                     <p>Recent Transactions</p>
                     <h2>Cash, Revenue, Expense</h2>
                   </div>
-                  <span className="admin-muted">Export PDF / Excel / CSV planned for next finance phase</span>
+                  <div className="admin-actions">
+                    <button disabled={!financeTransactions.length} onClick={() => printFinanceTransactions(financeTransactions)} type="button">PDF / Print</button>
+                    <button disabled={!financeTransactions.length} onClick={() => exportFinanceTransactionsCsv(financeTransactions)} type="button">CSV</button>
+                    <button disabled={!financeTransactions.length} onClick={() => exportFinanceTransactionsExcel(financeTransactions)} type="button">Excel</button>
+                  </div>
                 </div>
                 <div className="admin-table-wrap">
                   <table className="admin-mobile-cards">
@@ -5314,6 +5404,9 @@ export default function AdminDashboard() {
                             <td data-label="Generated By">{item.generated_by || "-"}</td>
                             <td data-label="Actions">
                               <div className="admin-table-actions">
+                                <button onClick={() => printFinanceReport(reportData, makeSavedReportDraft(item))} type="button">PDF</button>
+                                <button onClick={() => exportFinanceReportCsv(reportData)} type="button">CSV</button>
+                                <button onClick={() => exportFinanceReportExcel(reportData, makeSavedReportDraft(item))} type="button">Excel</button>
                                 <button onClick={() => openModal("financeReport", item)} type="button">Edit</button>
                                 <button className="danger" onClick={() => openDeleteModal("financeReport", item)} type="button">Delete</button>
                               </div>
