@@ -9,6 +9,15 @@ function cleanRole(value) {
   return ["ceo", "cso", "owner", "marketing"].includes(value) ? value : "marketing";
 }
 
+function userStoreError(error) {
+  const message = String(error?.message || "");
+  if (/admin_users|schema cache|relation|column|does not exist/i.test(message)) {
+    return "Admin user database is not ready. Run supabase/admin-users-migration.sql in Supabase SQL Editor, then try saving again.";
+  }
+
+  return message || "Unable to save admin user.";
+}
+
 export async function GET(request) {
   const permission = await requireAdminPermission(request, "user_management");
   if (!permission.ok) {
@@ -35,29 +44,33 @@ export async function POST(request) {
     return Response.json({ message: "Username and password with at least 6 characters are required." }, { status: 400 });
   }
 
-  const before = await getStoredAdminUserForAudit(username);
-  const after = { username, role, is_active: data.is_active !== false };
-  const result = await upsertStoredAdminUser({
-    username,
-    password,
-    role,
-    is_active: data.is_active !== false
-  });
+  try {
+    const before = await getStoredAdminUserForAudit(username);
+    const after = { username, role, is_active: data.is_active !== false };
+    const result = await upsertStoredAdminUser({
+      username,
+      password,
+      role,
+      is_active: data.is_active !== false
+    });
 
-  await insertAdminActivity({
-    admin: permission.admin,
-    action: "upsert_admin_user",
-    label: `Saved admin user ${username}`,
-    referenceType: "admin_user",
-    referenceId: username,
-    metadata: {
-      fields: ["username", "role", "is_active"],
-      before: before || {},
-      after
-    }
-  });
+    await insertAdminActivity({
+      admin: permission.admin,
+      action: "upsert_admin_user",
+      label: `Saved admin user ${username}`,
+      referenceType: "admin_user",
+      referenceId: username,
+      metadata: {
+        fields: ["username", "role", "is_active"],
+        before: before || {},
+        after
+      }
+    });
 
-  return Response.json({ ok: true, result });
+    return Response.json({ ok: true, result });
+  } catch (error) {
+    return Response.json({ message: userStoreError(error) }, { status: 500 });
+  }
 }
 
 export async function PATCH(request) {
@@ -91,34 +104,38 @@ export async function PATCH(request) {
     return Response.json({ message: "No updates provided." }, { status: 400 });
   }
 
-  const before = await getStoredAdminUserForAudit(username);
-  if (["ceo", "cso"].includes(before?.role)) {
-    if (updates.role && updates.role !== before.role) {
-      return Response.json({ message: "Executive account cannot be demoted from the dashboard." }, { status: 403 });
+  try {
+    const before = await getStoredAdminUserForAudit(username);
+    if (["ceo", "cso"].includes(before?.role)) {
+      if (updates.role && updates.role !== before.role) {
+        return Response.json({ message: "Executive account cannot be demoted from the dashboard." }, { status: 403 });
+      }
+      if (updates.is_active === false) {
+        return Response.json({ message: "Executive account cannot be suspended from the dashboard." }, { status: 403 });
+      }
     }
-    if (updates.is_active === false) {
-      return Response.json({ message: "Executive account cannot be suspended from the dashboard." }, { status: 403 });
+    const result = await updateStoredAdminUser(username, updates);
+    const auditUpdates = { ...updates };
+    if (auditUpdates.password) {
+      auditUpdates.password = "[updated]";
     }
-  }
-  const result = await updateStoredAdminUser(username, updates);
-  const auditUpdates = { ...updates };
-  if (auditUpdates.password) {
-    auditUpdates.password = "[updated]";
-  }
-  await insertAdminActivity({
-    admin: permission.admin,
-    action: "update_admin_user",
-    label: `Updated admin user ${username}`,
-    referenceType: "admin_user",
-    referenceId: username,
-    metadata: {
-      fields: Object.keys(updates).filter((field) => field !== "password"),
-      before: Object.fromEntries(Object.keys(auditUpdates).map((field) => [field, field === "password" ? "[hidden]" : before?.[field] ?? null])),
-      after: auditUpdates
-    }
-  });
+    await insertAdminActivity({
+      admin: permission.admin,
+      action: "update_admin_user",
+      label: `Updated admin user ${username}`,
+      referenceType: "admin_user",
+      referenceId: username,
+      metadata: {
+        fields: Object.keys(updates).filter((field) => field !== "password"),
+        before: Object.fromEntries(Object.keys(auditUpdates).map((field) => [field, field === "password" ? "[hidden]" : before?.[field] ?? null])),
+        after: auditUpdates
+      }
+    });
 
-  return Response.json({ ok: true, result });
+    return Response.json({ ok: true, result });
+  } catch (error) {
+    return Response.json({ message: userStoreError(error) }, { status: 500 });
+  }
 }
 
 export async function DELETE(request) {
@@ -137,19 +154,23 @@ export async function DELETE(request) {
     return Response.json({ message: "You cannot delete your own active account." }, { status: 400 });
   }
 
-  const before = await getStoredAdminUserForAudit(username);
-  if (["ceo", "cso"].includes(before?.role)) {
-    return Response.json({ message: "Executive account cannot be deleted from the dashboard." }, { status: 403 });
-  }
-  const result = await deleteStoredAdminUser(username);
-  await insertAdminActivity({
-    admin: permission.admin,
-    action: "delete_admin_user",
-    label: `Deleted admin user ${username}`,
-    referenceType: "admin_user",
-    referenceId: username,
-    metadata: { before }
-  });
+  try {
+    const before = await getStoredAdminUserForAudit(username);
+    if (["ceo", "cso"].includes(before?.role)) {
+      return Response.json({ message: "Executive account cannot be deleted from the dashboard." }, { status: 403 });
+    }
+    const result = await deleteStoredAdminUser(username);
+    await insertAdminActivity({
+      admin: permission.admin,
+      action: "delete_admin_user",
+      label: `Deleted admin user ${username}`,
+      referenceType: "admin_user",
+      referenceId: username,
+      metadata: { before }
+    });
 
-  return Response.json({ ok: true, result });
+    return Response.json({ ok: true, result });
+  } catch (error) {
+    return Response.json({ message: userStoreError(error) }, { status: 500 });
+  }
 }
