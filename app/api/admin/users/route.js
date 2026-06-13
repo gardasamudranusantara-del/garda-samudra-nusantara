@@ -1,4 +1,5 @@
 import { listAdminAccounts, requireAdminPermission } from "@/lib/adminAuth";
+import { hashAdminPassword } from "@/lib/adminSecurity";
 import { deleteStoredAdminUser, getStoredAdminUserForAudit, insertAdminActivity, updateStoredAdminUser, upsertStoredAdminUser } from "@/lib/gsnDataStore";
 
 const adminRoleIds = [
@@ -61,7 +62,7 @@ export async function POST(request) {
     const after = { username, role, is_active: data.is_active !== false };
     const result = await upsertStoredAdminUser({
       username,
-      password,
+      password: hashAdminPassword(password),
       role,
       is_active: data.is_active !== false
     });
@@ -106,7 +107,7 @@ export async function PATCH(request) {
     if (data.password.trim().length < 6) {
       return Response.json({ message: "Password must be at least 6 characters." }, { status: 400 });
     }
-    updates.password = data.password.trim();
+    updates.password = hashAdminPassword(data.password.trim());
   }
   if (typeof data.is_active === "boolean") {
     updates.is_active = data.is_active;

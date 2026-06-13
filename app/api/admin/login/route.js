@@ -1,4 +1,5 @@
 import { getAuthorizedAdmin } from "@/lib/adminAuth";
+import { createAdminSession } from "@/lib/adminSecurity";
 
 export async function POST(request) {
   const admin = await getAuthorizedAdmin(request);
@@ -7,5 +8,9 @@ export async function POST(request) {
     return Response.json({ message: "Invalid username or password." }, { status: 401 });
   }
 
-  return Response.json({ ok: true, admin });
+  return Response.json({
+    ok: true,
+    admin,
+    session: createAdminSession(admin)
+  });
 }

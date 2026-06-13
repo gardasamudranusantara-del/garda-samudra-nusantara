@@ -1176,6 +1176,12 @@ export default function AdminDashboard() {
   const [storageStatus, setStorageStatus] = useState(null);
 
   function authHeaders(activeCredentials = savedCredentials || credentials) {
+    if (activeCredentials?.session) {
+      return {
+        "x-admin-session": activeCredentials.session
+      };
+    }
+
     return {
       "x-admin-username": activeCredentials.username,
       "x-admin-password": activeCredentials.password
@@ -1198,11 +1204,16 @@ export default function AdminDashboard() {
         throw new Error(result.message || "Invalid username or password.");
       }
 
-      setSavedCredentials(credentials);
+      const sessionCredentials = {
+        username: result.admin?.username || credentials.username,
+        role: result.admin?.role || "owner",
+        session: result.session
+      };
+      setSavedCredentials(sessionCredentials);
       setAdminProfile(result.admin || { username: credentials.username, role: "owner" });
-      await loadDashboard(credentials);
-      if ((result.admin?.role || "owner") === "owner") {
-        await loadUsers(credentials);
+      await loadDashboard(sessionCredentials);
+      if (userManagerRoleIds.includes(result.admin?.role || "owner")) {
+        await loadUsers(sessionCredentials);
       }
     } catch (error) {
       setNotice(error.message);
@@ -3584,7 +3595,7 @@ export default function AdminDashboard() {
           {!data.configured ? (
             <section className="admin-setup-warning">
               <h2>Supabase is not connected yet.</h2>
-              <p>Add SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_DASHBOARD_USERNAME, and ADMIN_DASHBOARD_PASSWORD in Vercel to start storing live GSN data.</p>
+              <p>Add SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_DASHBOARD_ACCOUNTS, and ADMIN_SESSION_SECRET in Vercel to start storing live GSN data securely.</p>
             </section>
           ) : null}
 
