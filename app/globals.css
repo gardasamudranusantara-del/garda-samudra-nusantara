@@ -3407,6 +3407,123 @@ body {
   color: #fff;
 }
 
+.admin-home-kpis {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.admin-home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 18px;
+}
+
+.admin-home-focus {
+  grid-row: span 2;
+}
+
+.admin-quick-actions,
+.admin-admin-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-quick-actions button,
+.admin-admin-shortcuts button,
+.admin-task-list button {
+  min-height: 106px;
+  border: 1px solid rgba(188, 174, 255, 0.14);
+  border-radius: 20px;
+  padding: 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(73, 194, 255, 0.04)),
+    rgba(255, 255, 255, 0.035);
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.admin-quick-actions button:hover,
+.admin-admin-shortcuts button:hover,
+.admin-task-list button:hover {
+  border-color: rgba(159, 224, 255, 0.34);
+  background:
+    linear-gradient(145deg, rgba(142, 92, 255, 0.2), rgba(73, 194, 255, 0.08)),
+    rgba(255, 255, 255, 0.045);
+  transform: translateY(-2px);
+}
+
+.admin-quick-actions strong,
+.admin-quick-actions span,
+.admin-admin-shortcuts strong,
+.admin-admin-shortcuts span,
+.admin-task-list strong,
+.admin-task-list span,
+.admin-insight-list strong,
+.admin-insight-list span {
+  display: block;
+}
+
+.admin-quick-actions strong,
+.admin-admin-shortcuts strong,
+.admin-task-list strong,
+.admin-insight-list strong {
+  font-size: 1rem;
+}
+
+.admin-quick-actions span,
+.admin-admin-shortcuts span,
+.admin-task-list span,
+.admin-insight-list span {
+  margin-top: 8px;
+  color: rgba(239, 244, 255, 0.62);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.admin-task-list,
+.admin-insight-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-task-list button {
+  min-height: 88px;
+}
+
+.admin-task-list button.high {
+  border-color: rgba(255, 91, 132, 0.28);
+  background: linear-gradient(135deg, rgba(255, 91, 132, 0.14), rgba(255, 255, 255, 0.035));
+}
+
+.admin-task-list button.medium {
+  border-color: rgba(255, 203, 107, 0.28);
+  background: linear-gradient(135deg, rgba(255, 203, 107, 0.12), rgba(255, 255, 255, 0.035));
+}
+
+.admin-insight-list article,
+.admin-empty-state {
+  border: 1px solid rgba(188, 174, 255, 0.12);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.admin-empty-state strong,
+.admin-empty-state span {
+  display: block;
+}
+
+.admin-empty-state span {
+  margin-top: 6px;
+  color: rgba(239, 244, 255, 0.62);
+}
+
+.admin-admin-hub {
+  max-width: 980px;
+}
+
 .admin-login {
   position: relative;
   z-index: 1;
@@ -4549,6 +4666,14 @@ body {
   grid-column: 1 / -1;
 }
 
+.admin-finance-grid.finance-collapsed > :nth-child(n + 5) {
+  display: none;
+}
+
+.admin-finance-grid.finance-collapsed {
+  align-items: start;
+}
+
 .admin-metrics.finance {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -4853,6 +4978,10 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .admin-home-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .admin-finance-menu,
   .admin-finance-menu.compact,
   .admin-finance-signals,
@@ -4892,6 +5021,10 @@ body {
   .admin-metrics,
   .admin-metrics.crm,
   .admin-metrics.analytics,
+  .admin-home-kpis,
+  .admin-home-grid,
+  .admin-quick-actions,
+  .admin-admin-shortcuts,
   .admin-chart-grid,
   .admin-chart-grid.analytics,
   .admin-grid,
@@ -4958,6 +5091,54 @@ body {
 }
 
 @media (max-width: 760px) {
+  .admin-shell {
+    padding: 18px 14px 104px;
+  }
+
+  .admin-hero {
+    padding: 20px;
+  }
+
+  .admin-hero h1 {
+    font-size: clamp(2rem, 12vw, 3rem);
+  }
+
+  .admin-module-tabs {
+    position: fixed;
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    z-index: 30;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(86px, 1fr);
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    margin: 0;
+    border: 1px solid rgba(188, 174, 255, 0.18);
+    border-radius: 22px;
+    padding: 8px;
+    background: rgba(5, 7, 18, 0.9);
+    box-shadow: 0 18px 58px rgba(0, 0, 0, 0.42);
+    backdrop-filter: blur(18px);
+  }
+
+  .admin-module-tabs button {
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .admin-home-focus {
+    grid-row: auto;
+  }
+
+  .admin-quick-actions button,
+  .admin-admin-shortcuts button {
+    min-height: 86px;
+  }
+
   .admin-table-wrap {
     overflow-x: visible;
   }

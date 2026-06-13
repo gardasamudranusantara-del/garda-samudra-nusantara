@@ -5,21 +5,24 @@ import { useMemo, useState } from "react";
 const statuses = ["New", "Contacted", "Negotiation", "Quotation Sent", "Converted", "Closed"];
 const priorities = ["All", "High", "Medium", "Low"];
 const statusFilters = ["All", ...statuses];
-const modules = ["Leads", "Buyers", "Suppliers", "Documents", "Investors", "Quotations", "Analytics", "Finance", "Attendance", "Activity", "Settings", "Users"];
+const modules = ["Dashboard", "Leads", "Buyers", "Suppliers", "Documents", "Analytics", "Finance", "Attendance", "Admin"];
 const moduleLabels = {
+  Dashboard: "Dashboard",
   Leads: "Prospek",
-  Buyers: "Buyer",
-  Suppliers: "Supplier",
+  Buyers: "Pembeli",
+  Suppliers: "Pemasok",
   Documents: "Dokumen",
   Investors: "Investor",
   Quotations: "Penawaran",
-  Analytics: "Analisis",
+  Analytics: "Analitik",
   Finance: "Keuangan",
   Attendance: "Absensi",
   Activity: "Aktivitas",
   Settings: "Pengaturan",
-  Users: "Pengguna"
+  Users: "Pengguna",
+  Admin: "Admin"
 };
+const adminShortcutModules = ["Quotations", "Investors", "Activity", "Settings", "Users"];
 const adminRoleOptions = [
   { value: "ceo", label: "CEO", description: "Akses owner penuh: kontrol perusahaan, keuangan, pengguna, pengaturan, hapus data, dan automation." },
   { value: "cso", label: "CSO", description: "Akses owner penuh: strategi, investor, keuangan, pengguna, pengaturan, hapus data, dan automation." },
@@ -44,16 +47,14 @@ const supplierStatuses = ["Active", "Pending Review", "Preferred", "Backup", "In
 const documentTypes = ["Quotation", "Invoice", "Contract", "Packing List", "Certificate", "Legal", "Tax", "Payment Proof", "Supplier Document", "Other"];
 const documentStatuses = ["Active", "Draft", "Pending Review", "Expired", "Archived"];
 const financeMenus = [
-  "Dashboard Overview",
-  "Cash Management",
-  "Revenue Management",
-  "Expense Management",
-  "Accounts Receivable",
-  "Accounts Payable",
-  "Budget & Planning",
-  "Financial Reports",
-  "Investor Reports",
-  "Access Management"
+  "Dashboard",
+  "Kas & Bank",
+  "Penjualan",
+  "Pembelian",
+  "Pajak & Legal",
+  "Anggaran",
+  "Laporan",
+  "Audit"
 ];
 const financeCurrencies = ["IDR", "USD", "SGD"];
 const cashInCategories = ["Founder Capital", "Investor Capital", "Sales Revenue", "Commission Revenue", "Other Income"];
@@ -1046,7 +1047,8 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
-  const [activeModule, setActiveModule] = useState("Leads");
+  const [activeModule, setActiveModule] = useState("Dashboard");
+  const [showFinanceDetail, setShowFinanceDetail] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState(defaultSettings);
   const [modal, setModal] = useState(null);
@@ -2296,7 +2298,10 @@ export default function AdminDashboard() {
       return;
     }
 
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setShowFinanceDetail(true);
+    window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
   }
 
   async function testFinanceOwnerAlerts() {
@@ -3295,6 +3300,22 @@ export default function AdminDashboard() {
   const selectedProducts = selected ? normalizeProducts(selected) : [];
   const selectedFollowUpHours = selected ? hoursSince(selected.created_at) : 0;
   const assignableUsers = useMemo(() => userAccounts.filter((account) => account.is_active !== false).map((account) => account.username), [userAccounts]);
+  const attentionTasks = useMemo(() => ([
+    metrics.pendingFollowUps ? { title: "Follow-up buyer", detail: `${metrics.pendingFollowUps} prospek perlu dihubungi`, tone: "high", module: "Leads" } : null,
+    metrics.highPriority ? { title: "Prioritas tinggi", detail: `${metrics.highPriority} lead harus dipantau`, tone: "medium", module: "Leads" } : null,
+    unreadNotifications.length ? { title: "Notifikasi baru", detail: `${unreadNotifications.length} info belum dibaca`, tone: "medium", module: "Dashboard" } : null,
+    canUseFinance && financeReminders.total ? { title: "Keuangan", detail: `${financeReminders.total} reminder finance aktif`, tone: "high", module: "Finance" } : null,
+    !currentAttendance?.check_in_at ? { title: "Absensi hari ini", detail: "Belum absen masuk", tone: "low", module: "Attendance" } : null
+  ].filter(Boolean).slice(0, 5)), [canUseFinance, currentAttendance?.check_in_at, financeReminders.total, metrics.highPriority, metrics.pendingFollowUps, unreadNotifications.length]);
+  const homeActivities = useMemo(() => latestAdminActivities.slice(0, 5), [latestAdminActivities]);
+  const quickActions = [
+    { label: "Tambah Prospek", hint: "Kelola inquiry buyer", module: "Leads" },
+    { label: "Buat Penawaran", hint: "Quotation buyer", module: "Quotations" },
+    { label: "Catat Pemasukan", hint: "Revenue / cash in", module: "Finance", financeTarget: "finance-revenue-form" },
+    { label: "Catat Pengeluaran", hint: "Expense approval", module: "Finance", financeTarget: "finance-expense-form" },
+    { label: "Upload Dokumen", hint: "Kontrak, invoice, legal", module: "Documents" },
+    { label: "Absen Masuk", hint: "Check-in harian", module: "Attendance" }
+  ];
   const modalTitles = {
     buyerProfile: "Buyer Profile",
     supplier: "Supplier Profile",
@@ -3705,7 +3726,7 @@ export default function AdminDashboard() {
             </section>
           ) : null}
 
-          <section className="admin-metrics crm">
+          {activeModule === "Dashboard" ? <section className="admin-metrics crm admin-home-kpis">
             <article><span>Total Prospek</span><strong>{metrics.totalLeads}</strong></article>
             <article><span>Masuk Hari Ini</span><strong>{metrics.newToday}</strong></article>
             <article><span>Investor</span><strong>{metrics.investorInquiries}</strong></article>
@@ -3713,7 +3734,7 @@ export default function AdminDashboard() {
             <article><span>Lead NusaBot</span><strong>{metrics.nusabotLeads}</strong></article>
             <article><span>Perlu Follow-Up</span><strong>{metrics.pendingFollowUps}</strong></article>
             <article><span>Prioritas Tinggi</span><strong>{metrics.highPriority}</strong></article>
-          </section>
+          </section> : null}
 
           <nav className="admin-module-tabs" aria-label="Admin modules">
             {visibleModules.map((module) => (
@@ -3722,6 +3743,94 @@ export default function AdminDashboard() {
               </button>
             ))}
           </nav>
+
+          {activeModule === "Dashboard" ? (
+            <section className="admin-home-grid">
+              <div className="admin-panel admin-home-focus">
+                <div className="admin-panel-header">
+                  <div>
+                    <p>Mulai Dari Sini</p>
+                    <h2>Quick Actions</h2>
+                  </div>
+                  <span className="admin-muted">Pekerjaan harian dalam 2-3 klik</span>
+                </div>
+                <div className="admin-quick-actions">
+                  {quickActions.map((action) => (
+                    <button
+                      key={action.label}
+                      onClick={() => {
+                        setActiveModule(action.module);
+                        if (action.financeTarget) {
+                          window.setTimeout(() => scrollToFinanceForm(action.financeTarget), 80);
+                        }
+                      }}
+                      type="button"
+                    >
+                      <strong>{action.label}</strong>
+                      <span>{action.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-header compact">
+                  <div>
+                    <p>Perlu Perhatian</p>
+                    <h2>Tugas Penting</h2>
+                  </div>
+                </div>
+                <div className="admin-task-list">
+                  {attentionTasks.map((task) => (
+                    <button className={task.tone} key={task.title} onClick={() => setActiveModule(task.module)} type="button">
+                      <strong>{task.title}</strong>
+                      <span>{task.detail}</span>
+                    </button>
+                  ))}
+                  {!attentionTasks.length ? (
+                    <div className="admin-empty-state">
+                      <strong>Semua aman.</strong>
+                      <span>Tidak ada tugas penting yang menunggu sekarang.</span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-header compact">
+                  <div>
+                    <p>Insight Sistem</p>
+                    <h2>Ringkasan Hari Ini</h2>
+                  </div>
+                </div>
+                <div className="admin-insight-list">
+                  <article><strong>{chartData.products[0]?.[0] || "Belum ada produk dominan"}</strong><span>Produk yang paling sering diminati.</span></article>
+                  <article><strong>{chartData.countries[0]?.[0] || "Belum ada negara dominan"}</strong><span>Negara buyer paling aktif.</span></article>
+                  <article><strong>{mostClicked || "-"}</strong><span>Fitur website paling sering diklik.</span></article>
+                </div>
+              </div>
+
+              <div className="admin-panel">
+                <div className="admin-panel-header compact">
+                  <div>
+                    <p>Aktivitas Terbaru</p>
+                    <h2>5 Aktivitas Terakhir</h2>
+                  </div>
+                  <button onClick={() => setActiveModule("Activity")} type="button">Lihat Semua</button>
+                </div>
+                <div className="admin-event-list compact">
+                  {homeActivities.map((activity) => (
+                    <article key={activity.id}>
+                      <strong>{activity.label || activity.metadata?.action || "Aktivitas admin"}</strong>
+                      <span>{activity.metadata?.admin || "admin"}</span>
+                      <small>{formatDate(activity.created_at)}</small>
+                    </article>
+                  ))}
+                  {!homeActivities.length ? <p className="admin-empty">Belum ada aktivitas admin.</p> : null}
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           {activeModule === "Leads" ? <section className="admin-chart-grid">
             <div className="admin-panel">
@@ -4237,54 +4346,64 @@ export default function AdminDashboard() {
           ) : null}
 
           {activeModule === "Finance" && canUseFinance ? (
-            <section className="admin-finance-grid">
+            <section className={`admin-finance-grid ${showFinanceDetail ? "finance-expanded" : "finance-collapsed"}`}>
               <div className="admin-panel wide">
                 <div className="admin-panel-header">
                   <div>
-                    <p>Finance Command Center</p>
-                    <h2>CEO-Controlled Financial System</h2>
+                    <p>Keuangan</p>
+                    <h2>Ringkasan Finance</h2>
                   </div>
-                  <span className="admin-muted">Multi currency: IDR / USD / SGD</span>
+                  <div className="admin-actions">
+                    <span className="admin-muted">IDR / USD / SGD</span>
+                    <button onClick={() => setShowFinanceDetail((value) => !value)} type="button">
+                      {showFinanceDetail ? "Sembunyikan Detail" : "Buka Mode Detail ERP"}
+                    </button>
+                  </div>
                 </div>
                 <div className="admin-finance-menu">
                   {financeMenus.map((menu) => (
-                    <article className={menu === "Access Management" ? "secure" : ""} key={menu}>
+                    <article className={menu === "Audit" ? "secure" : ""} key={menu}>
                       <strong>{menu}</strong>
-                      <span>{menu === "Access Management" ? "CEO permission control and finance access logs" : "Prepared for finance records, reporting, filters, and exports"}</span>
+                      <span>{menu === "Dashboard" ? "Ringkasan utama finance." :
+                        menu === "Kas & Bank" ? "Saldo, kas kecil, dan mutasi." :
+                        menu === "Penjualan" ? "Pemasukan, invoice, dan AR." :
+                        menu === "Pembelian" ? "Pengeluaran, AP, dan supplier payment." :
+                        menu === "Pajak & Legal" ? "Catatan pajak dan dokumen legal." :
+                        menu === "Anggaran" ? "Budget dan perencanaan." :
+                        menu === "Laporan" ? "Export laporan finance." :
+                        "Audit finance dan akses internal."}</span>
                     </article>
                   ))}
                 </div>
               </div>
 
               <div className="admin-panel wide">
-                <div className="admin-panel-header compact"><div><p>Dashboard Overview</p><h2>Executive KPIs</h2></div></div>
+                <div className="admin-panel-header compact"><div><p>KPI Utama</p><h2>Angka Yang Perlu Dipantau</h2></div></div>
                 <div className="admin-metrics finance">
-                  <article><span>Cash Balance</span><strong>{formatMoney(financeMetrics.cashBalanceByCurrency.IDR || 0, "IDR")}</strong></article>
-                  <article><span>Total Revenue MTD</span><strong>{formatMoney(financeMetrics.revenueByCurrency.IDR || 0, "IDR")}</strong></article>
-                  <article><span>Total Expenses MTD</span><strong>{formatMoney(financeMetrics.expenseByCurrency.IDR || 0, "IDR")}</strong></article>
-                  <article><span>Net Profit / Loss</span><strong>{formatMoney(financeMetrics.netProfit, "IDR")}</strong></article>
-                  <article><span>Accounts Receivable</span><strong>{formatMoney(financeMetrics.receivableByCurrency.IDR || 0, "IDR")}</strong></article>
-                  <article><span>Accounts Payable</span><strong>{formatMoney(financeMetrics.payableByCurrency.IDR || 0, "IDR")}</strong></article>
-                  <article><span>Burn Rate</span><strong>{formatMoney(financeMetrics.burnRate, "IDR")}</strong></article>
-                  <article><span>Cash Runway</span><strong>{financeMetrics.runway ? `${financeMetrics.runway} mo` : "-"}</strong></article>
+                  <article><span>Saldo Perusahaan</span><strong>{formatMoney(financeMetrics.cashBalanceByCurrency.IDR || 0, "IDR")}</strong></article>
+                  <article><span>Pendapatan Bulan Ini</span><strong>{formatMoney(financeMetrics.revenueByCurrency.IDR || 0, "IDR")}</strong></article>
+                  <article><span>Pengeluaran Bulan Ini</span><strong>{formatMoney(financeMetrics.expenseByCurrency.IDR || 0, "IDR")}</strong></article>
+                  <article><span>Laba Bersih</span><strong>{formatMoney(financeMetrics.netProfit, "IDR")}</strong></article>
+                  <article><span>Piutang Buyer</span><strong>{formatMoney(financeMetrics.receivableByCurrency.IDR || 0, "IDR")}</strong></article>
+                  <article><span>Tagihan Supplier</span><strong>{formatMoney(financeMetrics.payableByCurrency.IDR || 0, "IDR")}</strong></article>
                 </div>
               </div>
 
               <div className="admin-panel wide admin-mobile-finance-flow">
                 <div className="admin-panel-header compact">
                   <div>
-                    <p>Quick Finance Flow</p>
-                    <h2>Choose What You Want to Record</h2>
+                    <p>Aksi Cepat</p>
+                    <h2>Pilih Yang Ingin Dicatat</h2>
                   </div>
-                  <span className="admin-muted">Mobile-first shortcuts</span>
+                  <span className="admin-muted">Form detail akan terbuka saat dibutuhkan</span>
                 </div>
                 <div className="admin-finance-steps">
-                  <button onClick={() => scrollToFinanceForm("finance-cash-form")} type="button"><span>01</span><strong>Cash In / Out</strong><small>Record bank or cash movement.</small></button>
-                  <button onClick={() => scrollToFinanceForm("finance-revenue-form")} type="button"><span>02</span><strong>Revenue</strong><small>Save buyer sales revenue.</small></button>
-                  <button onClick={() => scrollToFinanceForm("finance-expense-form")} type="button"><span>03</span><strong>Expense</strong><small>Upload receipt and request approval.</small></button>
-                  <button onClick={() => scrollToFinanceForm("finance-ar-ap-form")} type="button"><span>04</span><strong>AR / AP</strong><small>Track buyer invoices and supplier bills.</small></button>
-                  <button onClick={() => scrollToFinanceForm("finance-payment-form")} type="button"><span>05</span><strong>Payment</strong><small>Match buyer or supplier payments.</small></button>
-                  <button onClick={() => scrollToFinanceForm("finance-report-form")} type="button"><span>06</span><strong>Report</strong><small>Generate monthly finance report.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-cash-form")} type="button"><span>01</span><strong>Kas / Bank</strong><small>Catat uang masuk atau keluar.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-revenue-form")} type="button"><span>02</span><strong>Pemasukan</strong><small>Simpan revenue penjualan.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-expense-form")} type="button"><span>03</span><strong>Pengeluaran</strong><small>Upload bukti dan approval.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-ar-ap-form")} type="button"><span>04</span><strong>AR / AP</strong><small>Pantau invoice dan tagihan.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-payment-form")} type="button"><span>05</span><strong>Pembayaran</strong><small>Cocokkan pembayaran buyer/supplier.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-report-form")} type="button"><span>06</span><strong>Laporan</strong><small>Buat laporan finance bulanan.</small></button>
                 </div>
               </div>
 
@@ -5712,6 +5831,39 @@ export default function AdminDashboard() {
                   );
                 })}
                 {!latestAdminActivities.length ? <p className="admin-empty">Belum ada aktivitas admin.</p> : null}
+              </div>
+            </section>
+          ) : null}
+
+          {activeModule === "Admin" ? (
+            <section className="admin-panel admin-admin-hub">
+              <div className="admin-panel-header">
+                <div>
+                  <p>Admin Hub</p>
+                  <h2>Kontrol Internal</h2>
+                </div>
+                <span className="admin-muted">Fitur lanjutan disimpan di sini agar dashboard utama tetap ringan.</span>
+              </div>
+              <div className="admin-admin-shortcuts">
+                {adminShortcutModules
+                  .filter((module) => {
+                    if (module === "Investors") return isExecutive;
+                    if (module === "Settings") return canUseSettings;
+                    if (module === "Users") return canManageUsers;
+                    return true;
+                  })
+                  .map((module) => (
+                    <button key={module} onClick={() => setActiveModule(module)} type="button">
+                      <strong>{moduleLabels[module] || module}</strong>
+                      <span>
+                        {module === "Quotations" ? "Kelola permintaan penawaran dan dokumen quotation." :
+                          module === "Investors" ? "Pantau peluang investor dan kerja sama strategis." :
+                          module === "Activity" ? "Lihat audit perubahan dan aktivitas admin." :
+                          module === "Settings" ? "Atur profil perusahaan, notifikasi, dan analytics." :
+                          "Kelola akun dashboard dan role pengguna."}
+                      </span>
+                    </button>
+                  ))}
               </div>
             </section>
           ) : null}
