@@ -1,4 +1,4 @@
-import { getEffectiveAdminSettings, isSupabaseConfigured, listAdminActivities, listAttendanceRecords, listFinanceSnapshot, listInquiries, listInvestorInquiries, listNotifications, listQuotationDocuments, listQuotationRequests, listTrackingEvents } from "@/lib/gsnDataStore";
+import { getEffectiveAdminSettings, isSupabaseConfigured, listAdminActivities, listAttendanceRecords, listBusinessDocuments, listBuyerProfiles, listFinanceSnapshot, listInquiries, listInvestorInquiries, listNotifications, listQuotationDocuments, listQuotationRequests, listSuppliers, listTrackingEvents } from "@/lib/gsnDataStore";
 import { canAccessFinance, getAuthorizedAdmin } from "@/lib/adminAuth";
 
 function summarize(inquiries, events, investorInquiries = [], quotationRequests = []) {
@@ -45,6 +45,9 @@ export async function GET(request) {
       notifications: [],
       settings: null,
       attendanceRecords: [],
+      buyerProfiles: [],
+      suppliers: [],
+      businessDocuments: [],
       events: [],
       adminActivities: [],
       finance: null,
@@ -52,7 +55,7 @@ export async function GET(request) {
     });
   }
 
-  const [inquiries, investorInquiries, quotationRequests, quotationDocuments, notifications, settings, attendanceRecords, events, adminActivities, finance] = await Promise.all([
+  const [inquiries, investorInquiries, quotationRequests, quotationDocuments, notifications, settings, attendanceRecords, buyerProfiles, suppliers, businessDocuments, events, adminActivities, finance] = await Promise.all([
     listInquiries(),
     listInvestorInquiries(),
     listQuotationRequests(),
@@ -60,6 +63,9 @@ export async function GET(request) {
     listNotifications(),
     getEffectiveAdminSettings(),
     listAttendanceRecords(),
+    listBuyerProfiles(),
+    listSuppliers(),
+    listBusinessDocuments(),
     listTrackingEvents(),
     listAdminActivities(),
     canAccessFinance(admin) ? listFinanceSnapshot() : Promise.resolve(null)
@@ -74,6 +80,9 @@ export async function GET(request) {
     notifications,
     settings,
     attendanceRecords,
+    buyerProfiles,
+    suppliers,
+    businessDocuments,
     events,
     adminActivities,
     finance,

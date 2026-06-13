@@ -5,9 +5,14 @@ import { useMemo, useState } from "react";
 const statuses = ["New", "Contacted", "Negotiation", "Quotation Sent", "Converted", "Closed"];
 const priorities = ["All", "High", "Medium", "Low"];
 const statusFilters = ["All", ...statuses];
-const modules = ["Leads", "Investors", "Quotations", "Analytics", "Finance", "Attendance", "Activity", "Settings", "Users"];
+const modules = ["Leads", "Buyers", "Suppliers", "Documents", "Investors", "Quotations", "Analytics", "Finance", "Attendance", "Activity", "Settings", "Users"];
 const attendanceStatuses = ["Present", "Remote", "Field Visit", "Permission", "Sick", "Leave"];
 const attendanceWorkModes = ["Office", "Remote", "Field", "Hybrid"];
+const buyerStages = ["New", "Qualified", "Repeat Buyer", "Active", "Dormant", "Inactive"];
+const relationshipStatuses = ["Prospect", "Warm", "Active", "Repeat", "Strategic", "Inactive"];
+const supplierStatuses = ["Active", "Pending Review", "Preferred", "Backup", "Inactive"];
+const documentTypes = ["Quotation", "Invoice", "Contract", "Packing List", "Certificate", "Legal", "Tax", "Payment Proof", "Supplier Document", "Other"];
+const documentStatuses = ["Active", "Draft", "Pending Review", "Expired", "Archived"];
 const financeMenus = [
   "Dashboard Overview",
   "Cash Management",
@@ -166,6 +171,17 @@ function normalizeProducts(lead) {
     return lead.product_interest.split(",").map((item) => item.trim()).filter(Boolean);
   }
   return [];
+}
+
+function parseListText(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+  return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function listToText(value) {
+  return Array.isArray(value) ? value.join(", ") : String(value || "");
 }
 
 function getPriority(lead) {
@@ -603,6 +619,59 @@ function buildQuotationDocumentHtml(lead, draft) {
   `;
 }
 
+function buyerProfileToDraft(item = {}) {
+  return {
+    buyer_name: item.buyer_name || "",
+    company_name: item.company_name || "",
+    email: item.email || "",
+    whatsapp: item.whatsapp || "",
+    country: item.country || "",
+    city: item.city || "",
+    preferred_division: item.preferred_division || "",
+    products: listToText(item.products),
+    buyer_stage: item.buyer_stage || "New",
+    relationship_status: item.relationship_status || "Prospect",
+    assigned_to: item.assigned_to || "",
+    total_inquiries: String(item.total_inquiries ?? ""),
+    total_quotations: String(item.total_quotations ?? ""),
+    notes: item.notes || ""
+  };
+}
+
+function supplierToDraft(item = {}) {
+  return {
+    supplier_name: item.supplier_name || "",
+    company_name: item.company_name || "",
+    contact_person: item.contact_person || "",
+    email: item.email || "",
+    whatsapp: item.whatsapp || "",
+    country: item.country || "Indonesia",
+    city: item.city || "",
+    product_categories: listToText(item.product_categories),
+    products: listToText(item.products),
+    capacity: item.capacity || "",
+    payment_terms: item.payment_terms || "",
+    lead_time: item.lead_time || "",
+    quality_rating: String(item.quality_rating ?? ""),
+    status: item.status || "Active",
+    notes: item.notes || ""
+  };
+}
+
+function businessDocumentToDraft(item = {}) {
+  return {
+    document_type: item.document_type || "General",
+    title: item.title || "",
+    related_type: item.related_type || "",
+    related_name: item.related_name || "",
+    file_url: item.file_url || "",
+    status: item.status || "Active",
+    expiry_date: String(item.expiry_date || "").slice(0, 10),
+    owner: item.owner || "",
+    notes: item.notes || ""
+  };
+}
+
 function leadToDraft(lead = {}) {
   return {
     full_name: lead.full_name || "",
@@ -871,6 +940,48 @@ export default function AdminDashboard() {
     status: "Present",
     work_mode: "Office",
     location: "",
+    notes: ""
+  });
+  const [buyerDraft, setBuyerDraft] = useState({
+    buyer_name: "",
+    company_name: "",
+    email: "",
+    whatsapp: "",
+    country: "",
+    city: "",
+    preferred_division: "Garda Fresh",
+    products: "",
+    buyer_stage: "New",
+    relationship_status: "Prospect",
+    assigned_to: "",
+    notes: ""
+  });
+  const [supplierDraft, setSupplierDraft] = useState({
+    supplier_name: "",
+    company_name: "",
+    contact_person: "",
+    email: "",
+    whatsapp: "",
+    country: "Indonesia",
+    city: "",
+    product_categories: "",
+    products: "",
+    capacity: "",
+    payment_terms: "",
+    lead_time: "",
+    quality_rating: "",
+    status: "Active",
+    notes: ""
+  });
+  const [documentDraft, setDocumentDraft] = useState({
+    document_type: "Contract",
+    title: "",
+    related_type: "Buyer",
+    related_name: "",
+    file_url: "",
+    status: "Active",
+    expiry_date: "",
+    owner: "",
     notes: ""
   });
   const [financeDraft, setFinanceDraft] = useState({
@@ -1244,8 +1355,176 @@ export default function AdminDashboard() {
     await loadDashboard(savedCredentials);
   }
 
+  async function saveBuyerProfile() {
+    const response = await fetch("/api/admin/buyers", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(savedCredentials)
+      },
+      body: JSON.stringify({
+        ...buyerDraft,
+        products: parseListText(buyerDraft.products)
+      })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to save buyer profile.");
+      return;
+    }
+
+    setBuyerDraft({
+      buyer_name: "",
+      company_name: "",
+      email: "",
+      whatsapp: "",
+      country: "",
+      city: "",
+      preferred_division: "Garda Fresh",
+      products: "",
+      buyer_stage: "New",
+      relationship_status: "Prospect",
+      assigned_to: "",
+      notes: ""
+    });
+    setNotice("Buyer profile saved.");
+    await loadDashboard(savedCredentials);
+  }
+
+  async function saveSupplier() {
+    const response = await fetch("/api/admin/suppliers", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(savedCredentials)
+      },
+      body: JSON.stringify({
+        ...supplierDraft,
+        product_categories: parseListText(supplierDraft.product_categories),
+        products: parseListText(supplierDraft.products)
+      })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to save supplier.");
+      return;
+    }
+
+    setSupplierDraft({
+      supplier_name: "",
+      company_name: "",
+      contact_person: "",
+      email: "",
+      whatsapp: "",
+      country: "Indonesia",
+      city: "",
+      product_categories: "",
+      products: "",
+      capacity: "",
+      payment_terms: "",
+      lead_time: "",
+      quality_rating: "",
+      status: "Active",
+      notes: ""
+    });
+    setNotice("Supplier profile saved.");
+    await loadDashboard(savedCredentials);
+  }
+
+  async function saveBusinessDocument() {
+    const response = await fetch("/api/admin/documents", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(savedCredentials)
+      },
+      body: JSON.stringify(documentDraft)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to save document.");
+      return;
+    }
+
+    setDocumentDraft({
+      document_type: "Contract",
+      title: "",
+      related_type: "Buyer",
+      related_name: "",
+      file_url: "",
+      status: "Active",
+      expiry_date: "",
+      owner: "",
+      notes: ""
+    });
+    setNotice("Business document saved.");
+    await loadDashboard(savedCredentials);
+  }
+
+  async function updateMasterRecord(type, id, updates) {
+    const endpoints = {
+      buyerProfile: "buyers",
+      supplier: "suppliers",
+      businessDocument: "documents"
+    };
+    const endpoint = endpoints[type];
+    if (!endpoint) {
+      return false;
+    }
+
+    const response = await fetch(`/api/admin/${endpoint}/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(savedCredentials)
+      },
+      body: JSON.stringify(updates)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to update record.");
+      return false;
+    }
+
+    await loadDashboard(savedCredentials);
+    return true;
+  }
+
+  async function deleteMasterRecord(type, id) {
+    const endpoints = {
+      buyerProfile: "buyers",
+      supplier: "suppliers",
+      businessDocument: "documents"
+    };
+    const endpoint = endpoints[type];
+    if (!endpoint) {
+      return false;
+    }
+
+    const response = await fetch(`/api/admin/${endpoint}/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(savedCredentials)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setNotice(result.message || "Unable to delete record.");
+      return false;
+    }
+
+    await loadDashboard(savedCredentials);
+    return true;
+  }
+
   function openModal(type, item) {
     const drafts = {
+      buyerProfile: buyerProfileToDraft,
+      supplier: supplierToDraft,
+      businessDocument: businessDocumentToDraft,
       lead: leadToDraft,
       investor: investorToDraft,
       quotation: quotationToDraft,
@@ -1319,6 +1598,23 @@ export default function AdminDashboard() {
       return;
     }
 
+    if (["buyerProfile", "supplier", "businessDocument"].includes(modal.type)) {
+      const draft = { ...modal.draft };
+      if (modal.type === "buyerProfile") {
+        draft.products = parseListText(draft.products);
+      }
+      if (modal.type === "supplier") {
+        draft.product_categories = parseListText(draft.product_categories);
+        draft.products = parseListText(draft.products);
+      }
+      const ok = await updateMasterRecord(modal.type, modal.item.id, draft);
+      if (ok) {
+        setModal(null);
+        setNotice("Record updated.");
+      }
+      return;
+    }
+
     if (financeTypeTables[modal.type]) {
       const ok = await updateFinanceRecord(modal.type, modal.item.id, modal.draft);
       if (ok) {
@@ -1341,6 +1637,12 @@ export default function AdminDashboard() {
     }
     if (modal.type === "quotation") {
       await deleteQuotation(modal.item.id, true);
+    }
+    if (["buyerProfile", "supplier", "businessDocument"].includes(modal.type)) {
+      const ok = await deleteMasterRecord(modal.type, modal.item.id);
+      if (!ok) {
+        return;
+      }
     }
     if (financeTypeTables[modal.type]) {
       const ok = await deleteFinanceRecord(modal.type, modal.item.id);
@@ -2382,6 +2684,9 @@ export default function AdminDashboard() {
   const events = data?.events || [];
   const adminActivities = data?.adminActivities || [];
   const attendanceRecords = data?.attendanceRecords || [];
+  const buyerProfiles = data?.buyerProfiles || [];
+  const suppliers = data?.suppliers || [];
+  const businessDocuments = data?.businessDocuments || [];
   const finance = data?.finance || null;
   const financeTransactions = finance?.transactions || [];
   const bankAccounts = finance?.bankAccounts || [];
@@ -2462,6 +2767,62 @@ export default function AdminDashboard() {
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
       });
   }, [leads, query, statusFilter, priorityFilter, sortBy]);
+
+  const filteredBuyerProfiles = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return buyerProfiles.filter((item) => {
+      const searchable = [
+        item.buyer_name,
+        item.company_name,
+        item.email,
+        item.whatsapp,
+        item.country,
+        item.city,
+        item.preferred_division,
+        listToText(item.products),
+        item.buyer_stage,
+        item.relationship_status,
+        item.assigned_to
+      ].join(" ").toLowerCase();
+      return !search || searchable.includes(search);
+    });
+  }, [buyerProfiles, query]);
+
+  const filteredSuppliers = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return suppliers.filter((item) => {
+      const searchable = [
+        item.supplier_name,
+        item.company_name,
+        item.contact_person,
+        item.email,
+        item.whatsapp,
+        item.country,
+        item.city,
+        listToText(item.product_categories),
+        listToText(item.products),
+        item.capacity,
+        item.status
+      ].join(" ").toLowerCase();
+      return !search || searchable.includes(search);
+    });
+  }, [suppliers, query]);
+
+  const filteredBusinessDocuments = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return businessDocuments.filter((item) => {
+      const searchable = [
+        item.document_type,
+        item.title,
+        item.related_type,
+        item.related_name,
+        item.status,
+        item.owner,
+        item.notes
+      ].join(" ").toLowerCase();
+      return !search || searchable.includes(search);
+    });
+  }, [businessDocuments, query]);
 
   const metrics = useMemo(() => {
     const now = new Date();
@@ -2801,6 +3162,9 @@ export default function AdminDashboard() {
   const selectedFollowUpHours = selected ? hoursSince(selected.created_at) : 0;
   const assignableUsers = useMemo(() => userAccounts.filter((account) => account.is_active !== false).map((account) => account.username), [userAccounts]);
   const modalTitles = {
+    buyerProfile: "Buyer Profile",
+    supplier: "Supplier Profile",
+    businessDocument: "Business Document",
     lead: "Buyer Lead",
     investor: "Investor Inquiry",
     quotation: "Quotation Request",
@@ -2819,6 +3183,18 @@ export default function AdminDashboard() {
     financeReport: "Financial Report"
   };
   const modalSelectOptions = {
+    buyerProfile: {
+      preferred_division: revenueDivisions,
+      buyer_stage: buyerStages,
+      relationship_status: relationshipStatuses
+    },
+    supplier: {
+      status: supplierStatuses
+    },
+    businessDocument: {
+      document_type: documentTypes,
+      status: documentStatuses
+    },
     quotation: { status: ["Draft", "Sent", "Accepted", "Rejected", "Closed"] },
     financeTransaction: {
       transaction_type: ["Cash In", "Cash Out"],
@@ -2880,6 +3256,50 @@ export default function AdminDashboard() {
     }
   };
   const modalFields = {
+    buyerProfile: [
+      ["buyer_name", "Buyer Name"],
+      ["company_name", "Company Name"],
+      ["email", "Email"],
+      ["whatsapp", "WhatsApp"],
+      ["country", "Country"],
+      ["city", "City"],
+      ["preferred_division", "Preferred Division", "select"],
+      ["products", "Products"],
+      ["buyer_stage", "Buyer Stage", "select"],
+      ["relationship_status", "Relationship", "select"],
+      ["assigned_to", "Assigned To", "admin"],
+      ["total_inquiries", "Total Inquiries"],
+      ["total_quotations", "Total Quotations"],
+      ["notes", "Notes", "textarea"]
+    ],
+    supplier: [
+      ["supplier_name", "Supplier Name"],
+      ["company_name", "Company Name"],
+      ["contact_person", "Contact Person"],
+      ["email", "Email"],
+      ["whatsapp", "WhatsApp"],
+      ["country", "Country"],
+      ["city", "City"],
+      ["product_categories", "Product Categories"],
+      ["products", "Products"],
+      ["capacity", "Capacity"],
+      ["payment_terms", "Payment Terms"],
+      ["lead_time", "Lead Time"],
+      ["quality_rating", "Quality Rating"],
+      ["status", "Status", "select"],
+      ["notes", "Notes", "textarea"]
+    ],
+    businessDocument: [
+      ["document_type", "Document Type", "select"],
+      ["title", "Title"],
+      ["related_type", "Related Type"],
+      ["related_name", "Related Name"],
+      ["file_url", "File URL"],
+      ["status", "Status", "select"],
+      ["expiry_date", "Expiry Date", "date"],
+      ["owner", "Owner"],
+      ["notes", "Notes", "textarea"]
+    ],
     lead: [
       ["full_name", "Full Name"],
       ["company_name", "Company Name"],
@@ -3347,6 +3767,148 @@ export default function AdminDashboard() {
               </div>
             </div>
           </section> : null}
+
+          {activeModule === "Buyers" ? (
+            <section className="admin-grid">
+              <div className="admin-panel admin-table-panel">
+                <div className="admin-panel-header">
+                  <div><p>Buyer Database</p><h2>Permanent Buyer Profiles</h2></div>
+                  <button disabled={!filteredBuyerProfiles.length} onClick={() => exportRowsCsv(`gsn-buyers-${new Date().toISOString().slice(0, 10)}.csv`, ["Buyer", "Company", "Email", "WhatsApp", "Country", "Products", "Stage", "Relationship", "Owner"], filteredBuyerProfiles.map((item) => [item.buyer_name, item.company_name, item.email, item.whatsapp, item.country, listToText(item.products), item.buyer_stage, item.relationship_status, item.assigned_to]))} type="button">Export CSV</button>
+                </div>
+                <div className="admin-toolbar">
+                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search buyer, company, product, country..." />
+                </div>
+                <div className="admin-table-wrap">
+                  <table className="admin-mobile-cards">
+                    <thead><tr><th>Buyer</th><th>Country</th><th>Products</th><th>Stage</th><th>Relationship</th><th>Owner</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {filteredBuyerProfiles.map((item) => (
+                        <tr key={item.id}>
+                          <td data-label="Buyer"><strong>{item.company_name || item.buyer_name || "-"}</strong><span>{item.buyer_name || item.email || "-"}</span></td>
+                          <td data-label="Country">{item.country || "-"}</td>
+                          <td data-label="Products">{listToText(item.products) || "-"}</td>
+                          <td data-label="Stage">{item.buyer_stage || "-"}</td>
+                          <td data-label="Relationship">{item.relationship_status || "-"}</td>
+                          <td data-label="Owner">{item.assigned_to || "Unassigned"}</td>
+                          <td data-label="Actions"><div className="admin-table-actions"><button onClick={() => openModal("buyerProfile", item)} type="button">Edit</button>{canDelete ? <button className="danger" onClick={() => openDeleteModal("buyerProfile", item)} type="button">Delete</button> : null}</div></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!filteredBuyerProfiles.length ? <p className="admin-empty table">No buyer profiles yet. Add important buyers here after qualification.</p> : null}
+                </div>
+              </div>
+              <aside className="admin-panel admin-detail">
+                <div className="admin-panel-header"><div><p>Create Buyer</p><h2>Buyer Profile</h2></div></div>
+                <div className="admin-settings-form compact">
+                  <label>Buyer Name<input value={buyerDraft.buyer_name} onChange={(event) => setBuyerDraft((current) => ({ ...current, buyer_name: event.target.value }))} /></label>
+                  <label>Company<input value={buyerDraft.company_name} onChange={(event) => setBuyerDraft((current) => ({ ...current, company_name: event.target.value }))} /></label>
+                  <label>Email<input value={buyerDraft.email} onChange={(event) => setBuyerDraft((current) => ({ ...current, email: event.target.value }))} /></label>
+                  <label>WhatsApp<input value={buyerDraft.whatsapp} onChange={(event) => setBuyerDraft((current) => ({ ...current, whatsapp: event.target.value }))} /></label>
+                  <label>Country<input value={buyerDraft.country} onChange={(event) => setBuyerDraft((current) => ({ ...current, country: event.target.value }))} /></label>
+                  <label>Products<input value={buyerDraft.products} onChange={(event) => setBuyerDraft((current) => ({ ...current, products: event.target.value }))} placeholder="Coconut charcoal, spices..." /></label>
+                  <label>Stage<select value={buyerDraft.buyer_stage} onChange={(event) => setBuyerDraft((current) => ({ ...current, buyer_stage: event.target.value }))}>{buyerStages.map((stage) => <option key={stage}>{stage}</option>)}</select></label>
+                  <label>Relationship<select value={buyerDraft.relationship_status} onChange={(event) => setBuyerDraft((current) => ({ ...current, relationship_status: event.target.value }))}>{relationshipStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+                  <label>Assigned To<select value={buyerDraft.assigned_to} onChange={(event) => setBuyerDraft((current) => ({ ...current, assigned_to: event.target.value }))}><option value="">Unassigned</option>{assignableUsers.map((user) => <option key={user}>{user}</option>)}</select></label>
+                  <label>Notes<textarea value={buyerDraft.notes} onChange={(event) => setBuyerDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
+                  <button onClick={saveBuyerProfile} type="button">Save Buyer</button>
+                </div>
+              </aside>
+            </section>
+          ) : null}
+
+          {activeModule === "Suppliers" ? (
+            <section className="admin-grid">
+              <div className="admin-panel admin-table-panel">
+                <div className="admin-panel-header">
+                  <div><p>Supplier Database</p><h2>Sourcing Network</h2></div>
+                  <button disabled={!filteredSuppliers.length} onClick={() => exportRowsCsv(`gsn-suppliers-${new Date().toISOString().slice(0, 10)}.csv`, ["Supplier", "Company", "Contact", "Country", "Products", "Capacity", "Payment Terms", "Status"], filteredSuppliers.map((item) => [item.supplier_name, item.company_name, item.contact_person, item.country, listToText(item.products), item.capacity, item.payment_terms, item.status]))} type="button">Export CSV</button>
+                </div>
+                <div className="admin-toolbar"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search supplier, product, category, city..." /></div>
+                <div className="admin-table-wrap">
+                  <table className="admin-mobile-cards">
+                    <thead><tr><th>Supplier</th><th>Location</th><th>Products</th><th>Capacity</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {filteredSuppliers.map((item) => (
+                        <tr key={item.id}>
+                          <td data-label="Supplier"><strong>{item.company_name || item.supplier_name || "-"}</strong><span>{item.contact_person || item.email || "-"}</span></td>
+                          <td data-label="Location">{[item.city, item.country].filter(Boolean).join(", ") || "-"}</td>
+                          <td data-label="Products">{listToText(item.products) || listToText(item.product_categories) || "-"}</td>
+                          <td data-label="Capacity">{item.capacity || "-"}</td>
+                          <td data-label="Rating">{item.quality_rating ? `${item.quality_rating}/5` : "-"}</td>
+                          <td data-label="Status">{item.status || "-"}</td>
+                          <td data-label="Actions"><div className="admin-table-actions"><button onClick={() => openModal("supplier", item)} type="button">Edit</button>{canDelete ? <button className="danger" onClick={() => openDeleteModal("supplier", item)} type="button">Delete</button> : null}</div></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!filteredSuppliers.length ? <p className="admin-empty table">No suppliers saved yet. Save sourcing contacts, capacity, payment terms, and quality notes here.</p> : null}
+                </div>
+              </div>
+              <aside className="admin-panel admin-detail">
+                <div className="admin-panel-header"><div><p>Create Supplier</p><h2>Supplier Profile</h2></div></div>
+                <div className="admin-settings-form compact">
+                  <label>Supplier Name<input value={supplierDraft.supplier_name} onChange={(event) => setSupplierDraft((current) => ({ ...current, supplier_name: event.target.value }))} /></label>
+                  <label>Company<input value={supplierDraft.company_name} onChange={(event) => setSupplierDraft((current) => ({ ...current, company_name: event.target.value }))} /></label>
+                  <label>Contact Person<input value={supplierDraft.contact_person} onChange={(event) => setSupplierDraft((current) => ({ ...current, contact_person: event.target.value }))} /></label>
+                  <label>WhatsApp<input value={supplierDraft.whatsapp} onChange={(event) => setSupplierDraft((current) => ({ ...current, whatsapp: event.target.value }))} /></label>
+                  <label>City<input value={supplierDraft.city} onChange={(event) => setSupplierDraft((current) => ({ ...current, city: event.target.value }))} /></label>
+                  <label>Categories<input value={supplierDraft.product_categories} onChange={(event) => setSupplierDraft((current) => ({ ...current, product_categories: event.target.value }))} placeholder="Spices, charcoal..." /></label>
+                  <label>Products<input value={supplierDraft.products} onChange={(event) => setSupplierDraft((current) => ({ ...current, products: event.target.value }))} /></label>
+                  <label>Capacity<input value={supplierDraft.capacity} onChange={(event) => setSupplierDraft((current) => ({ ...current, capacity: event.target.value }))} placeholder="10 MT/month" /></label>
+                  <label>Status<select value={supplierDraft.status} onChange={(event) => setSupplierDraft((current) => ({ ...current, status: event.target.value }))}>{supplierStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+                  <label>Notes<textarea value={supplierDraft.notes} onChange={(event) => setSupplierDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
+                  <button onClick={saveSupplier} type="button">Save Supplier</button>
+                </div>
+              </aside>
+            </section>
+          ) : null}
+
+          {activeModule === "Documents" ? (
+            <section className="admin-grid">
+              <div className="admin-panel admin-table-panel">
+                <div className="admin-panel-header">
+                  <div><p>Document Management</p><h2>Contracts, Certificates, and Trade Files</h2></div>
+                  <button disabled={!filteredBusinessDocuments.length} onClick={() => exportRowsCsv(`gsn-documents-${new Date().toISOString().slice(0, 10)}.csv`, ["Type", "Title", "Related", "Status", "Expiry", "Owner", "URL"], filteredBusinessDocuments.map((item) => [item.document_type, item.title, `${item.related_type || ""} ${item.related_name || ""}`.trim(), item.status, item.expiry_date, item.owner, item.file_url]))} type="button">Export CSV</button>
+                </div>
+                <div className="admin-toolbar"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search document, buyer, supplier, owner..." /></div>
+                <div className="admin-table-wrap">
+                  <table className="admin-mobile-cards">
+                    <thead><tr><th>Document</th><th>Related</th><th>Status</th><th>Expiry</th><th>Owner</th><th>File</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {filteredBusinessDocuments.map((item) => (
+                        <tr key={item.id}>
+                          <td data-label="Document"><strong>{item.title || "-"}</strong><span>{item.document_type || "-"}</span></td>
+                          <td data-label="Related">{[item.related_type, item.related_name].filter(Boolean).join(": ") || "-"}</td>
+                          <td data-label="Status">{item.status || "-"}</td>
+                          <td data-label="Expiry">{item.expiry_date ? formatDate(item.expiry_date) : "-"}</td>
+                          <td data-label="Owner">{item.owner || item.created_by || "-"}</td>
+                          <td data-label="File">{item.file_url ? <a href={item.file_url} target="_blank" rel="noreferrer">Open</a> : "-"}</td>
+                          <td data-label="Actions"><div className="admin-table-actions"><button onClick={() => openModal("businessDocument", item)} type="button">Edit</button>{canDelete ? <button className="danger" onClick={() => openDeleteModal("businessDocument", item)} type="button">Delete</button> : null}</div></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!filteredBusinessDocuments.length ? <p className="admin-empty table">No documents saved yet. Store contracts, export certificates, payment proofs, and legal records here.</p> : null}
+                </div>
+              </div>
+              <aside className="admin-panel admin-detail">
+                <div className="admin-panel-header"><div><p>Add Document</p><h2>Business File</h2></div></div>
+                <div className="admin-settings-form compact">
+                  <label>Type<select value={documentDraft.document_type} onChange={(event) => setDocumentDraft((current) => ({ ...current, document_type: event.target.value }))}>{documentTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+                  <label>Title<input value={documentDraft.title} onChange={(event) => setDocumentDraft((current) => ({ ...current, title: event.target.value }))} /></label>
+                  <label>Related Type<input value={documentDraft.related_type} onChange={(event) => setDocumentDraft((current) => ({ ...current, related_type: event.target.value }))} placeholder="Buyer / Supplier / Finance" /></label>
+                  <label>Related Name<input value={documentDraft.related_name} onChange={(event) => setDocumentDraft((current) => ({ ...current, related_name: event.target.value }))} /></label>
+                  <label>File URL<input value={documentDraft.file_url} onChange={(event) => setDocumentDraft((current) => ({ ...current, file_url: event.target.value }))} placeholder="Google Drive, Supabase, or signed URL" /></label>
+                  <label>Status<select value={documentDraft.status} onChange={(event) => setDocumentDraft((current) => ({ ...current, status: event.target.value }))}>{documentStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+                  <label>Expiry Date<input type="date" value={documentDraft.expiry_date} onChange={(event) => setDocumentDraft((current) => ({ ...current, expiry_date: event.target.value }))} /></label>
+                  <label>Owner<input value={documentDraft.owner} onChange={(event) => setDocumentDraft((current) => ({ ...current, owner: event.target.value }))} /></label>
+                  <label>Notes<textarea value={documentDraft.notes} onChange={(event) => setDocumentDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
+                  <button onClick={saveBusinessDocument} type="button">Save Document</button>
+                </div>
+              </aside>
+            </section>
+          ) : null}
 
           {activeModule === "Investors" ? (
             <section className="admin-panel">
