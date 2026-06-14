@@ -2,6 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 
+const quickPrompts = [
+  "Tampilkan prospek baru hari ini",
+  "Cek invoice yang belum lunas",
+  "Apa reminder penting hari ini?",
+  "Ringkas laporan finance bulan ini"
+];
+
 export default function AIEmployeeWidget({ userRole, authToken, username }) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -71,7 +78,7 @@ export default function AIEmployeeWidget({ userRole, authToken, username }) {
       const data = await callChat({
         history,
         pendingAction: {
-          toolCall: pendingAction.toolCall,
+          token: pendingAction.token,
           confirmed
         }
       });
@@ -101,9 +108,9 @@ export default function AIEmployeeWidget({ userRole, authToken, username }) {
           <header className="ai-employee-header">
             <div>
               <p>GSN AI Employee</p>
-              <span>{username || "Admin"} · {userRole || "staff"}</span>
+              <span>{username || "Admin"} / {userRole || "staff"}</span>
             </div>
-            <button aria-label="Close AI Employee" onClick={() => setIsOpen(false)} type="button">×</button>
+            <button aria-label="Close AI Employee" onClick={() => setIsOpen(false)} type="button">x</button>
           </header>
 
           <div className="ai-employee-messages" ref={scrollRef}>
@@ -123,6 +130,16 @@ export default function AIEmployeeWidget({ userRole, authToken, username }) {
               </div>
             ) : null}
           </div>
+
+          {!pendingAction ? (
+            <div className="ai-quick-prompts">
+              {quickPrompts.map((prompt) => (
+                <button disabled={isLoading} key={prompt} onClick={() => sendMessage(prompt)} type="button">
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <form className="ai-employee-input" onSubmit={(event) => {
             event.preventDefault();

@@ -2,11 +2,55 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AIEmployeeWidget from "@/components/ai-employee/AIEmployeeWidget";
+import ActivityModule from "@/components/admin/ActivityModule";
+import AnalyticsModule from "@/components/admin/AnalyticsModule";
+import OwnerSummary from "@/components/admin/OwnerSummary";
 
 const statuses = ["New", "Contacted", "Negotiation", "Quotation Sent", "Converted", "Closed"];
 const priorities = ["All", "High", "Medium", "Low"];
 const statusFilters = ["All", ...statuses];
 const modules = ["Dashboard", "Leads", "Buyers", "Suppliers", "Documents", "Analytics", "Finance", "Attendance", "Admin"];
+const statusLabels = {
+  All: "Semua",
+  New: "Baru",
+  Contacted: "Sudah Dihubungi",
+  Negotiation: "Negosiasi",
+  "Quotation Sent": "Penawaran Terkirim",
+  Converted: "Berhasil",
+  Closed: "Ditutup",
+  Draft: "Draf",
+  Sent: "Terkirim",
+  "Partially Paid": "Dibayar Sebagian",
+  Paid: "Lunas",
+  Overdue: "Lewat Jatuh Tempo",
+  Cancelled: "Dibatalkan",
+  Unpaid: "Belum Dibayar",
+  Partial: "Sebagian",
+  Approved: "Disetujui",
+  Rejected: "Ditolak",
+  "Pending Approval": "Menunggu Persetujuan",
+  Active: "Aktif",
+  Inactive: "Tidak Aktif",
+  Recorded: "Tercatat",
+  "Pending Review": "Menunggu Review",
+  Preferred: "Utama",
+  Backup: "Cadangan",
+  Matched: "Cocok",
+  Unmatched: "Belum Cocok",
+  Reconciled: "Terekonsiliasi",
+  Scheduled: "Terjadwal",
+  Completed: "Selesai",
+  Prepared: "Disiapkan",
+  Submitted: "Dikirim",
+  Expired: "Kedaluwarsa",
+  Archived: "Diarsipkan"
+};
+const priorityLabels = {
+  All: "Semua",
+  High: "Tinggi",
+  Medium: "Sedang",
+  Low: "Rendah"
+};
 const moduleLabels = {
   Dashboard: "Dashboard",
   Leads: "Prospek",
@@ -46,32 +90,32 @@ const erpSidebarGroups = [
     financeOnly: true,
     items: [
       { label: "Ringkasan Keuangan", module: "Finance", description: "KPI finance utama" },
-      { label: "Pemasukan", module: "Finance", financeTarget: "finance-revenue-form", description: "Catat revenue" },
-      { label: "Pengeluaran", module: "Finance", financeTarget: "finance-expense-form", description: "Catat expense dan approval" },
+      { label: "Pemasukan", module: "Finance", financeTarget: "finance-revenue-form", description: "Catat pemasukan" },
+      { label: "Pengeluaran", module: "Finance", financeTarget: "finance-expense-form", description: "Catat pengeluaran dan persetujuan" },
       { label: "Transfer", module: "Finance", financeTarget: "finance-cash-form", description: "Perpindahan dana internal" },
       { label: "Invoice", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Invoice finance" },
       { label: "Tagihan", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Tagihan vendor dan supplier" },
-      { label: "Setor Tunai", module: "Finance", financeTarget: "finance-cash-form", description: "Cash in" },
-      { label: "Tarik Tunai", module: "Finance", financeTarget: "finance-cash-form", description: "Cash out" },
+      { label: "Setor Tunai", module: "Finance", financeTarget: "finance-cash-form", description: "Kas masuk" },
+      { label: "Tarik Tunai", module: "Finance", financeTarget: "finance-cash-form", description: "Kas keluar" },
       { label: "Saldo Perusahaan", module: "Finance", financeTarget: "finance-bank-form", description: "Bank dan kas" },
       { label: "Catatan Likuiditas", module: "Finance", financeTarget: "finance-report-form", description: "Catatan cash runway" },
       { label: "Faktur Pembeli", module: "Finance", financeTarget: "finance-ar-ap-form", description: "AR buyer" },
       { label: "Tagihan Pemasok", module: "Finance", financeTarget: "finance-ar-ap-form", description: "AP supplier" },
-      { label: "Pembayaran Pembeli", module: "Finance", financeTarget: "finance-payment-form", description: "Payment matching buyer" },
-      { label: "Pembayaran Pemasok", module: "Finance", financeTarget: "finance-payment-form", description: "Payment supplier" },
-      { label: "AP", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Accounts payable" },
-      { label: "AR", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Accounts receivable" },
-      { label: "Pajak", module: "Finance", financeTarget: "finance-tax-form", description: "PPN dan compliance" },
+      { label: "Pembayaran Pembeli", module: "Finance", financeTarget: "finance-payment-form", description: "Pencocokan pembayaran buyer" },
+      { label: "Pembayaran Pemasok", module: "Finance", financeTarget: "finance-payment-form", description: "Pembayaran supplier" },
+      { label: "AP", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Utang usaha" },
+      { label: "AR", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Piutang usaha" },
+      { label: "Pajak", module: "Finance", financeTarget: "finance-tax-form", description: "PPN dan kepatuhan" },
       { label: "Dokumen Hukum", module: "Documents", description: "Legal document center" },
-      { label: "Nilai Tukar", module: "Finance", financeTarget: "finance-tax-form", description: "Kurs dan currency" },
+      { label: "Nilai Tukar", module: "Finance", financeTarget: "finance-tax-form", description: "Kurs dan mata uang" },
       { label: "Anggaran", module: "Finance", financeTarget: "finance-budget-form", description: "Budget planning" },
       { label: "Budget vs Aktual", module: "Finance", financeTarget: "finance-budget-form", description: "Kontrol realisasi" },
       { label: "Audit", module: "Finance", financeTarget: "finance-audit-form", description: "Audit finance" },
       { label: "Ringkasan Laporan", module: "Finance", financeTarget: "finance-report-form", description: "Laporan bulanan" },
-      { label: "Export PDF", module: "Finance", financeTarget: "finance-report-form", description: "Export laporan PDF" },
-      { label: "Export Excel", module: "Finance", financeTarget: "finance-report-form", description: "Export laporan Excel" },
-      { label: "Export CSV", module: "Finance", financeTarget: "finance-report-form", description: "Export laporan CSV" },
-      { label: "Riwayat Laporan", module: "Finance", financeTarget: "finance-report-form", description: "History report" }
+      { label: "Ekspor PDF", module: "Finance", financeTarget: "finance-report-form", description: "Ekspor laporan PDF" },
+      { label: "Ekspor Excel", module: "Finance", financeTarget: "finance-report-form", description: "Ekspor laporan Excel" },
+      { label: "Ekspor CSV", module: "Finance", financeTarget: "finance-report-form", description: "Ekspor laporan CSV" },
+      { label: "Riwayat Laporan", module: "Finance", financeTarget: "finance-report-form", description: "Riwayat laporan" }
     ]
   },
   {
@@ -149,15 +193,15 @@ const financeMenus = [
   "Audit"
 ];
 const financeDisclosureTabs = [
-  { id: "overview", label: "Dashboard Keuangan", hint: "KPI, reminder, dan prioritas" },
-  { id: "cash", label: "Kas & Bank", hint: "Cash, bank, petty cash" },
-  { id: "sales", label: "Penjualan", hint: "Revenue, invoice, AR" },
-  { id: "purchase", label: "Pembelian", hint: "Expense, AP, supplier payment" },
-  { id: "payment", label: "Pembayaran", hint: "Matching dan rekonsiliasi" },
-  { id: "compliance", label: "Pajak & Legal", hint: "Tax, kurs, compliance" },
-  { id: "budget", label: "Anggaran", hint: "Budget vs aktual" },
-  { id: "report", label: "Laporan", hint: "Export dan riwayat" },
-  { id: "audit", label: "Audit", hint: "Akses, storage, log" }
+  { id: "overview", label: "Dashboard Keuangan", hint: "KPI, pengingat, dan prioritas" },
+  { id: "cash", label: "Kas & Bank", hint: "Kas, bank, dan kas kecil" },
+  { id: "sales", label: "Penjualan", hint: "Pemasukan, invoice, dan AR" },
+  { id: "purchase", label: "Pembelian", hint: "Pengeluaran, AP, dan pembayaran pemasok" },
+  { id: "payment", label: "Pembayaran", hint: "Pencocokan dan rekonsiliasi" },
+  { id: "compliance", label: "Pajak & Legal", hint: "Pajak, kurs, dan kepatuhan" },
+  { id: "budget", label: "Anggaran", hint: "Anggaran vs aktual" },
+  { id: "report", label: "Laporan", hint: "Ekspor dan riwayat" },
+  { id: "audit", label: "Audit", hint: "Akses, storage, dan log" }
 ];
 const financeCurrencies = ["IDR", "USD", "SGD"];
 const cashInCategories = ["Founder Capital", "Investor Capital", "Sales Revenue", "Commission Revenue", "Other Income"];
@@ -316,6 +360,18 @@ function parseListText(value) {
 
 function listToText(value) {
   return Array.isArray(value) ? value.join(", ") : String(value || "");
+}
+
+function labelStatus(value) {
+  return statusLabels[value] || value || "-";
+}
+
+function labelPriority(value) {
+  return priorityLabels[value] || value || "-";
+}
+
+function labelAssignee(value) {
+  return value || "Belum ditugaskan";
 }
 
 function formatAdminDisplayName(value) {
@@ -3965,7 +4021,7 @@ export default function AdminDashboard() {
           </button>
           <div className="admin-topbar-actions">
             <input aria-label="Tanggal kerja" type="date" value={todayKey} readOnly />
-            <button onClick={() => setCommandOpen(true)} type="button">Quick Create</button>
+            <button onClick={() => setCommandOpen(true)} type="button">Buat Cepat</button>
             <button className="admin-bell" onClick={() => setNotificationsOpen((value) => !value)} type="button">
               Notifikasi
               {unreadNotifications.length ? <span>{unreadNotifications.length}</span> : null}
@@ -4121,6 +4177,16 @@ export default function AdminDashboard() {
 
           {activeModule === "Dashboard" ? (
             <section className="admin-home-grid">
+              <OwnerSummary
+                metrics={metrics}
+                financeReminders={financeReminders}
+                chartData={chartData}
+                mostClicked={mostClicked}
+                unreadNotifications={unreadNotifications}
+                canUseFinance={canUseFinance}
+                onOpenModule={setActiveModule}
+              />
+
               <div className="admin-panel admin-home-focus">
                 <div className="admin-panel-header">
                   <div>
@@ -4230,25 +4296,25 @@ export default function AdminDashboard() {
             <div className="admin-panel admin-table-panel">
               <div className="admin-panel-header">
                 <div>
-                  <p>Lead Database</p>
-                  <h2>Inquiries</h2>
+                  <p>Database Prospek</p>
+                  <h2>Inquiry Buyer</h2>
                 </div>
-                <button onClick={() => exportLeadsCsv(filteredLeads)} disabled={!filteredLeads.length} type="button">Export CSV</button>
+                <button onClick={() => exportLeadsCsv(filteredLeads)} disabled={!filteredLeads.length} type="button">Ekspor CSV</button>
               </div>
 
               <div className="admin-toolbar">
-                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search buyer, company, product, country..." />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari buyer, perusahaan, produk, negara..." />
                 <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                  {statusFilters.map((item) => <option key={item}>{item}</option>)}
+                  {statusFilters.map((item) => <option key={item} value={item}>{labelStatus(item)}</option>)}
                 </select>
                 <select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)}>
-                  {priorities.map((item) => <option key={item}>{item}</option>)}
+                  {priorities.map((item) => <option key={item} value={item}>{labelPriority(item)}</option>)}
                 </select>
                 <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="priority">Priority</option>
-                  <option value="company">Company</option>
+                  <option value="newest">Terbaru</option>
+                  <option value="oldest">Terlama</option>
+                  <option value="priority">Prioritas</option>
+                  <option value="company">Perusahaan</option>
                 </select>
               </div>
 
@@ -4256,12 +4322,12 @@ export default function AdminDashboard() {
                 <table className="admin-mobile-cards">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Lead</th>
-                      <th>Type</th>
-                      <th>Country</th>
-                      <th>Products</th>
-                      <th>Priority</th>
+                      <th>Tanggal</th>
+                      <th>Prospek</th>
+                      <th>Tipe</th>
+                      <th>Negara</th>
+                      <th>Produk</th>
+                      <th>Prioritas</th>
                       <th>Status</th>
                       <th>Owner</th>
                       <th>Deadline</th>
@@ -4270,65 +4336,65 @@ export default function AdminDashboard() {
                   <tbody>
                     {filteredLeads.map((lead) => (
                       <tr className={selected?.id === lead.id ? "is-selected" : ""} key={lead.id} onClick={() => setSelected(lead)}>
-                        <td data-label="Date">{formatDate(lead.created_at)}</td>
-                        <td data-label="Lead"><strong>{lead.full_name || "-"}</strong><span>{lead.company_name || lead.email || "-"}</span></td>
-                        <td data-label="Type">{getLeadType(lead)}</td>
-                        <td data-label="Country">{lead.country || "-"}</td>
-                        <td data-label="Products">{normalizeProducts(lead).length ? normalizeProducts(lead).join(", ") : "-"}</td>
-                        <td data-label="Priority"><span className={`admin-priority ${getPriority(lead).toLowerCase()}`}>{getPriority(lead)}</span></td>
-                        <td data-label="Status">{getStatus(lead)}</td>
-                        <td data-label="Owner">{lead.assigned_to || "Unassigned"}</td>
+                        <td data-label="Tanggal">{formatDate(lead.created_at)}</td>
+                        <td data-label="Prospek"><strong>{lead.full_name || "-"}</strong><span>{lead.company_name || lead.email || "-"}</span></td>
+                        <td data-label="Tipe">{getLeadType(lead)}</td>
+                        <td data-label="Negara">{lead.country || "-"}</td>
+                        <td data-label="Produk">{normalizeProducts(lead).length ? normalizeProducts(lead).join(", ") : "-"}</td>
+                        <td data-label="Prioritas"><span className={`admin-priority ${getPriority(lead).toLowerCase()}`}>{labelPriority(getPriority(lead))}</span></td>
+                        <td data-label="Status">{labelStatus(getStatus(lead))}</td>
+                        <td data-label="Owner">{labelAssignee(lead.assigned_to)}</td>
                         <td data-label="Deadline">{lead.follow_up_deadline ? formatDate(lead.follow_up_deadline) : "-"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {!filteredLeads.length ? <p className="admin-empty table">No matching leads yet.</p> : null}
+                {!filteredLeads.length ? <p className="admin-empty table">Belum ada prospek yang cocok dengan filter.</p> : null}
               </div>
             </div>
 
             <aside className="admin-panel admin-detail">
               <div className="admin-panel-header">
                 <div>
-                  <p>Lead Detail</p>
-                  <h2>{selected?.full_name || "No lead selected"}</h2>
+                  <p>Detail Prospek</p>
+                  <h2>{selected?.full_name || "Belum ada prospek dipilih"}</h2>
                 </div>
-                {selected ? <span className={`admin-priority ${priorityClass}`}>{getPriority(selected)}</span> : null}
+                {selected ? <span className={`admin-priority ${priorityClass}`}>{labelPriority(getPriority(selected))}</span> : null}
               </div>
 
               {selected ? (
                 <div className="admin-detail-body">
                   <dl>
-                    <dt>Company</dt><dd>{selected.company_name || "-"}</dd>
+                    <dt>Perusahaan</dt><dd>{selected.company_name || "-"}</dd>
                     <dt>WhatsApp</dt><dd>{selected.whatsapp || selected.phone || "-"}</dd>
                     <dt>Email</dt><dd>{selected.email || "-"}</dd>
-                    <dt>Country</dt><dd>{selected.country || "-"}</dd>
-                    <dt>Products</dt><dd>{selectedProducts.length ? selectedProducts.join(", ") : "-"}</dd>
+                    <dt>Negara</dt><dd>{selected.country || "-"}</dd>
+                    <dt>Produk</dt><dd>{selectedProducts.length ? selectedProducts.join(", ") : "-"}</dd>
                     <dt>Quantity</dt><dd>{selected.quantity || "-"}</dd>
                     <dt>Lead Score</dt><dd>{selected.lead_score ?? 0}/100</dd>
-                    <dt>Follow-Up</dt><dd>{selectedFollowUpHours >= 24 ? `${selectedFollowUpHours} hours waiting` : "Within 24 hours"}</dd>
-                    <dt>Assigned To</dt><dd>{selected.assigned_to || "Unassigned"}</dd>
+                    <dt>Follow-Up</dt><dd>{selectedFollowUpHours >= 24 ? `${selectedFollowUpHours} jam menunggu` : "Masih dalam 24 jam"}</dd>
+                    <dt>Ditugaskan Ke</dt><dd>{labelAssignee(selected.assigned_to)}</dd>
                     <dt>Deadline</dt><dd>{selected.follow_up_deadline ? formatDate(selected.follow_up_deadline) : "-"}</dd>
-                    <dt>Reason</dt><dd>{selected.lead_reason || "-"}</dd>
+                    <dt>Alasan Prioritas</dt><dd>{selected.lead_reason || "-"}</dd>
                   </dl>
 
                   <label>
                     Status
                     <select value={getStatus(selected)} onChange={(event) => updateLead(selected.id, { status: event.target.value })}>
-                      {statuses.map((status) => <option key={status}>{status}</option>)}
+                      {statuses.map((status) => <option key={status} value={status}>{labelStatus(status)}</option>)}
                     </select>
                   </label>
 
                   <label>
-                    Assigned To
+                    Ditugaskan Ke
                     <select value={selected.assigned_to || ""} onChange={(event) => updateLead(selected.id, { assigned_to: event.target.value })}>
-                      <option value="">Unassigned</option>
+                      <option value="">Belum ditugaskan</option>
                       {assignableUsers.map((username) => <option key={username} value={username}>{username}</option>)}
                     </select>
                   </label>
 
                   <label>
-                    Follow-Up Deadline
+                    Deadline Follow-Up
                     <input
                       type="datetime-local"
                       value={toDateTimeLocal(selected.follow_up_deadline)}
@@ -4337,22 +4403,22 @@ export default function AdminDashboard() {
                   </label>
 
                   <label>
-                    Internal Notes
+                    Catatan Internal
                     <textarea
                       defaultValue={selected.internal_notes || ""}
                       onBlur={(event) => updateLead(selected.id, { internal_notes: event.target.value })}
-                      placeholder="Add follow-up notes, quotation status, buyer preference..."
+                      placeholder="Tambahkan catatan follow-up, status penawaran, preferensi buyer..."
                     />
                   </label>
 
                   <div className="admin-actions">
-                    <button onClick={() => openModal("lead", selected)} type="button">Edit Lead</button>
+                    <button onClick={() => openModal("lead", selected)} type="button">Edit Prospek</button>
                     <a href={`https://wa.me/${String(selected.whatsapp || selected.phone || "").replace(/\D/g, "")}`} target="_blank" rel="noreferrer">WhatsApp</a>
                     {selected.email ? <a href={`mailto:${selected.email}`}>Email</a> : null}
-                    {canDelete ? <button className="danger" onClick={() => openDeleteModal("lead", selected)} type="button">Delete</button> : null}
+                    {canDelete ? <button className="danger" onClick={() => openDeleteModal("lead", selected)} type="button">Hapus</button> : null}
                   </div>
                 </div>
-              ) : <p className="admin-empty">Select a lead to see details.</p>}
+              ) : <p className="admin-empty">Pilih prospek untuk melihat detail.</p>}
             </aside>
             <div className="admin-panel wide">
               <div className="admin-panel-header">
@@ -4390,11 +4456,11 @@ export default function AdminDashboard() {
             <section className="admin-grid">
               <div className="admin-panel admin-table-panel">
                 <div className="admin-panel-header">
-                  <div><p>Buyer Database</p><h2>Permanent Buyer Profiles</h2></div>
-                  <button disabled={!filteredBuyerProfiles.length} onClick={() => exportRowsCsv(`gsn-buyers-${new Date().toISOString().slice(0, 10)}.csv`, ["Buyer", "Company", "Email", "WhatsApp", "Country", "Products", "Stage", "Relationship", "Owner"], filteredBuyerProfiles.map((item) => [item.buyer_name, item.company_name, item.email, item.whatsapp, item.country, listToText(item.products), item.buyer_stage, item.relationship_status, item.assigned_to]))} type="button">Export CSV</button>
+                  <div><p>Database Pembeli</p><h2>Profil Buyer Tetap</h2></div>
+                  <button disabled={!filteredBuyerProfiles.length} onClick={() => exportRowsCsv(`gsn-buyers-${new Date().toISOString().slice(0, 10)}.csv`, ["Buyer", "Company", "Email", "WhatsApp", "Country", "Products", "Stage", "Relationship", "Owner"], filteredBuyerProfiles.map((item) => [item.buyer_name, item.company_name, item.email, item.whatsapp, item.country, listToText(item.products), item.buyer_stage, item.relationship_status, item.assigned_to]))} type="button">Ekspor CSV</button>
                 </div>
                 <div className="admin-toolbar">
-                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search buyer, company, product, country..." />
+                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari buyer, perusahaan, produk, negara..." />
                 </div>
                 <div className="admin-table-wrap">
                   <table className="admin-mobile-cards">
@@ -4407,29 +4473,29 @@ export default function AdminDashboard() {
                           <td data-label="Products">{listToText(item.products) || "-"}</td>
                           <td data-label="Stage">{item.buyer_stage || "-"}</td>
                           <td data-label="Relationship">{item.relationship_status || "-"}</td>
-                          <td data-label="Owner">{item.assigned_to || "Unassigned"}</td>
-                          <td data-label="Actions"><div className="admin-table-actions"><button onClick={() => openModal("buyerProfile", item)} type="button">Edit</button>{canDelete ? <button className="danger" onClick={() => openDeleteModal("buyerProfile", item)} type="button">Delete</button> : null}</div></td>
+                          <td data-label="Owner">{labelAssignee(item.assigned_to)}</td>
+                          <td data-label="Actions"><div className="admin-table-actions"><button onClick={() => openModal("buyerProfile", item)} type="button">Edit</button>{canDelete ? <button className="danger" onClick={() => openDeleteModal("buyerProfile", item)} type="button">Hapus</button> : null}</div></td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  {!filteredBuyerProfiles.length ? <p className="admin-empty table">No buyer profiles yet. Add important buyers here after qualification.</p> : null}
+                  {!filteredBuyerProfiles.length ? <p className="admin-empty table">Belum ada profil buyer. Tambahkan buyer penting setelah kualifikasi.</p> : null}
                 </div>
               </div>
               <aside className="admin-panel admin-detail">
-                <div className="admin-panel-header"><div><p>Create Buyer</p><h2>Buyer Profile</h2></div></div>
+                <div className="admin-panel-header"><div><p>Tambah Pembeli</p><h2>Profil Buyer</h2></div></div>
                 <div className="admin-settings-form compact">
-                  <label>Buyer Name<input value={buyerDraft.buyer_name} onChange={(event) => setBuyerDraft((current) => ({ ...current, buyer_name: event.target.value }))} /></label>
-                  <label>Company<input value={buyerDraft.company_name} onChange={(event) => setBuyerDraft((current) => ({ ...current, company_name: event.target.value }))} /></label>
+                  <label>Nama Buyer<input value={buyerDraft.buyer_name} onChange={(event) => setBuyerDraft((current) => ({ ...current, buyer_name: event.target.value }))} /></label>
+                  <label>Perusahaan<input value={buyerDraft.company_name} onChange={(event) => setBuyerDraft((current) => ({ ...current, company_name: event.target.value }))} /></label>
                   <label>Email<input value={buyerDraft.email} onChange={(event) => setBuyerDraft((current) => ({ ...current, email: event.target.value }))} /></label>
                   <label>WhatsApp<input value={buyerDraft.whatsapp} onChange={(event) => setBuyerDraft((current) => ({ ...current, whatsapp: event.target.value }))} /></label>
-                  <label>Country<input value={buyerDraft.country} onChange={(event) => setBuyerDraft((current) => ({ ...current, country: event.target.value }))} /></label>
-                  <label>Products<input value={buyerDraft.products} onChange={(event) => setBuyerDraft((current) => ({ ...current, products: event.target.value }))} placeholder="Coconut charcoal, spices..." /></label>
+                  <label>Negara<input value={buyerDraft.country} onChange={(event) => setBuyerDraft((current) => ({ ...current, country: event.target.value }))} /></label>
+                  <label>Produk<input value={buyerDraft.products} onChange={(event) => setBuyerDraft((current) => ({ ...current, products: event.target.value }))} placeholder="Coconut charcoal, spices..." /></label>
                   <label>Stage<select value={buyerDraft.buyer_stage} onChange={(event) => setBuyerDraft((current) => ({ ...current, buyer_stage: event.target.value }))}>{buyerStages.map((stage) => <option key={stage}>{stage}</option>)}</select></label>
                   <label>Relationship<select value={buyerDraft.relationship_status} onChange={(event) => setBuyerDraft((current) => ({ ...current, relationship_status: event.target.value }))}>{relationshipStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
-                  <label>Assigned To<select value={buyerDraft.assigned_to} onChange={(event) => setBuyerDraft((current) => ({ ...current, assigned_to: event.target.value }))}><option value="">Unassigned</option>{assignableUsers.map((user) => <option key={user}>{user}</option>)}</select></label>
-                  <label>Notes<textarea value={buyerDraft.notes} onChange={(event) => setBuyerDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
-                  <button onClick={saveBuyerProfile} type="button">Save Buyer</button>
+                  <label>Ditugaskan Ke<select value={buyerDraft.assigned_to} onChange={(event) => setBuyerDraft((current) => ({ ...current, assigned_to: event.target.value }))}><option value="">Belum ditugaskan</option>{assignableUsers.map((user) => <option key={user}>{user}</option>)}</select></label>
+                  <label>Catatan<textarea value={buyerDraft.notes} onChange={(event) => setBuyerDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
+                  <button onClick={saveBuyerProfile} type="button">Simpan Buyer</button>
                 </div>
               </aside>
             </section>
@@ -4439,10 +4505,10 @@ export default function AdminDashboard() {
             <section className="admin-grid">
               <div className="admin-panel admin-table-panel">
                 <div className="admin-panel-header">
-                  <div><p>Supplier Database</p><h2>Sourcing Network</h2></div>
-                  <button disabled={!filteredSuppliers.length} onClick={() => exportRowsCsv(`gsn-suppliers-${new Date().toISOString().slice(0, 10)}.csv`, ["Supplier", "Company", "Contact", "Country", "Products", "Capacity", "Payment Terms", "Status"], filteredSuppliers.map((item) => [item.supplier_name, item.company_name, item.contact_person, item.country, listToText(item.products), item.capacity, item.payment_terms, item.status]))} type="button">Export CSV</button>
+                  <div><p>Database Pemasok</p><h2>Jaringan Sourcing</h2></div>
+                  <button disabled={!filteredSuppliers.length} onClick={() => exportRowsCsv(`gsn-suppliers-${new Date().toISOString().slice(0, 10)}.csv`, ["Supplier", "Company", "Contact", "Country", "Products", "Capacity", "Payment Terms", "Status"], filteredSuppliers.map((item) => [item.supplier_name, item.company_name, item.contact_person, item.country, listToText(item.products), item.capacity, item.payment_terms, item.status]))} type="button">Ekspor CSV</button>
                 </div>
-                <div className="admin-toolbar"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search supplier, product, category, city..." /></div>
+                <div className="admin-toolbar"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari pemasok, produk, kategori, kota..." /></div>
                 <div className="admin-table-wrap">
                   <table className="admin-mobile-cards">
                     <thead><tr><th>Supplier</th><th>Location</th><th>Products</th><th>Capacity</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
@@ -4455,12 +4521,12 @@ export default function AdminDashboard() {
                           <td data-label="Capacity">{item.capacity || "-"}</td>
                           <td data-label="Rating">{item.quality_rating ? `${item.quality_rating}/5` : "-"}</td>
                           <td data-label="Status">{item.status || "-"}</td>
-                          <td data-label="Actions"><div className="admin-table-actions"><button onClick={() => openModal("supplier", item)} type="button">Edit</button>{canDelete ? <button className="danger" onClick={() => openDeleteModal("supplier", item)} type="button">Delete</button> : null}</div></td>
+                          <td data-label="Actions"><div className="admin-table-actions"><button onClick={() => openModal("supplier", item)} type="button">Edit</button>{canDelete ? <button className="danger" onClick={() => openDeleteModal("supplier", item)} type="button">Hapus</button> : null}</div></td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  {!filteredSuppliers.length ? <p className="admin-empty table">No suppliers saved yet. Save sourcing contacts, capacity, payment terms, and quality notes here.</p> : null}
+                  {!filteredSuppliers.length ? <p className="admin-empty table">Belum ada pemasok tersimpan. Simpan kontak sourcing, kapasitas, termin pembayaran, dan catatan kualitas di sini.</p> : null}
                 </div>
               </div>
               <aside className="admin-panel admin-detail">
@@ -4682,42 +4748,18 @@ export default function AdminDashboard() {
           ) : null}
 
           {activeModule === "Analytics" ? (
-            <>
-              <section className="admin-metrics analytics">
-                <article><span>Total Klik</span><strong>{events.length}</strong></article>
-                <article><span>Rasio Jadi Lead</span><strong>{conversionRate}%</strong></article>
-                <article><span>Paling Sering Diklik</span><strong className="text-small">{mostClicked}</strong></article>
-                <article><span>Jenis Aktivitas</span><strong>{new Set(events.map((event) => event.event)).size}</strong></article>
-              </section>
-              <section className="admin-chart-grid analytics">
-                <div className="admin-panel">
-                  <div className="admin-panel-header compact"><div><p>Klik Fitur</p><h2>Paling Sering Diklik</h2></div></div>
-                  <BarList items={chartData.clicks} empty="Belum ada data klik." />
-                </div>
-                <div className="admin-panel">
-                  <div className="admin-panel-header compact"><div><p>Sumber Prospek</p><h2>Asal Lead</h2></div></div>
-                  <BarList items={buildCountMap(leads, (lead) => lead.source || "inquiry_form").slice(0, 7)} empty="Belum ada data asal lead." />
-                </div>
-                <div className="admin-panel wide">
-                  <div className="admin-panel-header">
-                    <div>
-                      <p>Aktivitas Terbaru</p>
-                      <h2>Riwayat Klik Website</h2>
-                    </div>
-                  </div>
-                  <div className="admin-event-list">
-                    {latestEvents.map((event) => (
-                      <article key={event.id}>
-                        <strong>{event.event}</strong>
-                        <span>{event.label || event.path || "-"}</span>
-                        <small>{formatDate(event.created_at)}</small>
-                      </article>
-                    ))}
-                    {!latestEvents.length ? <p className="admin-empty">Belum ada aktivitas website.</p> : null}
-                  </div>
-                </div>
-              </section>
-            </>
+            <AnalyticsModule
+              events={events}
+              metrics={metrics}
+              conversionRate={conversionRate}
+              mostClicked={mostClicked}
+              chartData={chartData}
+              leads={leads}
+              latestEvents={latestEvents}
+              BarList={BarList}
+              buildCountMap={buildCountMap}
+              formatDate={formatDate}
+            />
           ) : null}
 
           {activeModule === "Finance" && canUseFinance ? (
@@ -4730,7 +4772,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="admin-actions">
                     <span className="admin-muted">IDR / USD / SGD</span>
-                    <button onClick={() => {
+                <button onClick={() => {
                       setShowFinanceDetail((value) => {
                         const next = !value;
                         if (!next) {
@@ -4739,8 +4781,8 @@ export default function AdminDashboard() {
                         return next;
                       });
                     }} type="button">
-                      {showFinanceDetail ? "Tampilkan Ringkasan" : "Pilih Kategori Detail"}
-                    </button>
+                  {showFinanceDetail ? "Tampilkan Ringkasan" : "Pilih Kategori Detail"}
+                </button>
                   </div>
                 </div>
                 <div className="admin-disclosure-tabs" aria-label="Kategori finance">
@@ -4807,55 +4849,55 @@ export default function AdminDashboard() {
               </div>
 
               <div className="admin-panel">
-                <div className="admin-panel-header compact">
+              <div className="admin-panel-header compact">
                   <div>
-                    <p>Finance Reminder</p>
-                    <h2>Due Dates & Approvals</h2>
+                    <p>Pengingat Keuangan</p>
+                    <h2>Jatuh Tempo & Persetujuan</h2>
                   </div>
                   <div className="admin-actions">
-                    <button onClick={testFinanceOwnerAlerts} type="button">Test Owner Alerts</button>
-                    <span className={financeReminders.total ? "admin-badge high" : "admin-badge low"}>{financeReminders.total} active</span>
+                    <button onClick={testFinanceOwnerAlerts} type="button">Tes Notifikasi Owner</button>
+                    <span className={financeReminders.total ? "admin-badge high" : "admin-badge low"}>{financeReminders.total} aktif</span>
                   </div>
                 </div>
                 <div className="admin-event-list compact">
                   {financeReminders.arItems.slice(0, 4).map((item) => (
                     <article key={`ar-${item.id}`}>
                       <strong>{item.invoice_number || item.buyer_name || "Buyer invoice"}</strong>
-                      <span>{item.days < 0 ? `${Math.abs(item.days)} day overdue` : item.days === 0 ? "Due today" : `Due in ${item.days} day(s)`}</span>
+                      <span>{item.days < 0 ? `Terlambat ${Math.abs(item.days)} hari` : item.days === 0 ? "Jatuh tempo hari ini" : `Jatuh tempo ${item.days} hari lagi`}</span>
                       <em>AR | {item.buyer_name || "-"} | {formatMoney(item.amount, item.currency || "IDR")}</em>
                     </article>
                   ))}
                   {financeReminders.apItems.slice(0, 4).map((item) => (
                     <article key={`ap-${item.id}`}>
                       <strong>{item.invoice_number || item.supplier_name || "Supplier bill"}</strong>
-                      <span>{item.days < 0 ? `${Math.abs(item.days)} day overdue` : item.days === 0 ? "Due today" : `Due in ${item.days} day(s)`}</span>
+                      <span>{item.days < 0 ? `Terlambat ${Math.abs(item.days)} hari` : item.days === 0 ? "Jatuh tempo hari ini" : `Jatuh tempo ${item.days} hari lagi`}</span>
                       <em>AP | {item.supplier_name || "-"} | {formatMoney(item.amount, item.currency || "IDR")}</em>
                     </article>
                   ))}
                   {financeReminders.pendingApproval.slice(0, 4).map((item) => (
                     <article key={`expense-${item.id}`}>
                       <strong>{item.expense_category || "Expense approval"}</strong>
-                      <span>Pending approval</span>
+                      <span>Menunggu persetujuan</span>
                       <em>{item.vendor || "-"} | {formatMoney(item.amount, item.currency || "IDR")}</em>
                     </article>
                   ))}
-                  {!financeReminders.total ? <p className="admin-empty">No overdue invoice, AP due soon, or pending expense approval.</p> : null}
+                  {!financeReminders.total ? <p className="admin-empty">Belum ada invoice terlambat, AP jatuh tempo, atau pengeluaran yang menunggu persetujuan.</p> : null}
                 </div>
               </div>
 
               <div className="admin-panel">
                 <div className="admin-panel-header">
                   <div>
-                    <p>Monthly Closing</p>
-                    <h2>Lock Finance Period</h2>
+                    <p>Closing Bulanan</p>
+                    <h2>Kunci Periode Keuangan</h2>
                   </div>
-                  <button onClick={saveFinancePeriodLock} type="button">Lock Period</button>
+                  <button onClick={saveFinancePeriodLock} type="button">Kunci Periode</button>
                 </div>
                 <div className="admin-settings-form compact">
-                  <label>Period Label<input value={financeLockDraft.period_label} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, period_label: event.target.value }))} placeholder="2026-06" /></label>
-                  <label>Date From<input type="date" value={financeLockDraft.date_from} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, date_from: event.target.value }))} /></label>
-                  <label>Date To<input type="date" value={financeLockDraft.date_to} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, date_to: event.target.value }))} /></label>
-                  <label className="wide">Closing Note<textarea value={financeLockDraft.lock_note} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, lock_note: event.target.value }))} placeholder="Example: June report approved by CEO/CSO." /></label>
+                  <label>Label Periode<input value={financeLockDraft.period_label} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, period_label: event.target.value }))} placeholder="2026-06" /></label>
+                  <label>Dari Tanggal<input type="date" value={financeLockDraft.date_from} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, date_from: event.target.value }))} /></label>
+                  <label>Sampai Tanggal<input type="date" value={financeLockDraft.date_to} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, date_to: event.target.value }))} /></label>
+                  <label className="wide">Catatan Closing<textarea value={financeLockDraft.lock_note} onChange={(event) => setFinanceLockDraft((current) => ({ ...current, lock_note: event.target.value }))} placeholder="Contoh: Laporan Juni disetujui CEO/CSO." /></label>
                 </div>
                 <div className="admin-finance-signals">
                   {closingChecklist.map((item) => (
@@ -4872,18 +4914,18 @@ export default function AdminDashboard() {
                       <span>{item.period_label}</span>
                       <strong>{item.status}</strong>
                       <small>{item.date_from} to {item.date_to}</small>
-                      {item.status === "Locked" ? <button className="ghost" onClick={() => reopenFinancePeriodLock(item)} type="button">Reopen</button> : null}
+                      {item.status === "Locked" ? <button className="ghost" onClick={() => reopenFinancePeriodLock(item)} type="button">Buka Lagi</button> : null}
                     </article>
                   ))}
-                  {!financePeriodLocks.length ? <article><span>No locked periods yet</span><strong>Open</strong><small>Use this after monthly review.</small></article> : null}
+                  {!financePeriodLocks.length ? <article><span>Belum ada periode dikunci</span><strong>Terbuka</strong><small>Gunakan setelah review bulanan selesai.</small></article> : null}
                 </div>
               </div>
 
               <div className="admin-panel wide">
                 <div className="admin-panel-header compact">
                   <div>
-                    <p>Cash Flow Visual</p>
-                    <h2>Monthly Inflow / Outflow</h2>
+                    <p>Arus Kas</p>
+                    <h2>Kas Masuk / Keluar Bulanan</h2>
                   </div>
                   <span className={financeMetrics.runway > 0 && financeMetrics.runway <= 2 ? "admin-badge high" : "admin-badge low"}>{cashFlowVisual.warning}</span>
                 </div>
@@ -4900,21 +4942,21 @@ export default function AdminDashboard() {
                   ))}
                 </div>
                 <div className="admin-finance-signals">
-                  <article><span>Runway Forecast</span><strong>{financeMetrics.runway ? `${financeMetrics.runway} months` : "-"}</strong></article>
-                  <article><span>Current Burn Rate</span><strong>{formatMoney(financeMetrics.burnRate, "IDR")}</strong></article>
-                  <article><span>Open AR</span><strong>{formatMoney(financeMetrics.receivableByCurrency.IDR || 0, "IDR")}</strong></article>
+                  <article><span>Perkiraan Runway</span><strong>{financeMetrics.runway ? `${financeMetrics.runway} bulan` : "-"}</strong></article>
+                  <article><span>Burn Rate Saat Ini</span><strong>{formatMoney(financeMetrics.burnRate, "IDR")}</strong></article>
+                  <article><span>AR Terbuka</span><strong>{formatMoney(financeMetrics.receivableByCurrency.IDR || 0, "IDR")}</strong></article>
                 </div>
               </div>
 
               <div className="admin-panel">
-                <div className="admin-panel-header compact"><div><p>Business Metrics</p><h2>Trading Signals</h2></div></div>
+                <div className="admin-panel-header compact"><div><p>Indikator Bisnis</p><h2>Sinyal Perdagangan</h2></div></div>
                 <div className="admin-finance-signals">
-                  <article><span>Active Buyers</span><strong>{financeMetrics.activeBuyers}</strong></article>
-                  <article><span>Active Suppliers</span><strong>{financeMetrics.activeSuppliers}</strong></article>
-                  <article><span>Active Leads</span><strong>{financeMetrics.activeLeads}</strong></article>
-                  <article><span>Active Negotiations</span><strong>{financeMetrics.activeNegotiations}</strong></article>
-                  <article><span>Pipeline Records</span><strong>{financeMetrics.pipelineValue}</strong></article>
-                  <article><span>Countries Reached</span><strong>{financeMetrics.countriesReached}</strong></article>
+                  <article><span>Buyer Aktif</span><strong>{financeMetrics.activeBuyers}</strong></article>
+                  <article><span>Pemasok Aktif</span><strong>{financeMetrics.activeSuppliers}</strong></article>
+                  <article><span>Prospek Aktif</span><strong>{financeMetrics.activeLeads}</strong></article>
+                  <article><span>Negosiasi Aktif</span><strong>{financeMetrics.activeNegotiations}</strong></article>
+                  <article><span>Data Pipeline</span><strong>{financeMetrics.pipelineValue}</strong></article>
+                  <article><span>Negara Terjangkau</span><strong>{financeMetrics.countriesReached}</strong></article>
                 </div>
               </div>
 
@@ -4957,13 +4999,13 @@ export default function AdminDashboard() {
               <div className="admin-panel wide" id="finance-cash-form">
                 <div className="admin-panel-header">
                   <div>
-                    <p>Cash Management</p>
-                    <h2>Cash In / Cash Out</h2>
+                    <p>Manajemen Kas</p>
+                    <h2>Kas Masuk / Kas Keluar</h2>
                   </div>
-                  <button onClick={saveFinanceTransaction} type="button">Save Transaction</button>
+                  <button onClick={saveFinanceTransaction} type="button">Simpan Transaksi</button>
                 </div>
                 <div className="admin-settings-form finance-form">
-                  <label>Type
+                  <label>Tipe
                     <select
                       value={financeDraft.transaction_type}
                       onChange={(event) => setFinanceDraft((current) => ({
@@ -4976,42 +5018,42 @@ export default function AdminDashboard() {
                       <option>Cash Out</option>
                     </select>
                   </label>
-                  <label>Date<input type="date" value={financeDraft.transaction_date} onChange={(event) => setFinanceDraft((current) => ({ ...current, transaction_date: event.target.value }))} /></label>
-                  <label>Category
+                  <label>Tanggal<input type="date" value={financeDraft.transaction_date} onChange={(event) => setFinanceDraft((current) => ({ ...current, transaction_date: event.target.value }))} /></label>
+                  <label>Kategori
                     <select value={financeDraft.category} onChange={(event) => setFinanceDraft((current) => ({ ...current, category: event.target.value }))}>
                       {(financeDraft.transaction_type === "Cash Out" ? cashOutCategories : cashInCategories).map((category) => <option key={category}>{category}</option>)}
                     </select>
                   </label>
-                  <label>Amount<input inputMode="decimal" value={financeDraft.amount} onChange={(event) => setFinanceDraft((current) => ({ ...current, amount: event.target.value }))} placeholder="0" /></label>
-                  <label>Currency
+                  <label>Nominal<input inputMode="decimal" value={financeDraft.amount} onChange={(event) => setFinanceDraft((current) => ({ ...current, amount: event.target.value }))} placeholder="0" /></label>
+                  <label>Mata Uang
                     <select value={financeDraft.currency} onChange={(event) => setFinanceDraft((current) => ({ ...current, currency: event.target.value }))}>
                       {financeCurrencies.map((currency) => <option key={currency}>{currency}</option>)}
                     </select>
                   </label>
-                  <label>Payment Method
+                  <label>Metode Pembayaran
                     <select value={financeDraft.payment_method} onChange={(event) => setFinanceDraft((current) => ({ ...current, payment_method: event.target.value }))}>
                       {paymentMethods.map((method) => <option key={method}>{method}</option>)}
                     </select>
                   </label>
-                  <label>Reference Number<input value={financeDraft.reference_number} onChange={(event) => setFinanceDraft((current) => ({ ...current, reference_number: event.target.value }))} placeholder="Invoice, transfer, or receipt number" /></label>
-                  <label className="wide">Description<textarea value={financeDraft.description} onChange={(event) => setFinanceDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Transaction description, source, or operational note" /></label>
+                  <label>Nomor Referensi<input value={financeDraft.reference_number} onChange={(event) => setFinanceDraft((current) => ({ ...current, reference_number: event.target.value }))} placeholder="Nomor invoice, transfer, atau bukti" /></label>
+                  <label className="wide">Deskripsi<textarea value={financeDraft.description} onChange={(event) => setFinanceDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Deskripsi transaksi, sumber dana, atau catatan operasional" /></label>
                 </div>
               </div>
 
               <div className="admin-panel" id="finance-bank-form">
                 <div className="admin-panel-header">
                   <div>
-                    <p>Bank Accounts</p>
-                    <h2>Company Balances</h2>
+                    <p>Rekening Bank</p>
+                    <h2>Saldo Perusahaan</h2>
                   </div>
-                  <button onClick={saveBankAccount} type="button">Save Bank</button>
+                  <button onClick={saveBankAccount} type="button">Simpan Bank</button>
                 </div>
                 <div className="admin-settings-form compact">
-                  <label>Account Name<input value={bankAccountDraft.account_name} onChange={(event) => setBankAccountDraft((current) => ({ ...current, account_name: event.target.value }))} placeholder="GSN Operating Account" /></label>
-                  <label>Bank Name<input value={bankAccountDraft.bank_name} onChange={(event) => setBankAccountDraft((current) => ({ ...current, bank_name: event.target.value }))} placeholder="Bank name" /></label>
-                  <label>Account Number<input value={bankAccountDraft.account_number} onChange={(event) => setBankAccountDraft((current) => ({ ...current, account_number: event.target.value }))} placeholder="Optional" /></label>
-                  <label>Balance<input inputMode="decimal" value={bankAccountDraft.current_balance} onChange={(event) => setBankAccountDraft((current) => ({ ...current, current_balance: event.target.value }))} placeholder="0" /></label>
-                  <label>Currency
+                  <label>Nama Rekening<input value={bankAccountDraft.account_name} onChange={(event) => setBankAccountDraft((current) => ({ ...current, account_name: event.target.value }))} placeholder="Rekening Operasional GSN" /></label>
+                  <label>Nama Bank<input value={bankAccountDraft.bank_name} onChange={(event) => setBankAccountDraft((current) => ({ ...current, bank_name: event.target.value }))} placeholder="Nama bank" /></label>
+                  <label>Nomor Rekening<input value={bankAccountDraft.account_number} onChange={(event) => setBankAccountDraft((current) => ({ ...current, account_number: event.target.value }))} placeholder="Opsional" /></label>
+                  <label>Saldo<input inputMode="decimal" value={bankAccountDraft.current_balance} onChange={(event) => setBankAccountDraft((current) => ({ ...current, current_balance: event.target.value }))} placeholder="0" /></label>
+                  <label>Mata Uang
                     <select value={bankAccountDraft.currency} onChange={(event) => setBankAccountDraft((current) => ({ ...current, currency: event.target.value }))}>
                       {financeCurrencies.map((currency) => <option key={currency}>{currency}</option>)}
                     </select>
@@ -5053,10 +5095,10 @@ export default function AdminDashboard() {
               <div className="admin-panel wide">
                 <div className="admin-panel-header">
                   <div>
-                    <p>Revenue Management</p>
-                    <h2>Division / Category / Product</h2>
+                    <p>Manajemen Pemasukan</p>
+                    <h2>Divisi / Kategori / Produk</h2>
                   </div>
-                  <button onClick={saveFinanceRevenue} type="button">Save Revenue</button>
+                  <button onClick={saveFinanceRevenue} type="button">Simpan Pemasukan</button>
                 </div>
                 <div className="admin-settings-form finance-form">
                   <label>Invoice Number<input value={revenueDraft.invoice_number} onChange={(event) => updateRevenueDraft("invoice_number", event.target.value)} placeholder="INV-GSN-2026-0001" /></label>
@@ -5093,10 +5135,10 @@ export default function AdminDashboard() {
               <div className="admin-panel wide">
                 <div className="admin-panel-header">
                   <div>
-                    <p>Expense Management</p>
-                    <h2>Category / Subcategory / Approval</h2>
+                    <p>Manajemen Pengeluaran</p>
+                    <h2>Kategori / Subkategori / Persetujuan</h2>
                   </div>
-                  <button onClick={saveFinanceExpense} type="button">Save Expense</button>
+                  <button onClick={saveFinanceExpense} type="button">Simpan Pengeluaran</button>
                 </div>
                 <div className="admin-settings-form finance-form">
                   <label>Date<input type="date" value={expenseDraft.expense_date} onChange={(event) => updateExpenseDraft("expense_date", event.target.value)} /></label>
@@ -6160,78 +6202,17 @@ export default function AdminDashboard() {
           ) : null}
 
           {activeModule === "Activity" ? (
-            <section className="admin-panel">
-              <div className="admin-panel-header">
-                <div>
-                  <p>Riwayat Aktivitas</p>
-                  <h2>Perubahan Dashboard</h2>
-                </div>
-                <button
-                  disabled={!latestAdminActivities.length}
-                  onClick={() => exportRowsCsv(
-                    `gsn-admin-activity-${new Date().toISOString().slice(0, 10)}.csv`,
-                    ["Created At", "Admin", "Role", "Action", "Label", "Reference Type", "Reference ID", "Changed Fields", "Before", "After", "Details"],
-                    latestAdminActivities.map((activity) => {
-                      const changes = getAuditChanges(activity);
-                      return [
-                      activity.created_at || "",
-                      activity.metadata?.admin || "",
-                      activity.metadata?.role || "",
-                      activity.metadata?.action || "",
-                      activity.label || "",
-                      activity.metadata?.referenceType || activity.path || "",
-                      activity.metadata?.referenceId || "",
-                      changes.map((change) => change.field).join("; "),
-                      changes.map((change) => `${change.field}: ${formatAuditValue(change.before)}`).join("; "),
-                      changes.map((change) => `${change.field}: ${formatAuditValue(change.after)}`).join("; "),
-                      JSON.stringify(activity.metadata || {})
-                    ];
-                    })
-                  )}
-                  type="button"
-                >
-                  Export Aktivitas CSV
-                </button>
-              </div>
-              <div className="admin-filter-row activity">
-                <select value={activityFilters.admin} onChange={(event) => setActivityFilters((current) => ({ ...current, admin: event.target.value }))}>
-                  {activityAdminOptions.map((admin) => <option key={admin}>{admin}</option>)}
-                </select>
-                <select value={activityFilters.action} onChange={(event) => setActivityFilters((current) => ({ ...current, action: event.target.value }))}>
-                  {activityActionOptions.map((action) => <option key={action}>{action}</option>)}
-                </select>
-                <input type="date" value={activityFilters.from} onChange={(event) => setActivityFilters((current) => ({ ...current, from: event.target.value }))} />
-                <input type="date" value={activityFilters.to} onChange={(event) => setActivityFilters((current) => ({ ...current, to: event.target.value }))} />
-                <button onClick={() => setActivityFilters({ admin: "All", action: "All", from: "", to: "" })} type="button">Reset Filter</button>
-              </div>
-              <div className="admin-event-list">
-                {latestAdminActivities.map((activity) => {
-                  const changes = getAuditChanges(activity);
-                  return (
-                    <article key={activity.id}>
-                      <strong>{activity.metadata?.admin || "admin"} <span className="admin-role-chip">{activity.metadata?.role || "role"}</span></strong>
-                      <span>{activity.label || activity.metadata?.action || "Admin activity"}</span>
-                      {activity.metadata?.quotationNumber ? <em>Quotation: {activity.metadata.quotationNumber}</em> : null}
-                      {changes.length ? (
-                        <div className="admin-audit-diff">
-                          {changes.slice(0, 6).map((change) => (
-                            <div key={change.field}>
-                              <b>{change.field}</b>
-                              <span>{formatAuditValue(change.before)}</span>
-                              <i>menjadi</i>
-                              <strong>{formatAuditValue(change.after)}</strong>
-                            </div>
-                          ))}
-                          {changes.length > 6 ? <small>+{changes.length - 6} field lain berubah</small> : null}
-                        </div>
-                      ) : null}
-                      <small>{formatDate(activity.created_at)}</small>
-                    </article>
-                  );
-                })}
-                {!latestAdminActivities.length ? <p className="admin-empty">Belum ada aktivitas admin.</p> : null}
-              </div>
-            </section>
+            <ActivityModule
+              latestAdminActivities={latestAdminActivities}
+              activityFilters={activityFilters}
+              setActivityFilters={setActivityFilters}
+              activityAdminOptions={activityAdminOptions}
+              activityActionOptions={activityActionOptions}
+              exportRowsCsv={exportRowsCsv}
+              getAuditChanges={getAuditChanges}
+              formatAuditValue={formatAuditValue}
+              formatDate={formatDate}
+            />
           ) : null}
 
           {activeModule === "Admin" ? (
@@ -6272,24 +6253,24 @@ export default function AdminDashboard() {
               <div className="admin-panel">
                 <div className="admin-panel-header">
                   <div>
-                    <p>Company Settings</p>
-                    <h2>Business Profile</h2>
+                    <p>Pengaturan Perusahaan</p>
+                    <h2>Profil Bisnis</h2>
                   </div>
-                  <button onClick={saveSettings} type="button">Save Settings</button>
+                  <button onClick={saveSettings} type="button">Simpan Pengaturan</button>
                 </div>
                 <div className="admin-settings-form">
-                  <label>Company Name<input value={settingsDraft.company_name || ""} onChange={(event) => updateSetting("company_name", event.target.value)} /></label>
-                  <label>Contact Email<input value={settingsDraft.contact_email || ""} onChange={(event) => updateSetting("contact_email", event.target.value)} /></label>
-                  <label>WhatsApp Number<input value={settingsDraft.whatsapp_number || ""} onChange={(event) => updateSetting("whatsapp_number", event.target.value)} /></label>
+                  <label>Nama Perusahaan<input value={settingsDraft.company_name || ""} onChange={(event) => updateSetting("company_name", event.target.value)} /></label>
+                  <label>Email Kontak<input value={settingsDraft.contact_email || ""} onChange={(event) => updateSetting("contact_email", event.target.value)} /></label>
+                  <label>Nomor WhatsApp<input value={settingsDraft.whatsapp_number || ""} onChange={(event) => updateSetting("whatsapp_number", event.target.value)} /></label>
                   <label>Website URL<input value={settingsDraft.website_url || ""} onChange={(event) => updateSetting("website_url", event.target.value)} /></label>
-                  <label>Office Location<textarea value={settingsDraft.office_location || ""} onChange={(event) => updateSetting("office_location", event.target.value)} /></label>
+                  <label>Lokasi Kantor<textarea value={settingsDraft.office_location || ""} onChange={(event) => updateSetting("office_location", event.target.value)} /></label>
                 </div>
               </div>
 
               <div className="admin-panel">
                 <div className="admin-panel-header">
                   <div>
-                    <p>Preferences</p>
+                    <p>Preferensi</p>
                     <h2>Notifikasi & Analisis</h2>
                   </div>
                 </div>
@@ -6320,29 +6301,29 @@ export default function AdminDashboard() {
               <div className="admin-panel admin-future-panel">
                 <div className="admin-panel-header">
                   <div>
-                    <p>Automation Center</p>
-                    <h2>Live Workflows</h2>
+                    <p>Pusat Otomasi</p>
+                    <h2>Workflow Aktif</h2>
                   </div>
                 </div>
                 <div className="admin-actions">
-                  <button onClick={() => runAutomation("/api/automation/followups", "Follow-up automation checked.")} type="button">Run Follow-Up Check</button>
-                  <button onClick={() => runAutomation("/api/automation/daily-report", "Daily report sent.")} type="button">Send Daily Report</button>
+                  <button onClick={() => runAutomation("/api/automation/followups", "Follow-up automation checked.")} type="button">Cek Follow-Up</button>
+                  <button onClick={() => runAutomation("/api/automation/daily-report", "Daily report sent.")} type="button">Kirim Laporan Harian</button>
                 </div>
-                <p className="admin-empty">Vercel Cron runs daily follow-up checks and sends the daily lead report at 08:00 Jakarta time after deployment.</p>
+                <p className="admin-empty">Vercel Cron menjalankan cek follow-up dan mengirim laporan harian pukul 08:00 WIB setelah deploy production aktif.</p>
               </div>
 
               <div className="admin-panel admin-future-panel">
                 <div className="admin-panel-header">
                   <div>
-                    <p>Future Ready</p>
-                    <h2>Integration Roadmap</h2>
+                    <p>Siap Dikembangkan</p>
+                    <h2>Roadmap Integrasi</h2>
                   </div>
                 </div>
                 <div className="admin-integration-list">
                   {futureIntegrations.map((name) => (
                     <article key={name}>
                       <strong>{name}</strong>
-                      <span>Planned integration layer ready</span>
+                      <span>Lapisan integrasi sudah disiapkan</span>
                     </article>
                   ))}
                 </div>
@@ -6355,10 +6336,10 @@ export default function AdminDashboard() {
               <div className="admin-panel">
                 <div className="admin-panel-header">
                   <div>
-                    <p>User Management</p>
-                    <h2>Admin Accounts</h2>
+                    <p>Manajemen Pengguna</p>
+                    <h2>Akun Admin</h2>
                   </div>
-                  <button onClick={() => loadUsers(savedCredentials)} type="button">Refresh Users</button>
+                  <button onClick={() => loadUsers(savedCredentials)} type="button">Muat Ulang Pengguna</button>
                 </div>
                 <div className="admin-user-list">
                   {userAccounts.map((account) => (

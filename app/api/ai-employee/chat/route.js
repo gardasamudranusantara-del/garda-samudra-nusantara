@@ -3,6 +3,74 @@ import { insertAiAuditLog } from "@/lib/gsnDataStore";
 import { callLLM } from "@/lib/ai-employee/llm-provider";
 import { getToolByName, getToolsForRole } from "@/lib/ai-employee/tools";
 import { buildSystemPrompt } from "@/lib/ai-employee/system-prompts";
+import { createHmac, timingSafeEqual } from "crypto";
+
+const rateLimitWindowMs = 60 * 1000;
+const rateLimitMaxRequests = 18;
+const pendingActionTtlSeconds = 10 * 60;
+const rateLimitStore = globalThis.__gsnAiRateLimitStore || new Map();
+globalThis.__gsnAiRateLimitStore = rateLimitStore;
+
+function getAiSecret() {
+  return process.env.ADMIN_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.GEMINI_API_KEY || "gsn-ai-local-secret";
+}
+
+function signValue(value) {
+  return createHmac("sha256", getAiSecret()).update(value).digest("base64url");
+}
+
+function encodePendingAction({ username, role, toolCall }) {
+  const payload = {
+    username,
+    role,
+    toolCall,
+    exp: Math.floor(Date.now() / 1000) + pendingActionTtlSeconds
+  };
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${encodedPayload}.${signValue(encodedPayload)}`;
+}
+
+function decodePendingAction(token, ctx) {
+  const [encodedPayload, signature] = String(token || "").split(".");
+  if (!encodedPayload || !signature) return null;
+
+  const expected = signValue(encodedPayload);
+  const actualBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (actualBuffer.length !== expectedBuffer.length || !timingSafeEqual(actualBuffer, expectedBuffer)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8"));
+    if (Number(payload.exp || 0) < Math.floor(Date.now() / 1000)) return null;
+    if (payload.username !== ctx.username || payload.role !== ctx.role) return null;
+    return payload.toolCall || null;
+  } catch {
+    return null;
+  }
+}
+
+function checkRateLimit(ctx) {
+  const key = `${ctx.username}:${ctx.role}`;
+  const now = Date.now();
+  const bucket = rateLimitStore.get(key) || { start: now, count: 0 };
+
+  if (now - bucket.start > rateLimitWindowMs) {
+    rateLimitStore.set(key, { start: now, count: 1 });
+    return { ok: true };
+  }
+
+  bucket.count += 1;
+  rateLimitStore.set(key, bucket);
+
+  if (bucket.count > rateLimitMaxRequests) {
+    const retryAfter = Math.ceil((rateLimitWindowMs - (now - bucket.start)) / 1000);
+    return { ok: false, retryAfter };
+  }
+
+  return { ok: true };
+}
 
 function mapAdminRoleToAiRole(role) {
   if (["ceo", "cso", "owner"].includes(role)) return "direksi";
@@ -83,12 +151,21 @@ export async function POST(request) {
       return Response.json({ reply: "Sesi admin tidak valid. Silakan login ulang.", history: [] }, { status: 401 });
     }
 
+    const rateLimit = checkRateLimit(ctx);
+    if (!rateLimit.ok) {
+      return Response.json(
+        { reply: `AI Employee sedang membatasi request supaya API tetap hemat. Coba lagi sekitar ${rateLimit.retryAfter} detik lagi.`, history: [] },
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } }
+      );
+    }
+
     const tools = getToolsForRole(ctx.role);
     const systemPrompt = buildSystemPrompt(ctx.role);
     const history = Array.isArray(body.history) ? body.history : [];
 
     if (body.pendingAction) {
-      const { toolCall, confirmed } = body.pendingAction;
+      const { confirmed } = body.pendingAction;
+      const toolCall = decodePendingAction(body.pendingAction.token, ctx);
       const tool = getToolByName(toolCall?.name);
 
       if (!tool) {
@@ -200,7 +277,10 @@ export async function POST(request) {
       return Response.json({
         reply: `${summary}\n\nKonfirmasi untuk melanjutkan?`,
         history: newHistory,
-        pendingAction: { toolCall, summary }
+        pendingAction: {
+          token: encodePendingAction({ username: ctx.username, role: ctx.role, toolCall }),
+          summary
+        }
       });
     }
 
