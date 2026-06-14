@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const statuses = ["New", "Contacted", "Negotiation", "Quotation Sent", "Converted", "Closed"];
 const priorities = ["All", "High", "Medium", "Low"];
@@ -23,6 +23,97 @@ const moduleLabels = {
   Admin: "Admin"
 };
 const adminShortcutModules = ["Quotations", "Investors", "Activity", "Settings", "Users"];
+const erpSidebarGroups = [
+  {
+    title: "Dashboard",
+    code: "DB",
+    items: [{ label: "Dashboard", module: "Dashboard", description: "Ringkasan perhatian hari ini" }]
+  },
+  {
+    title: "CRM",
+    code: "CRM",
+    items: [
+      { label: "Prospek", module: "Leads", description: "Lead buyer dan follow-up" },
+      { label: "Pembeli", module: "Buyers", description: "Database buyer aktif" },
+      { label: "Pemasok", module: "Suppliers", description: "Database supplier", supplierOnly: true },
+      { label: "Penawaran", module: "Quotations", description: "Quotation dan dokumen buyer" }
+    ]
+  },
+  {
+    title: "Keuangan",
+    code: "FIN",
+    financeOnly: true,
+    items: [
+      { label: "Ringkasan Keuangan", module: "Finance", description: "KPI finance utama" },
+      { label: "Pemasukan", module: "Finance", financeTarget: "finance-revenue-form", description: "Catat revenue" },
+      { label: "Pengeluaran", module: "Finance", financeTarget: "finance-expense-form", description: "Catat expense dan approval" },
+      { label: "Transfer", module: "Finance", financeTarget: "finance-cash-form", description: "Perpindahan dana internal" },
+      { label: "Invoice", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Invoice finance" },
+      { label: "Tagihan", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Tagihan vendor dan supplier" },
+      { label: "Setor Tunai", module: "Finance", financeTarget: "finance-cash-form", description: "Cash in" },
+      { label: "Tarik Tunai", module: "Finance", financeTarget: "finance-cash-form", description: "Cash out" },
+      { label: "Saldo Perusahaan", module: "Finance", financeTarget: "finance-bank-form", description: "Bank dan kas" },
+      { label: "Catatan Likuiditas", module: "Finance", financeTarget: "finance-report-form", description: "Catatan cash runway" },
+      { label: "Faktur Pembeli", module: "Finance", financeTarget: "finance-ar-ap-form", description: "AR buyer" },
+      { label: "Tagihan Pemasok", module: "Finance", financeTarget: "finance-ar-ap-form", description: "AP supplier" },
+      { label: "Pembayaran Pembeli", module: "Finance", financeTarget: "finance-payment-form", description: "Payment matching buyer" },
+      { label: "Pembayaran Pemasok", module: "Finance", financeTarget: "finance-payment-form", description: "Payment supplier" },
+      { label: "AP", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Accounts payable" },
+      { label: "AR", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Accounts receivable" },
+      { label: "Pajak", module: "Finance", financeTarget: "finance-tax-form", description: "PPN dan compliance" },
+      { label: "Dokumen Hukum", module: "Documents", description: "Legal document center" },
+      { label: "Nilai Tukar", module: "Finance", financeTarget: "finance-tax-form", description: "Kurs dan currency" },
+      { label: "Anggaran", module: "Finance", financeTarget: "finance-budget-form", description: "Budget planning" },
+      { label: "Budget vs Aktual", module: "Finance", financeTarget: "finance-budget-form", description: "Kontrol realisasi" },
+      { label: "Audit", module: "Finance", financeTarget: "finance-audit-form", description: "Audit finance" },
+      { label: "Ringkasan Laporan", module: "Finance", financeTarget: "finance-report-form", description: "Laporan bulanan" },
+      { label: "Export PDF", module: "Finance", financeTarget: "finance-report-form", description: "Export laporan PDF" },
+      { label: "Export Excel", module: "Finance", financeTarget: "finance-report-form", description: "Export laporan Excel" },
+      { label: "Export CSV", module: "Finance", financeTarget: "finance-report-form", description: "Export laporan CSV" },
+      { label: "Riwayat Laporan", module: "Finance", financeTarget: "finance-report-form", description: "History report" }
+    ]
+  },
+  {
+    title: "Operasional",
+    code: "OPS",
+    items: [
+      { label: "Dokumen", module: "Documents", description: "File operasional" },
+      { label: "Aktivitas", module: "Activity", description: "Log pekerjaan terakhir" },
+      { label: "Persetujuan", module: "Finance", financeTarget: "finance-expense-form", financeOnly: true, description: "Approval expense" },
+      { label: "Analisis", module: "Analytics", description: "Insight website dan CRM" }
+    ]
+  },
+  {
+    title: "Investor",
+    code: "INV",
+    executiveOnly: true,
+    items: [
+      { label: "Investor Aktif", module: "Investors", description: "Pipeline investor" },
+      { label: "Laporan Investor", module: "Finance", financeTarget: "finance-investor-form", description: "Report investor" },
+      { label: "Dividen", module: "Investors", description: "Rencana dividen dan equity" }
+    ]
+  },
+  {
+    title: "SDM",
+    code: "HR",
+    items: [
+      { label: "Absensi", module: "Attendance", description: "Check in dan rekap" },
+      { label: "Pengguna", module: "Users", userManagerOnly: true, description: "Akun dashboard" },
+      { label: "Role & Permission", module: "Users", userManagerOnly: true, description: "Hak akses internal" }
+    ]
+  },
+  {
+    title: "Pengaturan",
+    code: "SET",
+    executiveOnly: true,
+    items: [
+      { label: "Profil Perusahaan", module: "Settings", description: "Identitas GSN" },
+      { label: "Notifikasi", module: "Settings", description: "Preferensi alert" },
+      { label: "Integrasi", module: "Settings", description: "API dan automation" },
+      { label: "Sistem", module: "Settings", description: "Konfigurasi admin" }
+    ]
+  }
+];
 const adminRoleOptions = [
   { value: "ceo", label: "CEO", description: "Akses owner penuh: kontrol perusahaan, keuangan, pengguna, pengaturan, hapus data, dan automation." },
   { value: "cso", label: "CSO", description: "Akses owner penuh: strategi, investor, keuangan, pengguna, pengaturan, hapus data, dan automation." },
@@ -213,6 +304,15 @@ function parseListText(value) {
 
 function listToText(value) {
   return Array.isArray(value) ? value.join(", ") : String(value || "");
+}
+
+function formatAdminDisplayName(value) {
+  const username = String(value || "admin").trim();
+  const knownNames = {
+    dapi: "Daffa",
+    pici: "Pici"
+  };
+  return knownNames[username.toLowerCase()] || username.charAt(0).toUpperCase() + username.slice(1);
 }
 
 function getPriority(lead) {
@@ -1049,6 +1149,11 @@ export default function AdminDashboard() {
   const [sortBy, setSortBy] = useState("newest");
   const [activeModule, setActiveModule] = useState("Dashboard");
   const [showFinanceDetail, setShowFinanceDetail] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [expandedSidebarGroup, setExpandedSidebarGroup] = useState("CRM");
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState("");
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState(defaultSettings);
   const [modal, setModal] = useState(null);
@@ -1274,6 +1379,36 @@ export default function AdminDashboard() {
     from: "",
     to: ""
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    setSidebarCollapsed(window.localStorage.getItem("gsn_admin_sidebar_collapsed") === "true");
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem("gsn_admin_sidebar_collapsed", String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    function handleShortcut(event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen(true);
+      }
+      if (event.key === "Escape") {
+        setCommandOpen(false);
+        setProfileMenuOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
   const [uploadingFinanceField, setUploadingFinanceField] = useState("");
   const [expenseApprovalDraft, setExpenseApprovalDraft] = useState({ id: "", status: "", note: "" });
   const [storageStatus, setStorageStatus] = useState(null);
@@ -1323,6 +1458,18 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleLogout() {
+    setSavedCredentials(null);
+    setAdminProfile(null);
+    setData(null);
+    setSelected(null);
+    setNotice("");
+    setCommandOpen(false);
+    setProfileMenuOpen(false);
+    setNotificationsOpen(false);
+    setCredentials({ username: "", password: "" });
   }
 
   async function loadDashboard(activeCredentials = savedCredentials || credentials) {
@@ -2872,6 +3019,80 @@ export default function AdminDashboard() {
     }
     return true;
   });
+  const visibleSidebarGroups = useMemo(() => erpSidebarGroups
+    .map((group) => {
+      if (group.financeOnly && !canUseFinance) {
+        return null;
+      }
+      if (group.executiveOnly && !isExecutive) {
+        return null;
+      }
+
+      const items = group.items.filter((item) => {
+        if (item.financeOnly && !canUseFinance) {
+          return false;
+        }
+        if (item.supplierOnly && !canViewSuppliers) {
+          return false;
+        }
+        if (item.userManagerOnly && !canManageUsers) {
+          return false;
+        }
+        if (item.module === "Finance" && !canUseFinance) {
+          return false;
+        }
+        if (item.module === "Settings" && !canUseSettings) {
+          return false;
+        }
+        if (item.module === "Users" && !canManageUsers) {
+          return false;
+        }
+        if (item.module === "Investors" && !isExecutive) {
+          return false;
+        }
+        return true;
+      });
+
+      return items.length ? { ...group, items } : null;
+    })
+    .filter(Boolean), [canManageUsers, canUseFinance, canUseSettings, canViewSuppliers, isExecutive]);
+  const commandItems = useMemo(() => visibleSidebarGroups.flatMap((group) => group.items.map((item) => ({
+    ...item,
+    group: group.title
+  }))), [visibleSidebarGroups]);
+  const filteredCommandItems = useMemo(() => {
+    const search = commandQuery.trim().toLowerCase();
+    if (!search) {
+      return commandItems.slice(0, 12);
+    }
+    return commandItems.filter((item) => [
+      item.group,
+      item.label,
+      item.description,
+      moduleLabels[item.module]
+    ].join(" ").toLowerCase().includes(search)).slice(0, 18);
+  }, [commandItems, commandQuery]);
+  const activeGroupTitle = visibleSidebarGroups.find((group) => group.items.some((item) => item.module === activeModule))?.title || "Dashboard";
+  const displayName = formatAdminDisplayName(adminProfile?.username);
+
+  function handleWorkspaceItem(item) {
+    setActiveModule(item.module || "Dashboard");
+    setProfileMenuOpen(false);
+    setCommandOpen(false);
+    if (item.module === "Finance") {
+      setShowFinanceDetail(Boolean(item.financeTarget));
+    }
+    if (item.financeTarget) {
+      window.setTimeout(() => scrollToFinanceForm(item.financeTarget), 80);
+    }
+  }
+
+  function isSidebarItemActive(item) {
+    if (item.financeTarget) {
+      return activeModule === "Finance" && showFinanceDetail;
+    }
+    return activeModule === item.module;
+  }
 
   const filteredLeads = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -3638,12 +3859,120 @@ export default function AdminDashboard() {
   };
 
   return (
-    <main className={`admin-shell ${!savedCredentials ? "admin-login-screen" : ""}`}>
+    <main className={`admin-shell ${!savedCredentials ? "admin-login-screen" : "admin-erp-shell"} ${sidebarCollapsed ? "is-sidebar-collapsed" : ""}`}>
+      {savedCredentials ? (
+        <aside className="admin-sidebar" aria-label="GSN ERP navigation">
+          <div className="admin-sidebar-brand">
+            <img alt="GSN" src="/logos/gsn-admin-logo.png" />
+            {!sidebarCollapsed ? (
+              <div>
+                <strong>GARDA SAMUDRA NUSANTARA</strong>
+                <span>Internal Operating System</span>
+              </div>
+            ) : null}
+          </div>
+          <button className="admin-sidebar-toggle" onClick={() => setSidebarCollapsed((value) => !value)} type="button">
+            {sidebarCollapsed ? ">" : "<"}
+          </button>
+          <nav className="admin-sidebar-nav">
+            {visibleSidebarGroups.map((group) => {
+              const expanded = expandedSidebarGroup === group.title || sidebarCollapsed;
+              return (
+                <div className="admin-sidebar-group" key={group.title}>
+                  <button
+                    className={activeGroupTitle === group.title ? "is-active" : ""}
+                    onClick={() => setExpandedSidebarGroup((current) => current === group.title ? "" : group.title)}
+                    type="button"
+                  >
+                    <span>{group.code}</span>
+                    {!sidebarCollapsed ? <strong>{group.title}</strong> : null}
+                    {!sidebarCollapsed ? <small>{expanded ? "-" : "+"}</small> : null}
+                  </button>
+                  {expanded ? (
+                    <div className="admin-sidebar-items">
+                      {group.items.map((item) => (
+                        <button
+                          className={isSidebarItemActive(item) ? "is-active" : ""}
+                          key={`${group.title}-${item.label}`}
+                          onClick={() => handleWorkspaceItem(item)}
+                          title={sidebarCollapsed ? item.label : undefined}
+                          type="button"
+                        >
+                          <span>{item.label}</span>
+                          {!sidebarCollapsed ? <small>{item.description}</small> : null}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </nav>
+        </aside>
+      ) : null}
+
+      {savedCredentials ? (
+        <section className="admin-topbar" aria-label="GSN ERP topbar">
+          <button className="admin-command-trigger" onClick={() => setCommandOpen(true)} type="button">
+            <span>Cari menu, data, laporan...</span>
+            <kbd>Ctrl K</kbd>
+          </button>
+          <div className="admin-topbar-actions">
+            <input aria-label="Tanggal kerja" type="date" value={todayKey} readOnly />
+            <button onClick={() => setCommandOpen(true)} type="button">Quick Create</button>
+            <button className="admin-bell" onClick={() => setNotificationsOpen((value) => !value)} type="button">
+              Notifikasi
+              {unreadNotifications.length ? <span>{unreadNotifications.length}</span> : null}
+            </button>
+            <div className="admin-profile-menu">
+              <button onClick={() => setProfileMenuOpen((value) => !value)} type="button">
+                <strong>{displayName}</strong>
+                <small>{adminRoleLabels[adminProfile?.role] || adminProfile?.role}</small>
+              </button>
+              {profileMenuOpen ? (
+                <div className="admin-profile-dropdown">
+                  {canManageUsers ? <button onClick={() => setActiveModule("Users")} type="button">Profil Saya</button> : null}
+                  {canUseSettings ? <button onClick={() => setActiveModule("Settings")} type="button">Profil Perusahaan</button> : null}
+                  {canUseSettings ? <button onClick={() => setActiveModule("Settings")} type="button">Preferensi</button> : null}
+                  <button onClick={handleLogout} type="button">Keluar</button>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {savedCredentials && commandOpen ? (
+        <section className="admin-command-backdrop" role="dialog" aria-modal="true" aria-label="Cari menu dashboard">
+          <div className="admin-command-palette">
+            <div className="admin-command-input">
+              <input
+                autoFocus
+                value={commandQuery}
+                onChange={(event) => setCommandQuery(event.target.value)}
+                placeholder="Cari menu, data, laporan..."
+              />
+              <button onClick={() => setCommandOpen(false)} type="button">Tutup</button>
+            </div>
+            <div className="admin-command-list">
+              {filteredCommandItems.map((item) => (
+                <button key={`${item.group}-${item.label}`} onClick={() => handleWorkspaceItem(item)} type="button">
+                  <span>{item.group}</span>
+                  <strong>{item.label}</strong>
+                  <small>{item.description}</small>
+                </button>
+              ))}
+              {!filteredCommandItems.length ? <p className="admin-empty">Tidak ada menu yang cocok.</p> : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {savedCredentials ? <section className="admin-hero">
         <div>
-          <p>Pusat Kontrol GSN</p>
-          <h1>Ringkasan Operasional</h1>
-          <span>Kelola prospek buyer, penawaran, NusaBot, absensi, dan follow-up dari satu dashboard internal.</span>
+          <p>GSN ERP</p>
+          <h1>Selamat datang kembali, {displayName}</h1>
+          <span>Berikut ringkasan performa bisnis GSN hari ini.</span>
           {adminProfile ? <small className="admin-owner-badge">{adminProfile.username} - {adminRoleLabels[adminProfile.role] || adminProfile.role}</small> : null}
         </div>
         <div className="admin-hero-actions">
