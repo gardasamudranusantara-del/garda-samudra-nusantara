@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import AIEmployeeWidget from "@/components/ai-employee/AIEmployeeWidget";
 
 const statuses = ["New", "Contacted", "Negotiation", "Quotation Sent", "Converted", "Closed"];
 const priorities = ["All", "High", "Medium", "Low"];
@@ -6514,6 +6515,14 @@ export default function AdminDashboard() {
             )}
           </div>
         </section>
+      ) : null}
+
+      {savedCredentials ? (
+        <AIEmployeeWidget
+          authToken={savedCredentials.session}
+          username={adminProfile?.username || savedCredentials.username}
+          userRole={adminProfile?.role || savedCredentials.role}
+        />
       ) : null}
     </main>
   );
