@@ -9966,3 +9966,106 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.admin-disclosure-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.admin-disclosure-tabs button {
+  display: grid;
+  gap: 5px;
+  min-height: 82px;
+  border: 1px solid rgba(79, 195, 247, 0.14);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(7, 11, 23, 0.42);
+  color: #f9fafb;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.admin-disclosure-tabs button:hover,
+.admin-disclosure-tabs button.is-active {
+  border-color: rgba(56, 189, 248, 0.34);
+  background: linear-gradient(135deg, rgba(30, 136, 229, 0.2), rgba(0, 188, 212, 0.08));
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.2), 0 0 24px rgba(30, 136, 229, 0.12);
+  transform: translateY(-1px);
+}
+
+.admin-disclosure-tabs span {
+  color: #9ca3af;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.admin-finance-grid.finance-expanded > * {
+  display: none;
+}
+
+.admin-finance-grid.finance-expanded > :first-child {
+  display: block;
+}
+
+.admin-finance-grid.finance-view-overview > :nth-child(-n + 4),
+.admin-finance-grid.finance-view-overview > :nth-child(6),
+.admin-finance-grid.finance-view-overview > :nth-child(7) {
+  display: block;
+}
+
+.admin-finance-grid.finance-view-cash.finance-expanded > :nth-child(10),
+.admin-finance-grid.finance-view-cash.finance-expanded > :nth-child(11),
+.admin-finance-grid.finance-view-cash.finance-expanded > :nth-child(12),
+.admin-finance-grid.finance-view-cash.finance-expanded > :nth-child(23) {
+  display: block;
+}
+
+.admin-finance-grid.finance-view-sales.finance-expanded > :nth-child(13),
+.admin-finance-grid.finance-view-sales.finance-expanded > :nth-child(15),
+.admin-finance-grid.finance-view-sales.finance-expanded > :nth-child(16),
+.admin-finance-grid.finance-view-sales.finance-expanded > :nth-child(24) {
+  display: block;
+}
+
+.admin-finance-grid.finance-view-purchase.finance-expanded > :nth-child(14),
+.admin-finance-grid.finance-view-purchase.finance-expanded > :nth-child(17),
+.admin-finance-grid.finance-view-purchase.finance-expanded > :nth-child(19),
+.admin-finance-grid.finance-view-purchase.finance-expanded > :nth-child(25) {
+  display: block;
+}
+
+.admin-finance-grid.finance-view-payment.finance-expanded > :nth-child(15),
+.admin-finance-grid.finance-view-payment.finance-expanded > :nth-child(16),
+.admin-finance-grid.finance-view-payment.finance-expanded > :nth-child(17),
+.admin-finance-grid.finance-view-payment.finance-expanded > :nth-child(18),
+.admin-finance-grid.finance-view-payment.finance-expanded > :nth-child(19),
+.admin-finance-grid.finance-view-payment.finance-expanded > :nth-child(26),
+.admin-finance-grid.finance-view-payment.finance-expanded > :nth-child(27) {
+  display: block;
+}
+
+.admin-finance-grid.finance-view-compliance.finance-expanded > :nth-child(20),
+.admin-finance-grid.finance-view-compliance.finance-expanded > :nth-child(21),
+.admin-finance-grid.finance-view-compliance.finance-expanded > :nth-child(28) {
+  display: block;
+}
+
+.admin-finance-grid.finance-view-budget.finance-expanded > :nth-child(29),
+.admin-finance-grid.finance-view-budget.finance-expanded > :nth-child(30) {
+  display: block;
+}
+
+.admin-finance-grid.finance-view-report.finance-expanded > :nth-child(31),
+.admin-finance-grid.finance-view-report.finance-expanded > :nth-child(32) {
+  display: block;
+}
+
+.admin-finance-grid.finance-view-audit.finance-expanded > :nth-child(5),
+.admin-finance-grid.finance-view-audit.finance-expanded > :nth-child(8),
+.admin-finance-grid.finance-view-audit.finance-expanded > :nth-child(9),
+.admin-finance-grid.finance-view-audit.finance-expanded > :nth-child(n + 33) {
+  display: block;
+}

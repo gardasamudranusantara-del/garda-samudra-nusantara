@@ -147,6 +147,17 @@ const financeMenus = [
   "Laporan",
   "Audit"
 ];
+const financeDisclosureTabs = [
+  { id: "overview", label: "Dashboard Keuangan", hint: "KPI, reminder, dan prioritas" },
+  { id: "cash", label: "Kas & Bank", hint: "Cash, bank, petty cash" },
+  { id: "sales", label: "Penjualan", hint: "Revenue, invoice, AR" },
+  { id: "purchase", label: "Pembelian", hint: "Expense, AP, supplier payment" },
+  { id: "payment", label: "Pembayaran", hint: "Matching dan rekonsiliasi" },
+  { id: "compliance", label: "Pajak & Legal", hint: "Tax, kurs, compliance" },
+  { id: "budget", label: "Anggaran", hint: "Budget vs aktual" },
+  { id: "report", label: "Laporan", hint: "Export dan riwayat" },
+  { id: "audit", label: "Audit", hint: "Akses, storage, log" }
+];
 const financeCurrencies = ["IDR", "USD", "SGD"];
 const cashInCategories = ["Founder Capital", "Investor Capital", "Sales Revenue", "Commission Revenue", "Other Income"];
 const cashOutCategories = ["Operational", "Marketing", "Payroll", "Technology", "Logistics", "Travel", "Legal"];
@@ -313,6 +324,37 @@ function formatAdminDisplayName(value) {
     pici: "Pici"
   };
   return knownNames[username.toLowerCase()] || username.charAt(0).toUpperCase() + username.slice(1);
+}
+
+function getFinanceViewForTarget(target) {
+  if (!target) {
+    return "overview";
+  }
+  if (["finance-cash-form", "finance-bank-form"].includes(target)) {
+    return "cash";
+  }
+  if (target === "finance-revenue-form") {
+    return "sales";
+  }
+  if (target === "finance-expense-form") {
+    return "purchase";
+  }
+  if (["finance-ar-ap-form", "finance-payment-form"].includes(target)) {
+    return "payment";
+  }
+  if (target === "finance-tax-form") {
+    return "compliance";
+  }
+  if (target === "finance-budget-form") {
+    return "budget";
+  }
+  if (["finance-report-form", "finance-investor-form"].includes(target)) {
+    return "report";
+  }
+  if (target === "finance-audit-form") {
+    return "audit";
+  }
+  return "overview";
 }
 
 function getPriority(lead) {
@@ -1149,6 +1191,7 @@ export default function AdminDashboard() {
   const [sortBy, setSortBy] = useState("newest");
   const [activeModule, setActiveModule] = useState("Dashboard");
   const [showFinanceDetail, setShowFinanceDetail] = useState(false);
+  const [financeView, setFinanceView] = useState("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedSidebarGroup, setExpandedSidebarGroup] = useState("CRM");
   const [commandOpen, setCommandOpen] = useState(false);
@@ -2446,6 +2489,7 @@ export default function AdminDashboard() {
     }
 
     setShowFinanceDetail(true);
+    setFinanceView(getFinanceViewForTarget(id));
     window.setTimeout(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 60);
@@ -3081,6 +3125,7 @@ export default function AdminDashboard() {
     setCommandOpen(false);
     if (item.module === "Finance") {
       setShowFinanceDetail(Boolean(item.financeTarget));
+      setFinanceView(getFinanceViewForTarget(item.financeTarget));
     }
     if (item.financeTarget) {
       window.setTimeout(() => scrollToFinanceForm(item.financeTarget), 80);
@@ -4675,19 +4720,43 @@ export default function AdminDashboard() {
           ) : null}
 
           {activeModule === "Finance" && canUseFinance ? (
-            <section className={`admin-finance-grid ${showFinanceDetail ? "finance-expanded" : "finance-collapsed"}`}>
+            <section className={`admin-finance-grid finance-view-${financeView} ${showFinanceDetail ? "finance-expanded" : "finance-collapsed"}`}>
               <div className="admin-panel wide">
                 <div className="admin-panel-header">
                   <div>
                     <p>Keuangan</p>
-                    <h2>Ringkasan Finance</h2>
+                    <h2>{financeDisclosureTabs.find((tab) => tab.id === financeView)?.label || "Dashboard Keuangan"}</h2>
                   </div>
                   <div className="admin-actions">
                     <span className="admin-muted">IDR / USD / SGD</span>
-                    <button onClick={() => setShowFinanceDetail((value) => !value)} type="button">
-                      {showFinanceDetail ? "Sembunyikan Detail" : "Buka Mode Detail ERP"}
+                    <button onClick={() => {
+                      setShowFinanceDetail((value) => {
+                        const next = !value;
+                        if (!next) {
+                          setFinanceView("overview");
+                        }
+                        return next;
+                      });
+                    }} type="button">
+                      {showFinanceDetail ? "Tampilkan Ringkasan" : "Pilih Kategori Detail"}
                     </button>
                   </div>
+                </div>
+                <div className="admin-disclosure-tabs" aria-label="Kategori finance">
+                  {financeDisclosureTabs.map((tab) => (
+                    <button
+                      className={financeView === tab.id ? "is-active" : ""}
+                      key={tab.id}
+                      onClick={() => {
+                        setFinanceView(tab.id);
+                        setShowFinanceDetail(tab.id !== "overview");
+                      }}
+                      type="button"
+                    >
+                      <strong>{tab.label}</strong>
+                      <span>{tab.hint}</span>
+                    </button>
+                  ))}
                 </div>
                 <div className="admin-finance-menu">
                   {financeMenus.map((menu) => (
@@ -4727,12 +4796,12 @@ export default function AdminDashboard() {
                   <span className="admin-muted">Form detail akan terbuka saat dibutuhkan</span>
                 </div>
                 <div className="admin-finance-steps">
-                  <button onClick={() => scrollToFinanceForm("finance-cash-form")} type="button"><span>01</span><strong>Kas / Bank</strong><small>Catat uang masuk atau keluar.</small></button>
-                  <button onClick={() => scrollToFinanceForm("finance-revenue-form")} type="button"><span>02</span><strong>Pemasukan</strong><small>Simpan revenue penjualan.</small></button>
-                  <button onClick={() => scrollToFinanceForm("finance-expense-form")} type="button"><span>03</span><strong>Pengeluaran</strong><small>Upload bukti dan approval.</small></button>
-                  <button onClick={() => scrollToFinanceForm("finance-ar-ap-form")} type="button"><span>04</span><strong>AR / AP</strong><small>Pantau invoice dan tagihan.</small></button>
-                  <button onClick={() => scrollToFinanceForm("finance-payment-form")} type="button"><span>05</span><strong>Pembayaran</strong><small>Cocokkan pembayaran buyer/supplier.</small></button>
-                  <button onClick={() => scrollToFinanceForm("finance-report-form")} type="button"><span>06</span><strong>Laporan</strong><small>Buat laporan finance bulanan.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-cash-form")} type="button"><span>01</span><strong>Kas / Bank</strong><small>Buka kategori kas dan bank.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-revenue-form")} type="button"><span>02</span><strong>Pemasukan</strong><small>Buka kategori penjualan.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-expense-form")} type="button"><span>03</span><strong>Pengeluaran</strong><small>Buka kategori pembelian.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-ar-ap-form")} type="button"><span>04</span><strong>AR / AP</strong><small>Buka kategori pembayaran.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-payment-form")} type="button"><span>05</span><strong>Pembayaran</strong><small>Buka rekonsiliasi pembayaran.</small></button>
+                  <button onClick={() => scrollToFinanceForm("finance-report-form")} type="button"><span>06</span><strong>Laporan</strong><small>Buka kategori laporan.</small></button>
                 </div>
               </div>
 
@@ -4848,7 +4917,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="admin-panel">
+              <div className="admin-panel" id="finance-audit-form">
                 <div className="admin-panel-header compact"><div><p>Access Management</p><h2>Finance Permissions</h2></div></div>
                 <div className="admin-modal-confirm">
                   <p>Finance is hidden from non-executive users. Current login has executive finance access.</p>
@@ -4928,7 +4997,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="admin-panel">
+              <div className="admin-panel" id="finance-bank-form">
                 <div className="admin-panel-header">
                   <div>
                     <p>Bank Accounts</p>
@@ -5240,7 +5309,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="admin-panel">
+              <div className="admin-panel" id="finance-tax-form">
                 <div className="admin-panel-header">
                   <div>
                     <p>Tax & Compliance</p>
@@ -5711,7 +5780,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="admin-panel wide">
+              <div className="admin-panel wide" id="finance-budget-form">
                 <div className="admin-panel-header">
                   <div>
                     <p>Budget & Planning</p>
