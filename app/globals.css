@@ -3991,12 +3991,6 @@ body {
     linear-gradient(180deg, rgba(7, 11, 23, 0.06), rgba(7, 11, 23, 0.42));
 }
 
-.admin-login-left .admin-login-brand,
-.admin-login-left .admin-login-copy,
-.admin-login-left .admin-login-features {
-  display: none;
-}
-
 .admin-login-brand {
   display: flex;
   align-items: center;
@@ -4095,7 +4089,7 @@ body {
   background:
     linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.16), transparent),
     radial-gradient(ellipse at 42% 76%, rgba(30, 136, 229, 0.18), transparent 34%);
-  opacity: 0.24;
+  opacity: 0.48;
   animation: loginWaterDrift 9s ease-in-out infinite;
 }
 
@@ -4202,7 +4196,7 @@ body {
 .admin-login-right {
   display: grid;
   place-items: center;
-  padding: clamp(22px, 2.35vw, 38px);
+  padding: clamp(26px, 3.4vw, 58px);
   background:
     radial-gradient(circle at 50% 35%, rgba(30, 136, 229, 0.13), transparent 36%),
     linear-gradient(180deg, rgba(2, 6, 15, 0.44), rgba(2, 6, 15, 0.68));
@@ -4212,11 +4206,11 @@ body {
 .admin-login-card {
   position: relative;
   display: grid;
-  width: min(100%, 560px);
+  width: min(100%, 600px);
   gap: 14px;
   border: 1px solid rgba(79, 195, 247, 0.18);
   border-radius: 28px;
-  padding: clamp(26px, 3vw, 46px);
+  padding: clamp(24px, 3.1vw, 42px);
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
     rgba(7, 11, 23, 0.72);
