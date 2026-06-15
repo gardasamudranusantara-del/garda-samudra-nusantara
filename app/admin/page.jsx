@@ -1,16 +1,20 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import AIEmployeeWidget from "@/components/ai-employee/AIEmployeeWidget";
-import ActivityModule from "@/components/admin/ActivityModule";
-import AnalyticsModule from "@/components/admin/AnalyticsModule";
-import AttendanceModule from "@/components/admin/AttendanceModule";
-import { BuyersModule, DocumentsModule, SuppliersModule } from "@/components/admin/CrmModule";
-import FinanceModule from "@/components/admin/FinanceModule";
-import FinanceCashBank from "@/components/admin/finance/FinanceCashBank";
-import FinanceOverview from "@/components/admin/finance/FinanceOverview";
-import OwnerSummary from "@/components/admin/OwnerSummary";
-import UsersModule from "@/components/admin/UsersModule";
+
+const AIEmployeeWidget = dynamic(() => import("@/components/ai-employee/AIEmployeeWidget"), { ssr: false });
+const ActivityModule = dynamic(() => import("@/components/admin/ActivityModule"), { ssr: false });
+const AnalyticsModule = dynamic(() => import("@/components/admin/AnalyticsModule"), { ssr: false });
+const AttendanceModule = dynamic(() => import("@/components/admin/AttendanceModule"), { ssr: false });
+const BuyersModule = dynamic(() => import("@/components/admin/CrmModule").then((mod) => mod.BuyersModule), { ssr: false });
+const DocumentsModule = dynamic(() => import("@/components/admin/CrmModule").then((mod) => mod.DocumentsModule), { ssr: false });
+const SuppliersModule = dynamic(() => import("@/components/admin/CrmModule").then((mod) => mod.SuppliersModule), { ssr: false });
+const FinanceModule = dynamic(() => import("@/components/admin/FinanceModule"), { ssr: false });
+const FinanceCashBank = dynamic(() => import("@/components/admin/finance/FinanceCashBank"), { ssr: false });
+const FinanceOverview = dynamic(() => import("@/components/admin/finance/FinanceOverview"), { ssr: false });
+const OwnerSummary = dynamic(() => import("@/components/admin/OwnerSummary"), { ssr: false });
+const UsersModule = dynamic(() => import("@/components/admin/UsersModule"), { ssr: false });
 
 const statuses = ["New", "Contacted", "Negotiation", "Quotation Sent", "Converted", "Closed"];
 const priorities = ["All", "High", "Medium", "Low"];
