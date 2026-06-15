@@ -1802,13 +1802,18 @@ export default function AdminDashboard() {
 
   async function handleLogin(event) {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const submittedCredentials = {
+      username: String(formData.get("username") || credentials.username || "").trim(),
+      password: String(formData.get("password") || credentials.password || "")
+    };
     setLoading(true);
     setNotice("");
 
     try {
       const response = await fetch("/api/admin/login", {
         method: "POST",
-        headers: authHeaders(credentials)
+        headers: authHeaders(submittedCredentials)
       });
       const result = await response.json();
 
@@ -1817,12 +1822,12 @@ export default function AdminDashboard() {
       }
 
       const sessionCredentials = {
-        username: result.admin?.username || credentials.username,
+        username: result.admin?.username || submittedCredentials.username,
         role: result.admin?.role || "owner",
         session: result.session
       };
       setSavedCredentials(sessionCredentials);
-      setAdminProfile(result.admin || { username: credentials.username, role: "owner" });
+      setAdminProfile(result.admin || { username: submittedCredentials.username, role: "owner" });
       await loadDashboard(sessionCredentials);
       if (userManagerRoleIds.includes(result.admin?.role || "owner")) {
         await loadUsers(sessionCredentials);
@@ -4524,10 +4529,6 @@ export default function AdminDashboard() {
                         const value = event.target.value;
                         setCredentials((current) => ({ ...current, username: value }));
                       }}
-                      onInput={(event) => {
-                        const value = event.currentTarget.value;
-                        setCredentials((current) => ({ ...current, username: value }));
-                      }}
                       placeholder={copy.usernamePlaceholder}
                       type="text"
                     />
@@ -4544,10 +4545,6 @@ export default function AdminDashboard() {
                       value={credentials.password}
                       onChange={(event) => {
                         const value = event.target.value;
-                        setCredentials((current) => ({ ...current, password: value }));
-                      }}
-                      onInput={(event) => {
-                        const value = event.currentTarget.value;
                         setCredentials((current) => ({ ...current, password: value }));
                       }}
                       placeholder={copy.passwordPlaceholder}
