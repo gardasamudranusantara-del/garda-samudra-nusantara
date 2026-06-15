@@ -209,16 +209,16 @@ const erpSidebarGroups = [
   {
     title: "Dashboard",
     code: "DB",
-    items: [{ label: "Dashboard", module: "Dashboard", description: "Ringkasan perhatian hari ini" }]
+    items: [{ label: "Dashboard", module: "Dashboard", permission: "view", description: "Ringkasan perhatian hari ini" }]
   },
   {
     title: "CRM",
     code: "CRM",
     items: [
-      { label: "Prospek", module: "Leads", description: "Lead buyer dan follow-up" },
-      { label: "Pembeli", module: "Buyers", description: "Database buyer aktif" },
-      { label: "Pemasok", module: "Suppliers", description: "Database supplier", supplierOnly: true },
-      { label: "Penawaran", module: "Quotations", description: "Quotation dan dokumen buyer" }
+      { label: "Prospek", module: "Leads", permission: "edit_leads", description: "Lead buyer dan follow-up" },
+      { label: "Pembeli", module: "Buyers", permission: "crm_buyers_view", description: "Database buyer aktif" },
+      { label: "Pemasok", module: "Suppliers", permission: "crm_suppliers_view", description: "Database supplier", supplierOnly: true },
+      { label: "Penawaran", module: "Quotations", permission: "edit_quotations", description: "Quotation dan dokumen buyer" }
     ]
   },
   {
@@ -226,43 +226,43 @@ const erpSidebarGroups = [
     code: "FIN",
     financeOnly: true,
     items: [
-      { label: "Ringkasan Keuangan", module: "Finance", description: "KPI finance utama" },
-      { label: "Pemasukan", module: "Finance", financeTarget: "finance-revenue-form", description: "Catat pemasukan" },
-      { label: "Pengeluaran", module: "Finance", financeTarget: "finance-expense-form", description: "Catat pengeluaran dan persetujuan" },
-      { label: "Transfer", module: "Finance", financeTarget: "finance-cash-form", description: "Perpindahan dana internal" },
-      { label: "Invoice", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Invoice finance" },
-      { label: "Tagihan", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Tagihan vendor dan supplier" },
-      { label: "Setor Tunai", module: "Finance", financeTarget: "finance-cash-form", description: "Kas masuk" },
-      { label: "Tarik Tunai", module: "Finance", financeTarget: "finance-cash-form", description: "Kas keluar" },
-      { label: "Saldo Perusahaan", module: "Finance", financeTarget: "finance-bank-form", description: "Bank dan kas" },
-      { label: "Catatan Likuiditas", module: "Finance", financeTarget: "finance-report-form", description: "Catatan cash runway" },
-      { label: "Faktur Pembeli", module: "Finance", financeTarget: "finance-ar-ap-form", description: "AR buyer" },
-      { label: "Tagihan Pemasok", module: "Finance", financeTarget: "finance-ar-ap-form", description: "AP supplier" },
-      { label: "Pembayaran Pembeli", module: "Finance", financeTarget: "finance-payment-form", description: "Pencocokan pembayaran buyer" },
-      { label: "Pembayaran Pemasok", module: "Finance", financeTarget: "finance-payment-form", description: "Pembayaran supplier" },
-      { label: "AP", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Utang usaha" },
-      { label: "AR", module: "Finance", financeTarget: "finance-ar-ap-form", description: "Piutang usaha" },
-      { label: "Pajak", module: "Finance", financeTarget: "finance-tax-form", description: "PPN dan kepatuhan" },
-      { label: "Dokumen Hukum", module: "Documents", description: "Legal document center" },
-      { label: "Nilai Tukar", module: "Finance", financeTarget: "finance-tax-form", description: "Kurs dan mata uang" },
-      { label: "Anggaran", module: "Finance", financeTarget: "finance-budget-form", description: "Budget planning" },
-      { label: "Budget vs Aktual", module: "Finance", financeTarget: "finance-budget-form", description: "Kontrol realisasi" },
-      { label: "Audit", module: "Finance", financeTarget: "finance-audit-form", description: "Audit finance" },
-      { label: "Ringkasan Laporan", module: "Finance", financeTarget: "finance-report-form", description: "Laporan bulanan" },
-      { label: "Ekspor PDF", module: "Finance", financeTarget: "finance-report-form", description: "Ekspor laporan PDF" },
-      { label: "Ekspor Excel", module: "Finance", financeTarget: "finance-report-form", description: "Ekspor laporan Excel" },
-      { label: "Ekspor CSV", module: "Finance", financeTarget: "finance-report-form", description: "Ekspor laporan CSV" },
-      { label: "Riwayat Laporan", module: "Finance", financeTarget: "finance-report-form", description: "Riwayat laporan" }
+      { label: "Ringkasan Keuangan", module: "Finance", permission: "finance_access", description: "KPI finance utama" },
+      { label: "Pemasukan", module: "Finance", permission: "finance_sales", financeTarget: "finance-revenue-form", description: "Catat pemasukan" },
+      { label: "Pengeluaran", module: "Finance", permission: "finance_purchase", financeTarget: "finance-expense-form", description: "Catat pengeluaran dan persetujuan" },
+      { label: "Transfer", module: "Finance", permission: "finance_cash_bank", financeTarget: "finance-cash-form", description: "Perpindahan dana internal" },
+      { label: "Invoice", module: "Finance", permission: "finance_sales", financeTarget: "finance-ar-ap-form", description: "Invoice finance" },
+      { label: "Tagihan", module: "Finance", permission: "finance_purchase", financeTarget: "finance-ar-ap-form", description: "Tagihan vendor dan supplier" },
+      { label: "Setor Tunai", module: "Finance", permission: "finance_cash_bank", financeTarget: "finance-cash-form", description: "Kas masuk" },
+      { label: "Tarik Tunai", module: "Finance", permission: "finance_cash_bank", financeTarget: "finance-cash-form", description: "Kas keluar" },
+      { label: "Saldo Perusahaan", module: "Finance", permission: "finance_cash_bank", financeTarget: "finance-bank-form", description: "Bank dan kas" },
+      { label: "Catatan Likuiditas", module: "Finance", permission: "finance_reports", financeTarget: "finance-report-form", description: "Catatan cash runway" },
+      { label: "Faktur Pembeli", module: "Finance", permission: "finance_sales", financeTarget: "finance-ar-ap-form", description: "AR buyer" },
+      { label: "Tagihan Pemasok", module: "Finance", permission: "finance_purchase", financeTarget: "finance-ar-ap-form", description: "AP supplier" },
+      { label: "Pembayaran Pembeli", module: "Finance", permission: "finance_sales", financeTarget: "finance-payment-form", description: "Pencocokan pembayaran buyer" },
+      { label: "Pembayaran Pemasok", module: "Finance", permission: "finance_purchase", financeTarget: "finance-payment-form", description: "Pembayaran supplier" },
+      { label: "AP", module: "Finance", permission: "finance_purchase", financeTarget: "finance-ar-ap-form", description: "Utang usaha" },
+      { label: "AR", module: "Finance", permission: "finance_sales", financeTarget: "finance-ar-ap-form", description: "Piutang usaha" },
+      { label: "Pajak", module: "Finance", permission: "finance_tax_legal", financeTarget: "finance-tax-form", description: "PPN dan kepatuhan" },
+      { label: "Dokumen Hukum", module: "Documents", permission: "documents_access", description: "Legal document center" },
+      { label: "Nilai Tukar", module: "Finance", permission: "finance_tax_legal", financeTarget: "finance-tax-form", description: "Kurs dan mata uang" },
+      { label: "Anggaran", module: "Finance", permission: "finance_budget", financeTarget: "finance-budget-form", description: "Budget planning" },
+      { label: "Budget vs Aktual", module: "Finance", permission: "finance_budget", financeTarget: "finance-budget-form", description: "Kontrol realisasi" },
+      { label: "Audit", module: "Finance", permission: "finance_audit", financeTarget: "finance-audit-form", description: "Audit finance" },
+      { label: "Ringkasan Laporan", module: "Finance", permission: "finance_reports", financeTarget: "finance-report-form", description: "Laporan bulanan" },
+      { label: "Ekspor PDF", module: "Finance", permission: "finance_export", financeTarget: "finance-report-form", description: "Ekspor laporan PDF" },
+      { label: "Ekspor Excel", module: "Finance", permission: "finance_export", financeTarget: "finance-report-form", description: "Ekspor laporan Excel" },
+      { label: "Ekspor CSV", module: "Finance", permission: "finance_export", financeTarget: "finance-report-form", description: "Ekspor laporan CSV" },
+      { label: "Riwayat Laporan", module: "Finance", permission: "finance_reports", financeTarget: "finance-report-form", description: "Riwayat laporan" }
     ]
   },
   {
     title: "Operasional",
     code: "OPS",
     items: [
-      { label: "Dokumen", module: "Documents", description: "File operasional" },
-      { label: "Aktivitas", module: "Activity", description: "Log pekerjaan terakhir" },
-      { label: "Persetujuan", module: "Finance", financeTarget: "finance-expense-form", financeOnly: true, description: "Approval expense" },
-      { label: "Analisis", module: "Analytics", description: "Insight website dan CRM" }
+      { label: "Dokumen", module: "Documents", permission: "documents_access", description: "File operasional" },
+      { label: "Aktivitas", module: "Activity", permission: "activity_log", description: "Log pekerjaan terakhir" },
+      { label: "Persetujuan", module: "Finance", permission: "ops_approvals", financeTarget: "finance-expense-form", financeOnly: true, description: "Approval expense" },
+      { label: "Analisis", module: "Analytics", permission: "analytics_access", description: "Insight website dan CRM" }
     ]
   },
   {
@@ -270,18 +270,18 @@ const erpSidebarGroups = [
     code: "INV",
     executiveOnly: true,
     items: [
-      { label: "Investor Aktif", module: "Investors", description: "Pipeline investor" },
-      { label: "Laporan Investor", module: "Finance", financeTarget: "finance-investor-form", description: "Report investor" },
-      { label: "Dividen", module: "Investors", description: "Rencana dividen dan equity" }
+      { label: "Investor Aktif", module: "Investors", permission: "edit_investors", description: "Pipeline investor" },
+      { label: "Laporan Investor", module: "Finance", permission: "investor_reports", financeTarget: "finance-investor-form", description: "Report investor" },
+      { label: "Dividen", module: "Investors", permission: "investor_dividends", description: "Rencana dividen dan equity" }
     ]
   },
   {
     title: "SDM",
     code: "HR",
     items: [
-      { label: "Absensi", module: "Attendance", description: "Check in dan rekap" },
-      { label: "Pengguna", module: "Users", userManagerOnly: true, description: "Akun dashboard" },
-      { label: "Role & Permission", module: "Users", userManagerOnly: true, description: "Hak akses internal" }
+      { label: "Absensi", module: "Attendance", permission: "attendance_access", description: "Check in dan rekap" },
+      { label: "Pengguna", module: "Users", permission: "user_management", userManagerOnly: true, description: "Akun dashboard" },
+      { label: "Role & Permission", module: "Users", permission: "hr_roles_permissions", userManagerOnly: true, description: "Hak akses internal" }
     ]
   },
   {
@@ -289,10 +289,10 @@ const erpSidebarGroups = [
     code: "SET",
     executiveOnly: true,
     items: [
-      { label: "Profil Perusahaan", module: "Settings", description: "Identitas GSN" },
-      { label: "Notifikasi", module: "Settings", description: "Preferensi alert" },
-      { label: "Integrasi", module: "Settings", description: "API dan automation" },
-      { label: "Sistem", module: "Settings", description: "Konfigurasi admin" }
+      { label: "Profil Perusahaan", module: "Settings", permission: "settings", description: "Identitas GSN" },
+      { label: "Notifikasi", module: "Settings", permission: "settings_notifications", description: "Preferensi alert" },
+      { label: "Integrasi", module: "Settings", permission: "settings_integrations", description: "API dan automation" },
+      { label: "Sistem", module: "Settings", permission: "settings_system", description: "Konfigurasi admin" }
     ]
   }
 ];
@@ -308,30 +308,124 @@ const adminRoleOptions = [
 ];
 const adminRoleDescriptions = Object.fromEntries(adminRoleOptions.map((role) => [role.value, role.description]));
 const adminRoleLabels = Object.fromEntries(adminRoleOptions.map((role) => [role.value, role.label]));
-const accessOptions = [
-  { value: "edit_leads", label: "Prospek & CRM", description: "Melihat dan mengelola prospek buyer." },
-  { value: "edit_quotations", label: "Penawaran", description: "Membuat dan mengubah quotation." },
-  { value: "download_pdf", label: "Download PDF", description: "Mengunduh quotation dan dokumen PDF." },
-  { value: "supplier_access", label: "Database Pemasok", description: "Melihat modul pemasok." },
-  { value: "documents_access", label: "Dokumen", description: "Melihat dan mengelola dokumen bisnis." },
-  { value: "analytics_access", label: "Analitik", description: "Melihat analitik website dan CRM." },
-  { value: "finance_access", label: "Keuangan", description: "Melihat modul finance." },
-  { value: "finance_manage_access", label: "Approval Finance", description: "Approval, closing, dan kontrol finance." },
-  { value: "finance_export", label: "Export Finance", description: "Export laporan finance." },
-  { value: "attendance_access", label: "Absensi", description: "Melihat dan memakai modul absensi." },
-  { value: "activity_log", label: "Aktivitas", description: "Melihat log aktivitas dashboard." },
-  { value: "user_management", label: "Pengguna", description: "Membuat, mengubah, dan menghapus user." },
-  { value: "settings", label: "Pengaturan", description: "Mengubah profil perusahaan dan integrasi." },
-  { value: "automation", label: "Automation", description: "Menjalankan automation internal." }
+const supplierPermissionIds = [
+  "crm_suppliers_view",
+  "crm_suppliers_contacts",
+  "crm_suppliers_capacity",
+  "crm_suppliers_commercial",
+  "crm_suppliers_manage",
+  "crm_suppliers_export"
 ];
+const financeSubPermissionIds = [
+  "finance_cash_bank",
+  "finance_sales",
+  "finance_purchase",
+  "finance_tax_legal",
+  "finance_budget",
+  "finance_reports",
+  "finance_audit"
+];
+const accessOptions = [
+  {
+    value: "dashboard_group",
+    label: "Dashboard",
+    description: "Ringkasan utama dan perhatian hari ini.",
+    children: [
+      { value: "view", label: "Dashboard Utama", description: "Melihat ringkasan utama dashboard." }
+    ]
+  },
+  {
+    value: "crm_group",
+    label: "CRM",
+    description: "Prospek, pembeli, pemasok, dan penawaran.",
+    children: [
+      { value: "edit_leads", label: "Prospek", description: "Melihat dan mengelola prospek buyer." },
+      { value: "delete_leads", label: "Hapus Prospek", description: "Menghapus prospek dan pembeli." },
+      { value: "crm_buyers_view", label: "Pembeli", description: "Melihat database pembeli." },
+      { value: "crm_buyers_manage", label: "Kelola Pembeli", description: "Tambah dan edit profil pembeli." },
+      { value: "crm_suppliers_view", label: "Pemasok - Ringkasan", description: "Melihat nama, kota, negara, dan status pemasok." },
+      { value: "crm_suppliers_contacts", label: "Pemasok - Kontak", description: "Melihat kontak person, email, dan WhatsApp pemasok." },
+      { value: "crm_suppliers_capacity", label: "Pemasok - Produk & Kapasitas", description: "Melihat produk, kategori, kapasitas, dan rating pemasok." },
+      { value: "crm_suppliers_commercial", label: "Pemasok - Komersial", description: "Melihat termin pembayaran dan catatan sensitif pemasok." },
+      { value: "crm_suppliers_manage", label: "Pemasok - Kelola", description: "Tambah dan edit data pemasok." },
+      { value: "crm_suppliers_export", label: "Pemasok - Export", description: "Export database pemasok." },
+      { value: "edit_quotations", label: "Penawaran", description: "Membuat dan mengubah quotation." },
+      { value: "delete_quotations", label: "Hapus Penawaran", description: "Menghapus quotation dan dokumen penawaran." },
+      { value: "download_pdf", label: "Download PDF", description: "Mengunduh quotation dan dokumen PDF." }
+    ]
+  },
+  {
+    value: "finance_group",
+    label: "Finance",
+    description: "Keuangan dengan akses per sub-dashboard.",
+    children: [
+      { value: "finance_access", label: "Ringkasan Keuangan", description: "Melihat dashboard finance utama." },
+      { value: "finance_cash_bank", label: "Kas & Bank", description: "Melihat kas, bank, setor, tarik, dan transfer." },
+      { value: "finance_sales", label: "Penjualan / AR", description: "Melihat pemasukan, invoice, faktur pembeli, dan AR." },
+      { value: "finance_purchase", label: "Pembelian / AP", description: "Melihat pengeluaran, tagihan pemasok, pembayaran pemasok, dan AP." },
+      { value: "finance_tax_legal", label: "Pajak & Legal", description: "Melihat pajak, dokumen hukum, dan nilai tukar." },
+      { value: "finance_budget", label: "Anggaran", description: "Melihat anggaran dan budget vs aktual." },
+      { value: "finance_reports", label: "Laporan Finance", description: "Melihat ringkasan laporan dan riwayat laporan." },
+      { value: "finance_export", label: "Export Finance", description: "Export laporan PDF, Excel, dan CSV." },
+      { value: "finance_audit", label: "Audit Finance", description: "Melihat audit finance dan log akses." },
+      { value: "finance_manage_access", label: "Approval & Closing", description: "Approval, closing, dan kontrol finance." }
+    ]
+  },
+  {
+    value: "operations_group",
+    label: "Operations",
+    description: "Dokumen, aktivitas, persetujuan, analisis, dan otomasi.",
+    children: [
+      { value: "documents_access", label: "Dokumen", description: "Melihat dan mengelola dokumen bisnis." },
+      { value: "activity_log", label: "Aktivitas", description: "Melihat log aktivitas dashboard." },
+      { value: "ops_approvals", label: "Persetujuan", description: "Melihat pusat persetujuan operasional." },
+      { value: "analytics_access", label: "Analisis", description: "Melihat analitik website dan CRM." },
+      { value: "automation", label: "Otomasi Internal", description: "Menjalankan follow-up, laporan harian, dan notifikasi internal." }
+    ]
+  },
+  {
+    value: "investor_group",
+    label: "Investors",
+    description: "Investor aktif, laporan investor, dan dividen.",
+    children: [
+      { value: "edit_investors", label: "Investor Aktif", description: "Melihat dan mengelola pipeline investor." },
+      { value: "delete_investors", label: "Hapus Investor", description: "Menghapus data investor." },
+      { value: "investor_reports", label: "Laporan Investor", description: "Melihat laporan investor." },
+      { value: "investor_dividends", label: "Dividen", description: "Melihat rencana dividen dan equity." }
+    ]
+  },
+  {
+    value: "hr_group",
+    label: "HR",
+    description: "Absensi, pengguna, dan role permission.",
+    children: [
+      { value: "attendance_access", label: "Absensi", description: "Melihat dan memakai modul absensi." },
+      { value: "hr_attendance_manage", label: "Kelola Absensi", description: "Mengelola rekap, izin, cuti, dan pengaturan absensi." },
+      { value: "user_management", label: "Pengguna", description: "Membuat, mengubah, dan menghapus user." },
+      { value: "hr_roles_permissions", label: "Role & Permission", description: "Mengatur hak akses tiap pengguna." }
+    ]
+  },
+  {
+    value: "settings_group",
+    label: "Settings",
+    description: "Profil perusahaan, notifikasi, integrasi, dan sistem.",
+    children: [
+      { value: "settings", label: "Profil Perusahaan", description: "Mengubah identitas dan kontak perusahaan." },
+      { value: "settings_notifications", label: "Notifikasi", description: "Mengatur preferensi notifikasi." },
+      { value: "settings_integrations", label: "Integrasi", description: "Mengatur API, analytics, dan koneksi eksternal." },
+      { value: "settings_system", label: "Sistem", description: "Mengatur konfigurasi sistem admin." }
+    ]
+  }
+];
+const ownerPermissions = [...new Set(accessOptions.flatMap((group) => group.children.map((item) => item.value)))];
 const defaultPermissionsByRole = {
-  ceo: ["view", "edit_leads", "delete_leads", "edit_investors", "delete_investors", "edit_quotations", "delete_quotations", "download_pdf", "settings", "automation", "activity_log", "user_management", "finance_access", "finance_manage_access", "finance_export", "supplier_access", "attendance_access", "documents_access", "analytics_access"],
-  cso: ["view", "edit_leads", "delete_leads", "edit_investors", "delete_investors", "edit_quotations", "delete_quotations", "download_pdf", "settings", "automation", "activity_log", "user_management", "finance_access", "finance_manage_access", "finance_export", "supplier_access", "attendance_access", "documents_access", "analytics_access"],
-  owner: ["view", "edit_leads", "delete_leads", "edit_investors", "delete_investors", "edit_quotations", "delete_quotations", "download_pdf", "settings", "automation", "activity_log", "user_management", "finance_access", "finance_manage_access", "finance_export", "supplier_access", "attendance_access", "documents_access", "analytics_access"],
-  finance: ["view", "download_pdf", "activity_log", "finance_access", "finance_manage_access", "finance_export", "documents_access"],
-  procurement: ["view", "edit_leads", "edit_quotations", "download_pdf", "activity_log", "documents_access"],
-  marketing: ["view", "edit_leads", "edit_quotations", "download_pdf", "activity_log", "analytics_access"],
-  hr: ["view", "activity_log", "user_management", "attendance_access"],
+  ceo: ownerPermissions,
+  cso: ownerPermissions,
+  owner: ownerPermissions,
+  finance: ["view", "download_pdf", "activity_log", "documents_access", "finance_access", "finance_cash_bank", "finance_sales", "finance_purchase", "finance_tax_legal", "finance_budget", "finance_reports", "finance_export", "finance_audit", "finance_manage_access"],
+  procurement: ["view", "edit_leads", "crm_buyers_view", "crm_buyers_manage", "edit_quotations", "download_pdf", "documents_access", "activity_log"],
+  marketing: ["view", "edit_leads", "crm_buyers_view", "edit_quotations", "download_pdf", "activity_log", "analytics_access"],
+  hr: ["view", "activity_log", "user_management", "hr_roles_permissions", "attendance_access", "hr_attendance_manage"],
   staff: ["view", "activity_log", "attendance_access"],
   viewer: ["view"]
 };
@@ -3269,18 +3363,29 @@ export default function AdminDashboard() {
   const currentUsername = String(adminProfile?.username || "").toLowerCase();
   const currentPermissions = adminProfile?.permissions?.length ? adminProfile.permissions : defaultPermissionsByRole[currentRole] || [];
   const hasAccess = (permission) => currentPermissions.includes(permission);
+  const hasAnyAccess = (permissions) => permissions.some((permission) => hasAccess(permission));
   const isExecutive = executiveRoleIds.includes(currentRole);
-  const canUseFinance = hasAccess("finance_access") && Boolean(finance);
-  const canViewSuppliers = supplierAccessUsernames.includes(currentUsername) || hasAccess("supplier_access");
+  const hasLegacySupplierAccess = supplierAccessUsernames.includes(currentUsername) || hasAccess("supplier_access");
+  const canUseFinance = hasAnyAccess(["finance_access", ...financeSubPermissionIds, "finance_manage_access", "finance_export"]) && Boolean(finance);
+  const canViewSuppliers = hasLegacySupplierAccess || hasAnyAccess(supplierPermissionIds);
+  const supplierPermissions = {
+    overview: hasLegacySupplierAccess || hasAccess("crm_suppliers_view"),
+    contacts: hasLegacySupplierAccess || hasAccess("crm_suppliers_contacts"),
+    capacity: hasLegacySupplierAccess || hasAccess("crm_suppliers_capacity"),
+    commercial: hasLegacySupplierAccess || hasAccess("crm_suppliers_commercial"),
+    manage: hasLegacySupplierAccess || hasAccess("crm_suppliers_manage"),
+    export: hasLegacySupplierAccess || hasAccess("crm_suppliers_export")
+  };
   const canDelete = isExecutive;
-  const canUseSettings = hasAccess("settings");
-  const canManageUsers = hasAccess("user_management");
+  const canUseSettings = hasAnyAccess(["settings", "settings_notifications", "settings_integrations", "settings_system"]);
+  const canManageUsers = hasAnyAccess(["user_management", "hr_roles_permissions"]);
   const canUseLeads = hasAccess("edit_leads");
-  const canUseQuotations = hasAccess("edit_quotations");
+  const canUseBuyers = hasAnyAccess(["crm_buyers_view", "crm_buyers_manage", "edit_leads"]);
+  const canUseQuotations = hasAnyAccess(["edit_quotations", "download_pdf"]);
   const canUseDocuments = hasAccess("documents_access");
   const canUseAnalytics = hasAccess("analytics_access");
   const canUseAttendance = hasAccess("attendance_access");
-  const canUseInvestors = hasAccess("edit_investors") || isExecutive;
+  const canUseInvestors = hasAnyAccess(["edit_investors", "investor_reports", "investor_dividends"]) || isExecutive;
   const todayKey = new Date().toISOString().slice(0, 10);
   const todayAttendance = attendanceRecords.filter((record) => String(record.attendance_date || record.created_at || "").slice(0, 10) === todayKey);
   const currentAttendance = todayAttendance.find((record) => record.username === adminProfile?.username);
@@ -3291,8 +3396,11 @@ export default function AdminDashboard() {
     notCheckedOut: todayAttendance.filter((record) => record.check_in_at && !record.check_out_at).length
   };
   const visibleModules = modules.filter((module) => {
-    if (module === "Leads" || module === "Buyers") {
+    if (module === "Leads") {
       return canUseLeads;
+    }
+    if (module === "Buyers") {
+      return canUseBuyers;
     }
     if (module === "Finance") {
       return canUseFinance;
@@ -3313,7 +3421,7 @@ export default function AdminDashboard() {
       return canUseInvestors;
     }
     if (module === "Settings") {
-      return isExecutive;
+      return canUseSettings;
     }
     if (module === "Users") {
       return canManageUsers;
@@ -3344,7 +3452,15 @@ export default function AdminDashboard() {
         if (item.module === "Users" && !canManageUsers) {
           return false;
         }
-        if ((item.module === "Leads" || item.module === "Buyers") && !canUseLeads) {
+        if (item.permission && !hasAccess(item.permission)) {
+          if (!(item.supplierOnly && hasLegacySupplierAccess)) {
+            return false;
+          }
+        }
+        if (item.module === "Leads" && !canUseLeads) {
+          return false;
+        }
+        if (item.module === "Buyers" && !canUseBuyers) {
           return false;
         }
         if (item.module === "Quotations" && !canUseQuotations) {
@@ -3367,7 +3483,7 @@ export default function AdminDashboard() {
 
       return items.length ? { ...group, items } : null;
     })
-    .filter(Boolean), [canManageUsers, canUseAnalytics, canUseAttendance, canUseDocuments, canUseFinance, canUseInvestors, canUseLeads, canUseQuotations, canUseSettings, canViewSuppliers, isExecutive]);
+    .filter(Boolean), [canManageUsers, canUseAnalytics, canUseAttendance, canUseBuyers, canUseDocuments, canUseFinance, canUseInvestors, canUseLeads, canUseQuotations, canUseSettings, canViewSuppliers, currentPermissions, hasLegacySupplierAccess]);
   const commandItems = useMemo(() => visibleSidebarGroups.flatMap((group) => group.items.map((item) => ({
     ...item,
     group: group.title
@@ -4775,6 +4891,7 @@ export default function AdminDashboard() {
               canDelete={canDelete}
               supplierDraft={supplierDraft}
               setSupplierDraft={setSupplierDraft}
+              supplierPermissions={supplierPermissions}
               supplierStatuses={supplierStatuses}
               saveSupplier={saveSupplier}
             />

@@ -70,7 +70,7 @@ function getQuickPrompts(role, permissions = []) {
   if (access.has("edit_leads")) {
     prompts.push("Tampilkan prospek baru hari ini", "Apa prospek yang perlu follow-up?");
   }
-  if (access.has("finance_access")) {
+  if (["finance_access", "finance_sales", "finance_reports", "finance_purchase"].some((permission) => access.has(permission))) {
     prompts.push("Cek invoice yang belum lunas", "Ringkas laporan finance bulan ini");
   }
   if (access.has("finance_manage_access")) {
@@ -82,7 +82,7 @@ function getQuickPrompts(role, permissions = []) {
   if (access.has("documents_access")) {
     prompts.push("Cek dokumen penting");
   }
-  if (access.has("supplier_access")) {
+  if (["supplier_access", "crm_suppliers_view", "crm_suppliers_capacity", "crm_suppliers_contacts"].some((permission) => access.has(permission))) {
     prompts.push("Cari ringkasan pemasok");
   }
 

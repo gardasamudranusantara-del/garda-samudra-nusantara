@@ -78,15 +78,25 @@ export function SuppliersModule({
   canDelete,
   supplierDraft,
   setSupplierDraft,
+  supplierPermissions = {},
   supplierStatuses,
   saveSupplier
 }) {
+  const canSeeContacts = Boolean(supplierPermissions.contacts);
+  const canSeeCapacity = Boolean(supplierPermissions.capacity);
+  const canSeeCommercial = Boolean(supplierPermissions.commercial);
+  const canManageSupplier = Boolean(supplierPermissions.manage);
+  const canExportSupplier = Boolean(supplierPermissions.export);
+  const hiddenText = "Tersembunyi";
+
   return (
     <section className="admin-grid">
       <div className="admin-panel admin-table-panel">
         <div className="admin-panel-header">
           <div><p>Database Pemasok</p><h2>Jaringan Sourcing</h2></div>
-          <button disabled={!filteredSuppliers.length} onClick={() => exportRowsCsv(`gsn-suppliers-${new Date().toISOString().slice(0, 10)}.csv`, ["Supplier", "Company", "Contact", "Country", "Products", "Capacity", "Payment Terms", "Status"], filteredSuppliers.map((item) => [item.supplier_name, item.company_name, item.contact_person, item.country, listToText(item.products), item.capacity, item.payment_terms, item.status]))} type="button">Ekspor CSV</button>
+          {canExportSupplier ? (
+            <button disabled={!filteredSuppliers.length} onClick={() => exportRowsCsv(`gsn-suppliers-${new Date().toISOString().slice(0, 10)}.csv`, ["Supplier", "Company", "Contact", "Country", "Products", "Capacity", "Payment Terms", "Status"], filteredSuppliers.map((item) => [item.supplier_name, item.company_name, canSeeContacts ? item.contact_person : hiddenText, item.country, canSeeCapacity ? listToText(item.products) : hiddenText, canSeeCapacity ? item.capacity : hiddenText, canSeeCommercial ? item.payment_terms : hiddenText, item.status]))} type="button">Ekspor CSV</button>
+          ) : null}
         </div>
         <div className="admin-toolbar"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari pemasok, produk, kategori, kota..." /></div>
         <div className="admin-table-wrap">
@@ -95,13 +105,13 @@ export function SuppliersModule({
             <tbody>
               {filteredSuppliers.map((item) => (
                 <tr key={item.id}>
-                  <td data-label="Supplier"><strong>{item.company_name || item.supplier_name || "-"}</strong><span>{item.contact_person || item.email || "-"}</span></td>
+                  <td data-label="Supplier"><strong>{item.company_name || item.supplier_name || "-"}</strong><span>{canSeeContacts ? (item.contact_person || item.email || "-") : hiddenText}</span></td>
                   <td data-label="Location">{[item.city, item.country].filter(Boolean).join(", ") || "-"}</td>
-                  <td data-label="Products">{listToText(item.products) || listToText(item.product_categories) || "-"}</td>
-                  <td data-label="Capacity">{item.capacity || "-"}</td>
-                  <td data-label="Rating">{item.quality_rating ? `${item.quality_rating}/5` : "-"}</td>
+                  <td data-label="Products">{canSeeCapacity ? (listToText(item.products) || listToText(item.product_categories) || "-") : hiddenText}</td>
+                  <td data-label="Capacity">{canSeeCapacity ? (item.capacity || "-") : hiddenText}</td>
+                  <td data-label="Rating">{canSeeCapacity ? (item.quality_rating ? `${item.quality_rating}/5` : "-") : hiddenText}</td>
                   <td data-label="Status">{item.status || "-"}</td>
-                  <td data-label="Actions"><div className="admin-table-actions"><button onClick={() => openModal("supplier", item)} type="button">Edit</button>{canDelete ? <button className="danger" onClick={() => openDeleteModal("supplier", item)} type="button">Hapus</button> : null}</div></td>
+                  <td data-label="Actions"><div className="admin-table-actions">{canManageSupplier ? <button onClick={() => openModal("supplier", item)} type="button">Edit</button> : null}{canDelete && canManageSupplier ? <button className="danger" onClick={() => openDeleteModal("supplier", item)} type="button">Hapus</button> : null}{!canManageSupplier ? <span>{hiddenText}</span> : null}</div></td>
                 </tr>
               ))}
             </tbody>
@@ -109,7 +119,7 @@ export function SuppliersModule({
           {!filteredSuppliers.length ? <p className="admin-empty table">Belum ada pemasok tersimpan. Simpan kontak sourcing, kapasitas, termin pembayaran, dan catatan kualitas di sini.</p> : null}
         </div>
       </div>
-      <aside className="admin-panel admin-detail">
+      {canManageSupplier ? <aside className="admin-panel admin-detail">
         <div className="admin-panel-header"><div><p>Tambah Pemasok</p><h2>Profil Supplier</h2></div></div>
         <div className="admin-settings-form compact">
           <label>Nama Supplier<input value={supplierDraft.supplier_name} onChange={(event) => setSupplierDraft((current) => ({ ...current, supplier_name: event.target.value }))} /></label>
@@ -124,7 +134,12 @@ export function SuppliersModule({
           <label>Catatan<textarea value={supplierDraft.notes} onChange={(event) => setSupplierDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
           <button onClick={saveSupplier} type="button">Simpan Supplier</button>
         </div>
-      </aside>
+      </aside> : (
+        <aside className="admin-panel admin-detail">
+          <div className="admin-panel-header"><div><p>Akses Pemasok</p><h2>Mode Lihat</h2></div></div>
+          <p className="admin-empty">Akun ini hanya dapat melihat bagian pemasok yang dipilih oleh owner. Tambah, edit, export, kontak, kapasitas, dan data komersial mengikuti sub-permission masing-masing.</p>
+        </aside>
+      )}
     </section>
   );
 }

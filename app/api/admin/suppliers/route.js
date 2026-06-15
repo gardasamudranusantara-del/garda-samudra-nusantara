@@ -1,4 +1,4 @@
-import { requireSupplierAccess } from "@/lib/adminAuth";
+import { requireSupplierManageAccess } from "@/lib/adminAuth";
 import { insertAdminActivity, insertSupplier } from "@/lib/gsnDataStore";
 
 function cleanList(value) {
@@ -9,7 +9,7 @@ function cleanList(value) {
 }
 
 export async function POST(request) {
-  const permission = await requireSupplierAccess(request);
+  const permission = await requireSupplierManageAccess(request);
   if (!permission.ok) {
     return Response.json({ message: permission.message }, { status: permission.status });
   }

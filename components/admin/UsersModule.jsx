@@ -15,28 +15,88 @@ export default function UsersModule({
   setUserDraft,
   saveUserAccount
 }) {
+  function permissionValues(permission) {
+    return permission.children?.length ? permission.children.map((child) => child.value) : [permission.value];
+  }
+
   function toggleDraftPermission(permission) {
+    const values = permissionValues(permission);
     setUserDraft((current) => {
       const permissions = new Set(current.permissions || []);
-      if (permissions.has(permission)) {
-        permissions.delete(permission);
-      } else {
-        permissions.add(permission);
-      }
+      const shouldRemove = values.every((value) => permissions.has(value));
+      values.forEach((value) => {
+        if (value === "view") {
+          permissions.add(value);
+        } else if (shouldRemove) {
+          permissions.delete(value);
+        } else {
+          permissions.add(value);
+        }
+      });
 
       return { ...current, permissions: ["view", ...Array.from(permissions).filter((item) => item !== "view")] };
     });
   }
 
   function toggleAccountPermission(account, permission) {
+    const values = permissionValues(permission);
     const permissions = new Set(account.permissions || []);
-    if (permissions.has(permission)) {
-      permissions.delete(permission);
-    } else {
-      permissions.add(permission);
-    }
+    const shouldRemove = values.every((value) => permissions.has(value));
+    values.forEach((value) => {
+      if (value === "view") {
+        permissions.add(value);
+      } else if (shouldRemove) {
+        permissions.delete(value);
+      } else {
+        permissions.add(value);
+      }
+    });
 
     updateUserAccount(account, { permissions: ["view", ...Array.from(permissions).filter((item) => item !== "view")] });
+  }
+
+  function isPermissionChecked(permissions, permission) {
+    const values = permissionValues(permission);
+    return values.every((value) => (permissions || []).includes(value));
+  }
+
+  function renderPermissionEditor(permissions, onToggle, keyPrefix = "permission") {
+    return (
+      <div className="admin-permission-grid nested">
+        {accessOptions.map((permission) => (
+          <div key={`${keyPrefix}-${permission.value}`} className="admin-permission-group">
+            <label className="admin-permission-check group">
+              <input
+                checked={isPermissionChecked(permissions, permission)}
+                onChange={() => onToggle(permission)}
+                type="checkbox"
+              />
+              <span>
+                <strong>{permission.label}</strong>
+                <small>{permission.description}</small>
+              </span>
+            </label>
+            {permission.children?.length ? (
+              <div className="admin-permission-subgrid">
+                {permission.children.map((child) => (
+                  <label key={`${keyPrefix}-${permission.value}-${child.value}`} className="admin-permission-check sub">
+                    <input
+                      checked={(permissions || []).includes(child.value)}
+                      onChange={() => onToggle(child)}
+                      type="checkbox"
+                    />
+                    <span>
+                      <strong>{child.label}</strong>
+                      <small>{child.description}</small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (
@@ -68,21 +128,7 @@ export default function UsersModule({
                     {account.is_active === false ? "Aktifkan" : "Nonaktifkan"}
                   </button>
                   <button className="danger" onClick={() => deleteUserAccount(account)} type="button">Hapus</button>
-                  <div className="admin-permission-grid">
-                    {accessOptions.map((permission) => (
-                      <label key={`${account.username}-${permission.value}`} className="admin-permission-check">
-                        <input
-                          checked={(account.permissions || []).includes(permission.value)}
-                          onChange={() => toggleAccountPermission(account, permission.value)}
-                          type="checkbox"
-                        />
-                        <span>
-                          <strong>{permission.label}</strong>
-                          <small>{permission.description}</small>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+                  {renderPermissionEditor(account.permissions || [], (permission) => toggleAccountPermission(account, permission), account.username)}
                 </div>
               ) : (
                 <small>Akun environment. Ubah akun ini melalui env Vercel jika diperlukan.</small>
@@ -110,21 +156,7 @@ export default function UsersModule({
           </label>
           <div className="admin-permission-editor">
             <p>Akses yang ditampilkan</p>
-            <div className="admin-permission-grid">
-              {accessOptions.map((permission) => (
-                <label key={permission.value} className="admin-permission-check">
-                  <input
-                    checked={(userDraft.permissions || []).includes(permission.value)}
-                    onChange={() => toggleDraftPermission(permission.value)}
-                    type="checkbox"
-                  />
-                  <span>
-                    <strong>{permission.label}</strong>
-                    <small>{permission.description}</small>
-                  </span>
-                </label>
-              ))}
-            </div>
+            {renderPermissionEditor(userDraft.permissions || [], toggleDraftPermission, "draft")}
           </div>
           <button onClick={saveUserAccount} type="button">Simpan User</button>
         </div>
