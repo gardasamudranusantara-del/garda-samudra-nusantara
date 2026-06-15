@@ -1269,6 +1269,8 @@ function printQuotation(lead, draft) {
 
 export default function AdminDashboard() {
   const [credentials, setCredentials] = useState({ username: "", password: "" });
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [savedCredentials, setSavedCredentials] = useState(null);
   const [adminProfile, setAdminProfile] = useState(null);
   const [data, setData] = useState(null);
@@ -4176,42 +4178,114 @@ export default function AdminDashboard() {
       ) : null}
 
       {!savedCredentials ? (
-        <section className="admin-login">
-          <div className="admin-login-brand">
-            <img alt="Garda Samudra Nusantara" src="/logos/gsn-admin-logo.png" />
+        <section
+          className="admin-login"
+          aria-label="Portal login internal GSN"
+          onPointerMove={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            event.currentTarget.style.setProperty("--mouse-x", `${((event.clientX - rect.left) / rect.width) * 100}%`);
+            event.currentTarget.style.setProperty("--mouse-y", `${((event.clientY - rect.top) / rect.height) * 100}%`);
+          }}
+        >
+          <div className="admin-login-atmosphere" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
+            <span />
           </div>
-          <div className="admin-login-copy">
-            <p>GSN Admin</p>
-            <h2>Selamat Datang</h2>
-            <span className="admin-security-note">Portal internal GSN. Hanya untuk akses resmi.</span>
-            <form onSubmit={handleLogin}>
-              <label>
-                Nama Pengguna
-                <input
-                  autoComplete="username"
-                  value={credentials.username}
-                  onChange={(event) => setCredentials((current) => ({ ...current, username: event.target.value }))}
-                  placeholder="Masukkan username"
-                  type="text"
-                />
-              </label>
-              <label>
-                Kata Sandi
-                <input
-                  autoComplete="current-password"
-                  value={credentials.password}
-                  onChange={(event) => setCredentials((current) => ({ ...current, password: event.target.value }))}
-                  placeholder="Masukkan password"
-                  type="password"
-                />
-              </label>
-              <button disabled={!credentials.username || !credentials.password || loading} type="submit">{loading ? "Memproses..." : "Masuk"}</button>
-            </form>
+          <div className="admin-login-left">
+            <div className="admin-login-brand">
+              <img alt="Garda Samudra Nusantara" src="/logos/gsn-admin-logo.png" />
+              <div>
+                <strong>GARDA</strong>
+                <strong>SAMUDRA</strong>
+                <strong>NUSANTARA</strong>
+              </div>
+            </div>
+            <div className="admin-login-copy">
+              <p><span /> PORTAL INTERNAL GSN</p>
+              <h2>Connecting Global Trade.<br /><em>Empowering Local Growth.</em></h2>
+              <span>Kelola prospek, pembeli, pemasok, keuangan, dokumen, investor, dan operasional perusahaan dalam satu platform terpadu.</span>
+            </div>
+            <div className="admin-login-vessel" aria-hidden="true" />
+            <div className="admin-login-features">
+              {[
+                ["Aman & Terpercaya", "Data perusahaan terlindungi dengan baik."],
+                ["Real-time Analytics", "Keputusan lebih cepat berdasarkan data akurat."],
+                ["All In One Platform", "Semua kebutuhan bisnis dalam satu sistem."]
+              ].map(([title, text], index) => (
+                <article key={title} style={{ "--delay": `${index * 120}ms` }}>
+                  <span>{index === 0 ? "01" : index === 1 ? "02" : "03"}</span>
+                  <strong>{title}</strong>
+                  <small>{text}</small>
+                </article>
+              ))}
+            </div>
           </div>
-          {notice ? <strong>{notice}</strong> : null}
+          <div className="admin-login-divider" aria-hidden="true" />
+          <div className="admin-login-right">
+            <div className="admin-login-card">
+              <div className="admin-login-lock" aria-hidden="true">GSN</div>
+              <p>PORTAL INTERNAL GSN</p>
+              <h2>Selamat Datang Kembali</h2>
+              <span className="admin-security-note">Silakan masuk untuk melanjutkan ke dashboard GSN.</span>
+              <form onSubmit={handleLogin}>
+                <label className={credentials.username ? "is-filled" : ""}>
+                  <span>Email atau Username</span>
+                  <div className="admin-login-input">
+                    <i aria-hidden="true">@</i>
+                    <input
+                      aria-label="Email atau username"
+                      autoComplete="username"
+                      value={credentials.username}
+                      onChange={(event) => setCredentials((current) => ({ ...current, username: event.target.value }))}
+                      placeholder="Masukkan email atau username"
+                      type="text"
+                    />
+                  </div>
+                </label>
+                <label className={credentials.password ? "is-filled" : ""}>
+                  <span>Password</span>
+                  <div className="admin-login-input">
+                    <i aria-hidden="true">#</i>
+                    <input
+                      aria-label="Password"
+                      autoComplete="current-password"
+                      value={credentials.password}
+                      onChange={(event) => setCredentials((current) => ({ ...current, password: event.target.value }))}
+                      placeholder="Masukkan password"
+                      type={passwordVisible ? "text" : "password"}
+                    />
+                    <button aria-label={passwordVisible ? "Sembunyikan password" : "Tampilkan password"} onClick={() => setPasswordVisible((current) => !current)} type="button">
+                      {passwordVisible ? "Tutup" : "Lihat"}
+                    </button>
+                  </div>
+                </label>
+                <div className="admin-login-options">
+                  <label>
+                    <input checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} type="checkbox" />
+                    <span>Ingat saya</span>
+                  </label>
+                  <a href="mailto:gardasamudranusantara@gmail.com?subject=GSN%20Admin%20Access%20Help">Lupa Password?</a>
+                </div>
+                <button className="admin-login-submit" disabled={!credentials.username || !credentials.password || loading} type="submit">
+                  {loading ? <span className="admin-login-spinner" aria-hidden="true" /> : <span aria-hidden="true">[]</span>}
+                  {loading ? "Memproses..." : "Masuk ke Dashboard"}
+                  <b aria-hidden="true">-&gt;</b>
+                </button>
+              </form>
+              <div className="admin-login-notice">
+                <strong>i</strong>
+                <p>Akses hanya diberikan oleh Administrator GSN. Jika membutuhkan akun atau mengalami kendala akses, silakan hubungi administrator perusahaan.</p>
+              </div>
+              {notice ? <strong className="admin-login-error">{notice}</strong> : null}
+              <small className="admin-login-footer">(c) 2026 Garda Samudra Nusantara. Internal Operating System.</small>
+            </div>
+          </div>
         </section>
       ) : null}
-
       {data ? (
         <>
           {!data.configured ? (
