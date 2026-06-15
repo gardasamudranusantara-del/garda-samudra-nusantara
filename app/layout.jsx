@@ -1,4 +1,5 @@
 import "./globals.css";
+import "./admin/admin.css";
 import Script from "next/script";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.gardasamudranusantara.com";

@@ -4,7 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import AIEmployeeWidget from "@/components/ai-employee/AIEmployeeWidget";
 import ActivityModule from "@/components/admin/ActivityModule";
 import AnalyticsModule from "@/components/admin/AnalyticsModule";
+import AttendanceModule from "@/components/admin/AttendanceModule";
+import { BuyersModule, DocumentsModule, SuppliersModule } from "@/components/admin/CrmModule";
+import FinanceModule from "@/components/admin/FinanceModule";
 import OwnerSummary from "@/components/admin/OwnerSummary";
+import UsersModule from "@/components/admin/UsersModule";
 
 const statuses = ["New", "Contacted", "Negotiation", "Quotation Sent", "Converted", "Closed"];
 const priorities = ["All", "High", "Medium", "Low"];
@@ -4453,145 +4457,58 @@ export default function AdminDashboard() {
           </section> : null}
 
           {activeModule === "Buyers" ? (
-            <section className="admin-grid">
-              <div className="admin-panel admin-table-panel">
-                <div className="admin-panel-header">
-                  <div><p>Database Pembeli</p><h2>Profil Buyer Tetap</h2></div>
-                  <button disabled={!filteredBuyerProfiles.length} onClick={() => exportRowsCsv(`gsn-buyers-${new Date().toISOString().slice(0, 10)}.csv`, ["Buyer", "Company", "Email", "WhatsApp", "Country", "Products", "Stage", "Relationship", "Owner"], filteredBuyerProfiles.map((item) => [item.buyer_name, item.company_name, item.email, item.whatsapp, item.country, listToText(item.products), item.buyer_stage, item.relationship_status, item.assigned_to]))} type="button">Ekspor CSV</button>
-                </div>
-                <div className="admin-toolbar">
-                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari buyer, perusahaan, produk, negara..." />
-                </div>
-                <div className="admin-table-wrap">
-                  <table className="admin-mobile-cards">
-                    <thead><tr><th>Buyer</th><th>Country</th><th>Products</th><th>Stage</th><th>Relationship</th><th>Owner</th><th>Actions</th></tr></thead>
-                    <tbody>
-                      {filteredBuyerProfiles.map((item) => (
-                        <tr key={item.id}>
-                          <td data-label="Buyer"><strong>{item.company_name || item.buyer_name || "-"}</strong><span>{item.buyer_name || item.email || "-"}</span></td>
-                          <td data-label="Country">{item.country || "-"}</td>
-                          <td data-label="Products">{listToText(item.products) || "-"}</td>
-                          <td data-label="Stage">{item.buyer_stage || "-"}</td>
-                          <td data-label="Relationship">{item.relationship_status || "-"}</td>
-                          <td data-label="Owner">{labelAssignee(item.assigned_to)}</td>
-                          <td data-label="Actions"><div className="admin-table-actions"><button onClick={() => openModal("buyerProfile", item)} type="button">Edit</button>{canDelete ? <button className="danger" onClick={() => openDeleteModal("buyerProfile", item)} type="button">Hapus</button> : null}</div></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {!filteredBuyerProfiles.length ? <p className="admin-empty table">Belum ada profil buyer. Tambahkan buyer penting setelah kualifikasi.</p> : null}
-                </div>
-              </div>
-              <aside className="admin-panel admin-detail">
-                <div className="admin-panel-header"><div><p>Tambah Pembeli</p><h2>Profil Buyer</h2></div></div>
-                <div className="admin-settings-form compact">
-                  <label>Nama Buyer<input value={buyerDraft.buyer_name} onChange={(event) => setBuyerDraft((current) => ({ ...current, buyer_name: event.target.value }))} /></label>
-                  <label>Perusahaan<input value={buyerDraft.company_name} onChange={(event) => setBuyerDraft((current) => ({ ...current, company_name: event.target.value }))} /></label>
-                  <label>Email<input value={buyerDraft.email} onChange={(event) => setBuyerDraft((current) => ({ ...current, email: event.target.value }))} /></label>
-                  <label>WhatsApp<input value={buyerDraft.whatsapp} onChange={(event) => setBuyerDraft((current) => ({ ...current, whatsapp: event.target.value }))} /></label>
-                  <label>Negara<input value={buyerDraft.country} onChange={(event) => setBuyerDraft((current) => ({ ...current, country: event.target.value }))} /></label>
-                  <label>Produk<input value={buyerDraft.products} onChange={(event) => setBuyerDraft((current) => ({ ...current, products: event.target.value }))} placeholder="Coconut charcoal, spices..." /></label>
-                  <label>Stage<select value={buyerDraft.buyer_stage} onChange={(event) => setBuyerDraft((current) => ({ ...current, buyer_stage: event.target.value }))}>{buyerStages.map((stage) => <option key={stage}>{stage}</option>)}</select></label>
-                  <label>Relationship<select value={buyerDraft.relationship_status} onChange={(event) => setBuyerDraft((current) => ({ ...current, relationship_status: event.target.value }))}>{relationshipStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
-                  <label>Ditugaskan Ke<select value={buyerDraft.assigned_to} onChange={(event) => setBuyerDraft((current) => ({ ...current, assigned_to: event.target.value }))}><option value="">Belum ditugaskan</option>{assignableUsers.map((user) => <option key={user}>{user}</option>)}</select></label>
-                  <label>Catatan<textarea value={buyerDraft.notes} onChange={(event) => setBuyerDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
-                  <button onClick={saveBuyerProfile} type="button">Simpan Buyer</button>
-                </div>
-              </aside>
-            </section>
+            <BuyersModule
+              filteredBuyerProfiles={filteredBuyerProfiles}
+              exportRowsCsv={exportRowsCsv}
+              query={query}
+              setQuery={setQuery}
+              listToText={listToText}
+              labelAssignee={labelAssignee}
+              openModal={openModal}
+              openDeleteModal={openDeleteModal}
+              canDelete={canDelete}
+              buyerDraft={buyerDraft}
+              setBuyerDraft={setBuyerDraft}
+              buyerStages={buyerStages}
+              relationshipStatuses={relationshipStatuses}
+              assignableUsers={assignableUsers}
+              saveBuyerProfile={saveBuyerProfile}
+            />
           ) : null}
 
           {activeModule === "Suppliers" ? (
-            <section className="admin-grid">
-              <div className="admin-panel admin-table-panel">
-                <div className="admin-panel-header">
-                  <div><p>Database Pemasok</p><h2>Jaringan Sourcing</h2></div>
-                  <button disabled={!filteredSuppliers.length} onClick={() => exportRowsCsv(`gsn-suppliers-${new Date().toISOString().slice(0, 10)}.csv`, ["Supplier", "Company", "Contact", "Country", "Products", "Capacity", "Payment Terms", "Status"], filteredSuppliers.map((item) => [item.supplier_name, item.company_name, item.contact_person, item.country, listToText(item.products), item.capacity, item.payment_terms, item.status]))} type="button">Ekspor CSV</button>
-                </div>
-                <div className="admin-toolbar"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari pemasok, produk, kategori, kota..." /></div>
-                <div className="admin-table-wrap">
-                  <table className="admin-mobile-cards">
-                    <thead><tr><th>Supplier</th><th>Location</th><th>Products</th><th>Capacity</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
-                    <tbody>
-                      {filteredSuppliers.map((item) => (
-                        <tr key={item.id}>
-                          <td data-label="Supplier"><strong>{item.company_name || item.supplier_name || "-"}</strong><span>{item.contact_person || item.email || "-"}</span></td>
-                          <td data-label="Location">{[item.city, item.country].filter(Boolean).join(", ") || "-"}</td>
-                          <td data-label="Products">{listToText(item.products) || listToText(item.product_categories) || "-"}</td>
-                          <td data-label="Capacity">{item.capacity || "-"}</td>
-                          <td data-label="Rating">{item.quality_rating ? `${item.quality_rating}/5` : "-"}</td>
-                          <td data-label="Status">{item.status || "-"}</td>
-                          <td data-label="Actions"><div className="admin-table-actions"><button onClick={() => openModal("supplier", item)} type="button">Edit</button>{canDelete ? <button className="danger" onClick={() => openDeleteModal("supplier", item)} type="button">Hapus</button> : null}</div></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {!filteredSuppliers.length ? <p className="admin-empty table">Belum ada pemasok tersimpan. Simpan kontak sourcing, kapasitas, termin pembayaran, dan catatan kualitas di sini.</p> : null}
-                </div>
-              </div>
-              <aside className="admin-panel admin-detail">
-                <div className="admin-panel-header"><div><p>Create Supplier</p><h2>Supplier Profile</h2></div></div>
-                <div className="admin-settings-form compact">
-                  <label>Supplier Name<input value={supplierDraft.supplier_name} onChange={(event) => setSupplierDraft((current) => ({ ...current, supplier_name: event.target.value }))} /></label>
-                  <label>Company<input value={supplierDraft.company_name} onChange={(event) => setSupplierDraft((current) => ({ ...current, company_name: event.target.value }))} /></label>
-                  <label>Contact Person<input value={supplierDraft.contact_person} onChange={(event) => setSupplierDraft((current) => ({ ...current, contact_person: event.target.value }))} /></label>
-                  <label>WhatsApp<input value={supplierDraft.whatsapp} onChange={(event) => setSupplierDraft((current) => ({ ...current, whatsapp: event.target.value }))} /></label>
-                  <label>City<input value={supplierDraft.city} onChange={(event) => setSupplierDraft((current) => ({ ...current, city: event.target.value }))} /></label>
-                  <label>Categories<input value={supplierDraft.product_categories} onChange={(event) => setSupplierDraft((current) => ({ ...current, product_categories: event.target.value }))} placeholder="Spices, charcoal..." /></label>
-                  <label>Products<input value={supplierDraft.products} onChange={(event) => setSupplierDraft((current) => ({ ...current, products: event.target.value }))} /></label>
-                  <label>Capacity<input value={supplierDraft.capacity} onChange={(event) => setSupplierDraft((current) => ({ ...current, capacity: event.target.value }))} placeholder="10 MT/month" /></label>
-                  <label>Status<select value={supplierDraft.status} onChange={(event) => setSupplierDraft((current) => ({ ...current, status: event.target.value }))}>{supplierStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
-                  <label>Notes<textarea value={supplierDraft.notes} onChange={(event) => setSupplierDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
-                  <button onClick={saveSupplier} type="button">Save Supplier</button>
-                </div>
-              </aside>
-            </section>
+            <SuppliersModule
+              filteredSuppliers={filteredSuppliers}
+              exportRowsCsv={exportRowsCsv}
+              query={query}
+              setQuery={setQuery}
+              listToText={listToText}
+              openModal={openModal}
+              openDeleteModal={openDeleteModal}
+              canDelete={canDelete}
+              supplierDraft={supplierDraft}
+              setSupplierDraft={setSupplierDraft}
+              supplierStatuses={supplierStatuses}
+              saveSupplier={saveSupplier}
+            />
           ) : null}
 
           {activeModule === "Documents" ? (
-            <section className="admin-grid">
-              <div className="admin-panel admin-table-panel">
-                <div className="admin-panel-header">
-                  <div><p>Document Management</p><h2>Contracts, Certificates, and Trade Files</h2></div>
-                  <button disabled={!filteredBusinessDocuments.length} onClick={() => exportRowsCsv(`gsn-documents-${new Date().toISOString().slice(0, 10)}.csv`, ["Type", "Title", "Related", "Status", "Expiry", "Owner", "URL"], filteredBusinessDocuments.map((item) => [item.document_type, item.title, `${item.related_type || ""} ${item.related_name || ""}`.trim(), item.status, item.expiry_date, item.owner, item.file_url]))} type="button">Export CSV</button>
-                </div>
-                <div className="admin-toolbar"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search document, buyer, supplier, owner..." /></div>
-                <div className="admin-table-wrap">
-                  <table className="admin-mobile-cards">
-                    <thead><tr><th>Document</th><th>Related</th><th>Status</th><th>Expiry</th><th>Owner</th><th>File</th><th>Actions</th></tr></thead>
-                    <tbody>
-                      {filteredBusinessDocuments.map((item) => (
-                        <tr key={item.id}>
-                          <td data-label="Document"><strong>{item.title || "-"}</strong><span>{item.document_type || "-"}</span></td>
-                          <td data-label="Related">{[item.related_type, item.related_name].filter(Boolean).join(": ") || "-"}</td>
-                          <td data-label="Status">{item.status || "-"}</td>
-                          <td data-label="Expiry">{item.expiry_date ? formatDate(item.expiry_date) : "-"}</td>
-                          <td data-label="Owner">{item.owner || item.created_by || "-"}</td>
-                          <td data-label="File">{item.file_url ? <a href={item.file_url} target="_blank" rel="noreferrer">Open</a> : "-"}</td>
-                          <td data-label="Actions"><div className="admin-table-actions"><button onClick={() => openModal("businessDocument", item)} type="button">Edit</button>{canDelete ? <button className="danger" onClick={() => openDeleteModal("businessDocument", item)} type="button">Delete</button> : null}</div></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {!filteredBusinessDocuments.length ? <p className="admin-empty table">No documents saved yet. Store contracts, export certificates, payment proofs, and legal records here.</p> : null}
-                </div>
-              </div>
-              <aside className="admin-panel admin-detail">
-                <div className="admin-panel-header"><div><p>Add Document</p><h2>Business File</h2></div></div>
-                <div className="admin-settings-form compact">
-                  <label>Type<select value={documentDraft.document_type} onChange={(event) => setDocumentDraft((current) => ({ ...current, document_type: event.target.value }))}>{documentTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
-                  <label>Title<input value={documentDraft.title} onChange={(event) => setDocumentDraft((current) => ({ ...current, title: event.target.value }))} /></label>
-                  <label>Related Type<input value={documentDraft.related_type} onChange={(event) => setDocumentDraft((current) => ({ ...current, related_type: event.target.value }))} placeholder="Buyer / Supplier / Finance" /></label>
-                  <label>Related Name<input value={documentDraft.related_name} onChange={(event) => setDocumentDraft((current) => ({ ...current, related_name: event.target.value }))} /></label>
-                  <label>File URL<input value={documentDraft.file_url} onChange={(event) => setDocumentDraft((current) => ({ ...current, file_url: event.target.value }))} placeholder="Google Drive, Supabase, or signed URL" /></label>
-                  <label>Status<select value={documentDraft.status} onChange={(event) => setDocumentDraft((current) => ({ ...current, status: event.target.value }))}>{documentStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
-                  <label>Expiry Date<input type="date" value={documentDraft.expiry_date} onChange={(event) => setDocumentDraft((current) => ({ ...current, expiry_date: event.target.value }))} /></label>
-                  <label>Owner<input value={documentDraft.owner} onChange={(event) => setDocumentDraft((current) => ({ ...current, owner: event.target.value }))} /></label>
-                  <label>Notes<textarea value={documentDraft.notes} onChange={(event) => setDocumentDraft((current) => ({ ...current, notes: event.target.value }))} /></label>
-                  <button onClick={saveBusinessDocument} type="button">Save Document</button>
-                </div>
-              </aside>
-            </section>
+            <DocumentsModule
+              filteredBusinessDocuments={filteredBusinessDocuments}
+              exportRowsCsv={exportRowsCsv}
+              query={query}
+              setQuery={setQuery}
+              formatDate={formatDate}
+              openModal={openModal}
+              openDeleteModal={openDeleteModal}
+              canDelete={canDelete}
+              documentDraft={documentDraft}
+              setDocumentDraft={setDocumentDraft}
+              documentTypes={documentTypes}
+              documentStatuses={documentStatuses}
+              saveBusinessDocument={saveBusinessDocument}
+            />
           ) : null}
 
           {activeModule === "Investors" ? (
@@ -4763,7 +4680,7 @@ export default function AdminDashboard() {
           ) : null}
 
           {activeModule === "Finance" && canUseFinance ? (
-            <section className={`admin-finance-grid finance-view-${financeView} ${showFinanceDetail ? "finance-expanded" : "finance-collapsed"}`}>
+            <FinanceModule financeView={financeView} showFinanceDetail={showFinanceDetail}>
               <div className="admin-panel wide">
                 <div className="admin-panel-header">
                   <div>
@@ -6082,123 +5999,23 @@ export default function AdminDashboard() {
                   {!latestFinanceActivities.length ? <p className="admin-empty">No finance audit activity found for this filter.</p> : null}
                 </div>
               </div>
-            </section>
+            </FinanceModule>
           ) : null}
 
           {activeModule === "Attendance" ? (
-            <section className="admin-attendance-grid">
-              <div className="admin-panel admin-attendance-hero">
-                <div className="admin-panel-header">
-                  <div>
-                    <p>Attendance</p>
-                    <h2>Daily Staff Check-In</h2>
-                  </div>
-                  <span className={`admin-priority ${currentAttendance?.check_in_at ? "medium" : "low"}`}>
-                    {currentAttendance?.check_in_at ? "Checked In" : "Not Checked In"}
-                  </span>
-                </div>
-                <div className="admin-attendance-actions">
-                  <button onClick={() => saveAttendance("check_in")} type="button">Check In</button>
-                  <button className="ghost" disabled={!currentAttendance?.check_in_at} onClick={() => saveAttendance("check_out")} type="button">Check Out</button>
-                </div>
-                <div className="admin-form-grid attendance">
-                  <label>
-                    Status
-                    <select value={attendanceDraft.status} onChange={(event) => setAttendanceDraft((current) => ({ ...current, status: event.target.value }))}>
-                      {attendanceStatuses.map((status) => <option key={status}>{status}</option>)}
-                    </select>
-                  </label>
-                  <label>
-                    Work Mode
-                    <select value={attendanceDraft.work_mode} onChange={(event) => setAttendanceDraft((current) => ({ ...current, work_mode: event.target.value }))}>
-                      {attendanceWorkModes.map((mode) => <option key={mode}>{mode}</option>)}
-                    </select>
-                  </label>
-                  <label>
-                    Location
-                    <input value={attendanceDraft.location} onChange={(event) => setAttendanceDraft((current) => ({ ...current, location: event.target.value }))} placeholder="Office, remote city, buyer visit..." />
-                  </label>
-                  <label className="wide">
-                    Notes
-                    <textarea value={attendanceDraft.notes} onChange={(event) => setAttendanceDraft((current) => ({ ...current, notes: event.target.value }))} placeholder="Daily work note, visit agenda, permission reason..." />
-                  </label>
-                </div>
-                <div className="admin-attendance-current">
-                  <article><span>Today</span><strong>{todayKey}</strong></article>
-                  <article><span>Check In</span><strong>{formatDate(currentAttendance?.check_in_at)}</strong></article>
-                  <article><span>Check Out</span><strong>{formatDate(currentAttendance?.check_out_at)}</strong></article>
-                </div>
-              </div>
-
-              <div className="admin-panel">
-                <div className="admin-panel-header compact"><div><p>Today Summary</p><h2>Team Attendance</h2></div></div>
-                <div className="admin-attendance-metrics">
-                  <article><span>Total Today</span><strong>{attendanceSummary.totalToday}</strong></article>
-                  <article><span>Present / Remote</span><strong>{attendanceSummary.present}</strong></article>
-                  <article><span>Permission</span><strong>{attendanceSummary.permission}</strong></article>
-                  <article><span>Not Checked Out</span><strong>{attendanceSummary.notCheckedOut}</strong></article>
-                </div>
-              </div>
-
-              <div className="admin-panel admin-table-panel wide">
-                <div className="admin-panel-header">
-                  <div>
-                    <p>Attendance Log</p>
-                    <h2>Recent Records</h2>
-                  </div>
-                  <button
-                    disabled={!attendanceRecords.length}
-                    onClick={() => exportRowsCsv(
-                      `gsn-attendance-${new Date().toISOString().slice(0, 10)}.csv`,
-                      ["Date", "Username", "Role", "Status", "Work Mode", "Check In", "Check Out", "Location", "Notes"],
-                      attendanceRecords.map((record) => [
-                        record.attendance_date || "",
-                        record.username || "",
-                        record.role || "",
-                        record.status || "",
-                        record.work_mode || "",
-                        record.check_in_at || "",
-                        record.check_out_at || "",
-                        record.location || "",
-                        record.notes || ""
-                      ])
-                    )}
-                    type="button"
-                  >
-                    Export CSV
-                  </button>
-                </div>
-                <div className="admin-table-wrap">
-                  <table className="admin-mobile-cards attendance">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>User</th>
-                        <th>Status</th>
-                        <th>Work Mode</th>
-                        <th>Check In</th>
-                        <th>Check Out</th>
-                        <th>Location</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {attendanceRecords.map((record) => (
-                        <tr key={record.id}>
-                          <td data-label="Date">{record.attendance_date || "-"}</td>
-                          <td data-label="User"><strong>{record.username || "-"}</strong><span>{record.role || "-"}</span></td>
-                          <td data-label="Status"><span className={`admin-priority ${["Permission", "Sick", "Leave"].includes(record.status) ? "medium" : "low"}`}>{record.status || "-"}</span></td>
-                          <td data-label="Work Mode">{record.work_mode || "-"}</td>
-                          <td data-label="Check In">{formatDate(record.check_in_at)}</td>
-                          <td data-label="Check Out">{formatDate(record.check_out_at)}</td>
-                          <td data-label="Location">{record.location || "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {!attendanceRecords.length ? <p className="admin-empty table">No attendance records yet. Run the latest Supabase schema, then check in from this page.</p> : null}
-                </div>
-              </div>
-            </section>
+            <AttendanceModule
+              currentAttendance={currentAttendance}
+              saveAttendance={saveAttendance}
+              attendanceDraft={attendanceDraft}
+              setAttendanceDraft={setAttendanceDraft}
+              attendanceStatuses={attendanceStatuses}
+              attendanceWorkModes={attendanceWorkModes}
+              todayKey={todayKey}
+              formatDate={formatDate}
+              attendanceSummary={attendanceSummary}
+              attendanceRecords={attendanceRecords}
+              exportRowsCsv={exportRowsCsv}
+            />
           ) : null}
 
           {activeModule === "Activity" ? (
@@ -6332,68 +6149,19 @@ export default function AdminDashboard() {
           ) : null}
 
           {activeModule === "Users" && canManageUsers ? (
-            <section className="admin-settings-grid">
-              <div className="admin-panel">
-                <div className="admin-panel-header">
-                  <div>
-                    <p>Manajemen Pengguna</p>
-                    <h2>Akun Admin</h2>
-                  </div>
-                  <button onClick={() => loadUsers(savedCredentials)} type="button">Muat Ulang Pengguna</button>
-                </div>
-                <div className="admin-user-list">
-                  {userAccounts.map((account) => (
-                    <article key={account.username}>
-                      <div>
-                        <strong>{account.username}</strong>
-                        <span>{adminRoleLabels[account.role] || account.role} | {account.source || "dashboard"} | {account.is_active === false ? "inactive" : "active"}</span>
-                      </div>
-                      <small>{adminRoleDescriptions[account.role] || "Custom dashboard access."}</small>
-                      {account.source !== "env" ? (
-                        <div className="admin-user-actions">
-                          <select value={account.role} onChange={(event) => updateUserAccount(account, { role: event.target.value })}>
-                            {adminRoleOptions.map((role) => (
-                              <option key={role.value} value={role.value}>{role.label}</option>
-                            ))}
-                          </select>
-                          <button onClick={() => updateUserAccount(account, { is_active: account.is_active === false })} type="button">
-                            {account.is_active === false ? "Activate" : "Deactivate"}
-                          </button>
-                          <button className="danger" onClick={() => deleteUserAccount(account)} type="button">Delete</button>
-                        </div>
-                      ) : (
-                        <small>Environment account. Edit this one in Vercel env if needed.</small>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              </div>
-              <div className="admin-panel">
-                <div className="admin-panel-header">
-                  <div>
-                    <p>Create Account</p>
-                    <h2>Dashboard User</h2>
-                  </div>
-                </div>
-                <div className="admin-settings-form">
-                  <label>Username<input value={userDraft.username} onChange={(event) => setUserDraft((current) => ({ ...current, username: event.target.value }))} placeholder="marketing" /></label>
-                  <label>Password<input value={userDraft.password} onChange={(event) => setUserDraft((current) => ({ ...current, password: event.target.value }))} placeholder="minimum 6 characters" type="password" /></label>
-                  <label>Role
-                    <select value={userDraft.role} onChange={(event) => setUserDraft((current) => ({ ...current, role: event.target.value }))}>
-                      {adminRoleOptions.map((role) => (
-                        <option key={role.value} value={role.value}>{role.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <button onClick={saveUserAccount} type="button">Save User</button>
-                </div>
-                <div className="admin-modal-confirm">
-                  <p>Recommended staff roles:</p>
-                  <strong>Finance, Procurement, Marketing, HR, Staff, Viewer</strong>
-                  <p>Use CEO/CSO only for owner accounts. Finance is restricted to CEO, CSO, and Finance roles only.</p>
-                </div>
-              </div>
-            </section>
+            <UsersModule
+              userAccounts={userAccounts}
+              loadUsers={loadUsers}
+              savedCredentials={savedCredentials}
+              adminRoleLabels={adminRoleLabels}
+              adminRoleDescriptions={adminRoleDescriptions}
+              adminRoleOptions={adminRoleOptions}
+              updateUserAccount={updateUserAccount}
+              deleteUserAccount={deleteUserAccount}
+              userDraft={userDraft}
+              setUserDraft={setUserDraft}
+              saveUserAccount={saveUserAccount}
+            />
           ) : null}
 
           {activeModule === "Leads" ? <section className="admin-grid lower">
