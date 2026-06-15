@@ -90,7 +90,7 @@ const languageCopy = {
     showPassword: "Lihat",
     hidePassword: "Tutup",
     loginButton: "Masuk ke Dashboard",
-    loading: "Memproses...",
+    loading: "Memverifikasi akses...",
     securityNotice: "Akses hanya diberikan oleh Administrator GSN. Jika membutuhkan akun atau mengalami kendala akses, silakan hubungi administrator perusahaan.",
     search: "Cari menu, data, laporan...",
     quickCreate: "Buat Cepat",
@@ -128,7 +128,7 @@ const languageCopy = {
     showPassword: "Show",
     hidePassword: "Hide",
     loginButton: "Enter Dashboard",
-    loading: "Processing...",
+    loading: "Verifying access...",
     securityNotice: "Access is granted only by the GSN Administrator. If you need an account or access support, please contact the company administrator.",
     search: "Search menus, data, reports...",
     quickCreate: "Quick Create",
@@ -4448,13 +4448,23 @@ export default function AdminDashboard() {
           aria-label="Portal login internal GSN"
           onPointerMove={(event) => {
             const rect = event.currentTarget.getBoundingClientRect();
-            event.currentTarget.style.setProperty("--mouse-x", `${((event.clientX - rect.left) / rect.width) * 100}%`);
-            event.currentTarget.style.setProperty("--mouse-y", `${((event.clientY - rect.top) / rect.height) * 100}%`);
+            const x = (event.clientX - rect.left) / rect.width;
+            const y = (event.clientY - rect.top) / rect.height;
+            event.currentTarget.style.setProperty("--mouse-x", `${x * 100}%`);
+            event.currentTarget.style.setProperty("--mouse-y", `${y * 100}%`);
+            event.currentTarget.style.setProperty("--card-x", `${(x - 0.5) * 6}px`);
+            event.currentTarget.style.setProperty("--card-y", `${(y - 0.5) * 6}px`);
           }}
         >
           <div className="admin-login-atmosphere" aria-hidden="true">
+            {Array.from({ length: 12 }).map((_, index) => <span key={index} />)}
+          </div>
+          <div className="admin-login-routes" aria-hidden="true">
             <span />
             <span />
+            <span />
+          </div>
+          <div className="admin-login-nodes" aria-hidden="true">
             <span />
             <span />
             <span />
@@ -4493,12 +4503,12 @@ export default function AdminDashboard() {
               ))}
             </div>
           </div>
-          <div className="admin-login-divider" aria-hidden="true" />
+          <div className="admin-login-divider" aria-hidden="true"><span /></div>
           <div className="admin-login-right">
             <div className="admin-login-card">
               <div className="admin-login-lock" aria-hidden="true">GSN</div>
               <p>{copy.portal}</p>
-              <h2>{copy.welcome}</h2>
+              <h2>{copy.welcome} <span aria-hidden="true">👋</span></h2>
               <span className="admin-security-note">{copy.loginSubtext}</span>
               <form onSubmit={handleLogin}>
                 <label className={credentials.username ? "is-filled" : ""}>
@@ -4518,7 +4528,7 @@ export default function AdminDashboard() {
                 <label className={credentials.password ? "is-filled" : ""}>
                   <span>{copy.passwordLabel}</span>
                   <div className="admin-login-input">
-                    <i aria-hidden="true">#</i>
+                    <i aria-hidden="true">⌁</i>
                     <input
                       aria-label="Password"
                       autoComplete="current-password"
@@ -4542,7 +4552,7 @@ export default function AdminDashboard() {
                 <button className="admin-login-submit" disabled={!credentials.username || !credentials.password || loading} type="submit">
                   {loading ? <span className="admin-login-spinner" aria-hidden="true" /> : null}
                   {loading ? copy.loading : copy.loginButton}
-                  <b aria-hidden="true">&gt;</b>
+                  <b aria-hidden="true">→</b>
                 </button>
               </form>
               <div className="admin-login-notice">
