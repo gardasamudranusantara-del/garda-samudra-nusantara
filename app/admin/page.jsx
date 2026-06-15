@@ -4524,11 +4524,6 @@ export default function AdminDashboard() {
                       aria-label="Email atau username"
                       autoComplete="username"
                       name="username"
-                      value={credentials.username}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setCredentials((current) => ({ ...current, username: value }));
-                      }}
                       placeholder={copy.usernamePlaceholder}
                       type="text"
                     />
@@ -4542,11 +4537,6 @@ export default function AdminDashboard() {
                       aria-label="Password"
                       autoComplete="current-password"
                       name="password"
-                      value={credentials.password}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setCredentials((current) => ({ ...current, password: value }));
-                      }}
                       placeholder={copy.passwordPlaceholder}
                       type={passwordVisible ? "text" : "password"}
                     />
