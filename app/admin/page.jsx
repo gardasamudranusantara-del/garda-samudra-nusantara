@@ -73,6 +73,137 @@ const moduleLabels = {
   Users: "Pengguna",
   Admin: "Admin"
 };
+const languageCopy = {
+  id: {
+    portal: "PORTAL INTERNAL GSN",
+    taglineOne: "Connecting Global Trade.",
+    taglineTwo: "Empowering Local Growth.",
+    loginDescription: "Kelola prospek, pembeli, pemasok, keuangan, dokumen, investor, dan operasional perusahaan dalam satu platform terpadu.",
+    welcome: "Selamat Datang Kembali",
+    loginSubtext: "Silakan masuk untuk melanjutkan ke dashboard GSN.",
+    usernameLabel: "Email atau Username",
+    usernamePlaceholder: "Masukkan email atau username",
+    passwordLabel: "Password",
+    passwordPlaceholder: "Masukkan password",
+    remember: "Ingat saya",
+    forgot: "Lupa Password?",
+    showPassword: "Lihat",
+    hidePassword: "Tutup",
+    loginButton: "Masuk ke Dashboard",
+    loading: "Memproses...",
+    securityNotice: "Akses hanya diberikan oleh Administrator GSN. Jika membutuhkan akun atau mengalami kendala akses, silakan hubungi administrator perusahaan.",
+    search: "Cari menu, data, laporan...",
+    quickCreate: "Buat Cepat",
+    notifications: "Notifikasi",
+    myProfile: "Profil Saya",
+    companyProfile: "Profil Perusahaan",
+    preferences: "Preferensi",
+    logout: "Keluar",
+    heroTitle: "Selamat datang kembali",
+    heroSubtext: "Berikut ringkasan performa bisnis GSN hari ini.",
+    reload: "Muat Ulang",
+    openWebsite: "Buka Website",
+    close: "Tutup",
+    noMenu: "Tidak ada menu yang cocok.",
+    featureOne: "Aman & Terpercaya",
+    featureOneText: "Data perusahaan terlindungi dengan baik.",
+    featureTwo: "Real-time Analytics",
+    featureTwoText: "Keputusan lebih cepat berdasarkan data akurat.",
+    featureThree: "All In One Platform",
+    featureThreeText: "Semua kebutuhan bisnis dalam satu sistem."
+  },
+  en: {
+    portal: "GSN INTERNAL PORTAL",
+    taglineOne: "Connecting Global Trade.",
+    taglineTwo: "Empowering Local Growth.",
+    loginDescription: "Manage prospects, buyers, suppliers, finance, documents, investors, and company operations in one integrated platform.",
+    welcome: "Welcome Back",
+    loginSubtext: "Sign in to continue to the GSN dashboard.",
+    usernameLabel: "Email or Username",
+    usernamePlaceholder: "Enter email or username",
+    passwordLabel: "Password",
+    passwordPlaceholder: "Enter password",
+    remember: "Remember me",
+    forgot: "Forgot Password?",
+    showPassword: "Show",
+    hidePassword: "Hide",
+    loginButton: "Enter Dashboard",
+    loading: "Processing...",
+    securityNotice: "Access is granted only by the GSN Administrator. If you need an account or access support, please contact the company administrator.",
+    search: "Search menus, data, reports...",
+    quickCreate: "Quick Create",
+    notifications: "Notifications",
+    myProfile: "My Profile",
+    companyProfile: "Company Profile",
+    preferences: "Preferences",
+    logout: "Logout",
+    heroTitle: "Welcome back",
+    heroSubtext: "Here is today's GSN business performance summary.",
+    reload: "Reload",
+    openWebsite: "Open Website",
+    close: "Close",
+    noMenu: "No matching menu found.",
+    featureOne: "Secure & Trusted",
+    featureOneText: "Company data is protected properly.",
+    featureTwo: "Real-time Analytics",
+    featureTwoText: "Faster decisions based on accurate data.",
+    featureThree: "All In One Platform",
+    featureThreeText: "All business needs in one system."
+  }
+};
+const labelTranslations = {
+  en: {
+    Dashboard: "Dashboard",
+    Prospek: "Prospects",
+    Pembeli: "Buyers",
+    Pemasok: "Suppliers",
+    Penawaran: "Quotations",
+    Keuangan: "Finance",
+    Operasional: "Operations",
+    Dokumen: "Documents",
+    Aktivitas: "Activity",
+    Persetujuan: "Approvals",
+    Analisis: "Analytics",
+    Investor: "Investors",
+    "Investor Aktif": "Active Investors",
+    "Laporan Investor": "Investor Reports",
+    Dividen: "Dividends",
+    SDM: "HR",
+    Absensi: "Attendance",
+    Pengguna: "Users",
+    "Role & Permission": "Roles & Permissions",
+    Pengaturan: "Settings",
+    "Profil Perusahaan": "Company Profile",
+    Notifikasi: "Notifications",
+    Integrasi: "Integrations",
+    Sistem: "System",
+    "Ringkasan Keuangan": "Finance Summary",
+    Pemasukan: "Revenue",
+    Pengeluaran: "Expenses",
+    Transfer: "Transfer",
+    Invoice: "Invoice",
+    Tagihan: "Bills",
+    "Setor Tunai": "Cash Deposit",
+    "Tarik Tunai": "Cash Withdrawal",
+    "Saldo Perusahaan": "Company Balance",
+    "Catatan Likuiditas": "Liquidity Notes",
+    "Faktur Pembeli": "Buyer Invoices",
+    "Tagihan Pemasok": "Supplier Bills",
+    "Pembayaran Pembeli": "Buyer Payments",
+    "Pembayaran Pemasok": "Supplier Payments",
+    Pajak: "Tax",
+    "Dokumen Hukum": "Legal Documents",
+    "Nilai Tukar": "Exchange Rates",
+    Anggaran: "Budget",
+    "Budget vs Aktual": "Budget vs Actual",
+    Audit: "Audit",
+    "Ringkasan Laporan": "Report Summary",
+    "Ekspor PDF": "Export PDF",
+    "Ekspor Excel": "Export Excel",
+    "Ekspor CSV": "Export CSV",
+    "Riwayat Laporan": "Report History"
+  }
+};
 const adminShortcutModules = ["Quotations", "Investors", "Activity", "Settings", "Users"];
 const erpSidebarGroups = [
   {
@@ -1271,6 +1402,7 @@ export default function AdminDashboard() {
   const [credentials, setCredentials] = useState({ username: "", password: "" });
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [language, setLanguage] = useState("id");
   const [savedCredentials, setSavedCredentials] = useState(null);
   const [adminProfile, setAdminProfile] = useState(null);
   const [data, setData] = useState(null);
@@ -1290,6 +1422,8 @@ export default function AdminDashboard() {
   const [commandQuery, setCommandQuery] = useState("");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const copy = languageCopy[language] || languageCopy.id;
+  const translateLabel = (label) => language === "en" ? (labelTranslations.en[label] || label) : label;
   const [settingsDraft, setSettingsDraft] = useState(defaultSettings);
   const [modal, setModal] = useState(null);
   const [userAccounts, setUserAccounts] = useState([]);
@@ -1520,6 +1654,10 @@ export default function AdminDashboard() {
       return;
     }
     setSidebarCollapsed(window.localStorage.getItem("gsn_admin_sidebar_collapsed") === "true");
+    const savedLanguage = window.localStorage.getItem("gsn_admin_language");
+    if (savedLanguage === "id" || savedLanguage === "en") {
+      setLanguage(savedLanguage);
+    }
   }, []);
 
   useEffect(() => {
@@ -1528,6 +1666,13 @@ export default function AdminDashboard() {
     }
     window.localStorage.setItem("gsn_admin_sidebar_collapsed", String(sidebarCollapsed));
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem("gsn_admin_language", language);
+  }, [language]);
 
   useEffect(() => {
     function handleShortcut(event) {
@@ -4053,7 +4198,7 @@ export default function AdminDashboard() {
                     type="button"
                   >
                     <span>{group.code}</span>
-                    {!sidebarCollapsed ? <strong>{group.title}</strong> : null}
+                    {!sidebarCollapsed ? <strong>{translateLabel(group.title)}</strong> : null}
                     {!sidebarCollapsed ? <small>{expanded ? "-" : "+"}</small> : null}
                   </button>
                   {expanded ? (
@@ -4063,11 +4208,11 @@ export default function AdminDashboard() {
                           className={isSidebarItemActive(item) ? "is-active" : ""}
                           key={`${group.title}-${item.label}`}
                           onClick={() => handleWorkspaceItem(item)}
-                          title={sidebarCollapsed ? item.label : undefined}
-                          type="button"
-                        >
-                          <span>{item.label}</span>
-                          {!sidebarCollapsed ? <small>{item.description}</small> : null}
+                           title={sidebarCollapsed ? translateLabel(item.label) : undefined}
+                           type="button"
+                         >
+                           <span>{translateLabel(item.label)}</span>
+                           {!sidebarCollapsed ? <small>{item.description}</small> : null}
                         </button>
                       ))}
                     </div>
@@ -4082,14 +4227,18 @@ export default function AdminDashboard() {
       {savedCredentials ? (
         <section className="admin-topbar" aria-label="GSN ERP topbar">
           <button className="admin-command-trigger" onClick={() => setCommandOpen(true)} type="button">
-            <span>Cari menu, data, laporan...</span>
+            <span>{copy.search}</span>
             <kbd>Ctrl K</kbd>
           </button>
           <div className="admin-topbar-actions">
             <input aria-label="Tanggal kerja" type="date" value={todayKey} readOnly />
-            <button onClick={() => setCommandOpen(true)} type="button">Buat Cepat</button>
+            <div className="admin-language-switch" aria-label="Pilihan bahasa">
+              <button className={language === "id" ? "is-active" : ""} onMouseDown={() => setLanguage("id")} onClick={() => setLanguage("id")} type="button">ID</button>
+              <button className={language === "en" ? "is-active" : ""} onMouseDown={() => setLanguage("en")} onClick={() => setLanguage("en")} type="button">EN</button>
+            </div>
+            <button onClick={() => setCommandOpen(true)} type="button">{copy.quickCreate}</button>
             <button className="admin-bell" onClick={() => setNotificationsOpen((value) => !value)} type="button">
-              Notifikasi
+              {copy.notifications}
               {unreadNotifications.length ? <span>{unreadNotifications.length}</span> : null}
             </button>
             <div className="admin-profile-menu">
@@ -4099,10 +4248,10 @@ export default function AdminDashboard() {
               </button>
               {profileMenuOpen ? (
                 <div className="admin-profile-dropdown">
-                  {canManageUsers ? <button onClick={() => setActiveModule("Users")} type="button">Profil Saya</button> : null}
-                  {canUseSettings ? <button onClick={() => setActiveModule("Settings")} type="button">Profil Perusahaan</button> : null}
-                  {canUseSettings ? <button onClick={() => setActiveModule("Settings")} type="button">Preferensi</button> : null}
-                  <button onClick={handleLogout} type="button">Keluar</button>
+                  {canManageUsers ? <button onClick={() => setActiveModule("Users")} type="button">{copy.myProfile}</button> : null}
+                  {canUseSettings ? <button onClick={() => setActiveModule("Settings")} type="button">{copy.companyProfile}</button> : null}
+                  {canUseSettings ? <button onClick={() => setActiveModule("Settings")} type="button">{copy.preferences}</button> : null}
+                  <button onClick={handleLogout} type="button">{copy.logout}</button>
                 </div>
               ) : null}
             </div>
@@ -4111,26 +4260,26 @@ export default function AdminDashboard() {
       ) : null}
 
       {savedCredentials && commandOpen ? (
-        <section className="admin-command-backdrop" role="dialog" aria-modal="true" aria-label="Cari menu dashboard">
+        <section className="admin-command-backdrop" role="dialog" aria-modal="true" aria-label={copy.search}>
           <div className="admin-command-palette">
             <div className="admin-command-input">
               <input
                 autoFocus
                 value={commandQuery}
                 onChange={(event) => setCommandQuery(event.target.value)}
-                placeholder="Cari menu, data, laporan..."
+                placeholder={copy.search}
               />
-              <button onClick={() => setCommandOpen(false)} type="button">Tutup</button>
+              <button onClick={() => setCommandOpen(false)} type="button">{copy.close}</button>
             </div>
             <div className="admin-command-list">
               {filteredCommandItems.map((item) => (
                 <button key={`${item.group}-${item.label}`} onClick={() => handleWorkspaceItem(item)} type="button">
-                  <span>{item.group}</span>
-                  <strong>{item.label}</strong>
+                  <span>{translateLabel(item.group)}</span>
+                  <strong>{translateLabel(item.label)}</strong>
                   <small>{item.description}</small>
                 </button>
               ))}
-              {!filteredCommandItems.length ? <p className="admin-empty">Tidak ada menu yang cocok.</p> : null}
+              {!filteredCommandItems.length ? <p className="admin-empty">{copy.noMenu}</p> : null}
             </div>
           </div>
         </section>
@@ -4139,19 +4288,19 @@ export default function AdminDashboard() {
       {savedCredentials ? <section className="admin-hero">
         <div>
           <p>GSN ERP</p>
-          <h1>Selamat datang kembali, {displayName}</h1>
-          <span>Berikut ringkasan performa bisnis GSN hari ini.</span>
+          <h1>{copy.heroTitle}, {displayName}</h1>
+          <span>{copy.heroSubtext}</span>
           {adminProfile ? <small className="admin-owner-badge">{adminProfile.username} - {adminRoleLabels[adminProfile.role] || adminProfile.role}</small> : null}
         </div>
         <div className="admin-hero-actions">
           {savedCredentials ? (
             <button className="admin-bell" onClick={() => setNotificationsOpen((value) => !value)} type="button">
-              Notifikasi
+              {copy.notifications}
               {unreadNotifications.length ? <span>{unreadNotifications.length}</span> : null}
             </button>
           ) : null}
-          {savedCredentials ? <button onClick={() => loadDashboard(savedCredentials)} type="button">{loading ? "Memuat..." : "Muat Ulang"}</button> : null}
-          <a href="/">Buka Website</a>
+          {savedCredentials ? <button onClick={() => loadDashboard(savedCredentials)} type="button">{loading ? copy.loading : copy.reload}</button> : null}
+          <a href="/">{copy.openWebsite}</a>
         </div>
       </section> : null}
 
@@ -4195,6 +4344,10 @@ export default function AdminDashboard() {
             <span />
             <span />
           </div>
+          <div className="admin-login-language" aria-label="Pilihan bahasa login">
+            <button className={language === "id" ? "is-active" : ""} onMouseDown={() => setLanguage("id")} onClick={() => setLanguage("id")} type="button">ID</button>
+            <button className={language === "en" ? "is-active" : ""} onMouseDown={() => setLanguage("en")} onClick={() => setLanguage("en")} type="button">EN</button>
+          </div>
           <div className="admin-login-left">
             <div className="admin-login-brand">
               <img alt="Garda Samudra Nusantara" src="/logos/gsn-admin-logo.png" />
@@ -4205,16 +4358,16 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="admin-login-copy">
-              <p><span /> PORTAL INTERNAL GSN</p>
-              <h2>Connecting Global Trade.<br /><em>Empowering Local Growth.</em></h2>
-              <span>Kelola prospek, pembeli, pemasok, keuangan, dokumen, investor, dan operasional perusahaan dalam satu platform terpadu.</span>
+              <p><span /> {copy.portal}</p>
+              <h2>{copy.taglineOne}<br /><em>{copy.taglineTwo}</em></h2>
+              <span>{copy.loginDescription}</span>
             </div>
             <div className="admin-login-vessel" aria-hidden="true" />
             <div className="admin-login-features">
               {[
-                ["Aman & Terpercaya", "Data perusahaan terlindungi dengan baik."],
-                ["Real-time Analytics", "Keputusan lebih cepat berdasarkan data akurat."],
-                ["All In One Platform", "Semua kebutuhan bisnis dalam satu sistem."]
+                [copy.featureOne, copy.featureOneText],
+                [copy.featureTwo, copy.featureTwoText],
+                [copy.featureThree, copy.featureThreeText]
               ].map(([title, text], index) => (
                 <article key={title} style={{ "--delay": `${index * 120}ms` }}>
                   <span>{index === 0 ? "01" : index === 1 ? "02" : "03"}</span>
@@ -4228,12 +4381,12 @@ export default function AdminDashboard() {
           <div className="admin-login-right">
             <div className="admin-login-card">
               <div className="admin-login-lock" aria-hidden="true">GSN</div>
-              <p>PORTAL INTERNAL GSN</p>
-              <h2>Selamat Datang Kembali</h2>
-              <span className="admin-security-note">Silakan masuk untuk melanjutkan ke dashboard GSN.</span>
+              <p>{copy.portal}</p>
+              <h2>{copy.welcome}</h2>
+              <span className="admin-security-note">{copy.loginSubtext}</span>
               <form onSubmit={handleLogin}>
                 <label className={credentials.username ? "is-filled" : ""}>
-                  <span>Email atau Username</span>
+                  <span>{copy.usernameLabel}</span>
                   <div className="admin-login-input">
                     <i aria-hidden="true">@</i>
                     <input
@@ -4241,13 +4394,13 @@ export default function AdminDashboard() {
                       autoComplete="username"
                       value={credentials.username}
                       onChange={(event) => setCredentials((current) => ({ ...current, username: event.target.value }))}
-                      placeholder="Masukkan email atau username"
+                      placeholder={copy.usernamePlaceholder}
                       type="text"
                     />
                   </div>
                 </label>
                 <label className={credentials.password ? "is-filled" : ""}>
-                  <span>Password</span>
+                  <span>{copy.passwordLabel}</span>
                   <div className="admin-login-input">
                     <i aria-hidden="true">#</i>
                     <input
@@ -4255,30 +4408,30 @@ export default function AdminDashboard() {
                       autoComplete="current-password"
                       value={credentials.password}
                       onChange={(event) => setCredentials((current) => ({ ...current, password: event.target.value }))}
-                      placeholder="Masukkan password"
+                      placeholder={copy.passwordPlaceholder}
                       type={passwordVisible ? "text" : "password"}
                     />
                     <button aria-label={passwordVisible ? "Sembunyikan password" : "Tampilkan password"} onClick={() => setPasswordVisible((current) => !current)} type="button">
-                      {passwordVisible ? "Tutup" : "Lihat"}
+                      {passwordVisible ? copy.hidePassword : copy.showPassword}
                     </button>
                   </div>
                 </label>
                 <div className="admin-login-options">
                   <label>
                     <input checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} type="checkbox" />
-                    <span>Ingat saya</span>
+                    <span>{copy.remember}</span>
                   </label>
-                  <a href="mailto:gardasamudranusantara@gmail.com?subject=GSN%20Admin%20Access%20Help">Lupa Password?</a>
+                  <a href="mailto:gardasamudranusantara@gmail.com?subject=GSN%20Admin%20Access%20Help">{copy.forgot}</a>
                 </div>
                 <button className="admin-login-submit" disabled={!credentials.username || !credentials.password || loading} type="submit">
-                  {loading ? <span className="admin-login-spinner" aria-hidden="true" /> : <span aria-hidden="true">[]</span>}
-                  {loading ? "Memproses..." : "Masuk ke Dashboard"}
-                  <b aria-hidden="true">-&gt;</b>
+                  {loading ? <span className="admin-login-spinner" aria-hidden="true" /> : null}
+                  {loading ? copy.loading : copy.loginButton}
+                  <b aria-hidden="true">&gt;</b>
                 </button>
               </form>
               <div className="admin-login-notice">
                 <strong>i</strong>
-                <p>Akses hanya diberikan oleh Administrator GSN. Jika membutuhkan akun atau mengalami kendala akses, silakan hubungi administrator perusahaan.</p>
+                <p>{copy.securityNotice}</p>
               </div>
               {notice ? <strong className="admin-login-error">{notice}</strong> : null}
               <small className="admin-login-footer">(c) 2026 Garda Samudra Nusantara. Internal Operating System.</small>
