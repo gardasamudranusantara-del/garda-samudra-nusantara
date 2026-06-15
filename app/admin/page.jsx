@@ -4518,8 +4518,10 @@ export default function AdminDashboard() {
                     <input
                       aria-label="Email atau username"
                       autoComplete="username"
+                      name="username"
                       value={credentials.username}
                       onChange={(event) => setCredentials((current) => ({ ...current, username: event.target.value }))}
+                      onInput={(event) => setCredentials((current) => ({ ...current, username: event.currentTarget.value }))}
                       placeholder={copy.usernamePlaceholder}
                       type="text"
                     />
@@ -4532,8 +4534,10 @@ export default function AdminDashboard() {
                     <input
                       aria-label="Password"
                       autoComplete="current-password"
+                      name="password"
                       value={credentials.password}
                       onChange={(event) => setCredentials((current) => ({ ...current, password: event.target.value }))}
+                      onInput={(event) => setCredentials((current) => ({ ...current, password: event.currentTarget.value }))}
                       placeholder={copy.passwordPlaceholder}
                       type={passwordVisible ? "text" : "password"}
                     />
@@ -4549,7 +4553,7 @@ export default function AdminDashboard() {
                   </label>
                   <a href="mailto:gardasamudranusantara@gmail.com?subject=GSN%20Admin%20Access%20Help">{copy.forgot}</a>
                 </div>
-                <button className="admin-login-submit" disabled={!credentials.username || !credentials.password || loading} type="submit">
+                <button className="admin-login-submit" disabled={loading} type="submit">
                   {loading ? <span className="admin-login-spinner" aria-hidden="true" /> : null}
                   {loading ? copy.loading : copy.loginButton}
                   <b aria-hidden="true">→</b>
