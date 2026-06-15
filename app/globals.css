@@ -4623,6 +4623,69 @@ body {
   color: #ff9ab2;
 }
 
+.admin-permission-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-permission-editor p {
+  margin: 0;
+  color: #9fe0ff;
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-permission-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px !important;
+  width: 100%;
+  flex-basis: 100%;
+}
+
+.admin-permission-check {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 9px !important;
+  min-height: 76px;
+  border: 1px solid rgba(159, 224, 255, 0.14);
+  border-radius: 14px !important;
+  padding: 10px !important;
+  background: rgba(255, 255, 255, 0.035);
+  cursor: pointer;
+}
+
+.admin-permission-check input {
+  width: 16px !important;
+  min-width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  accent-color: #38bdf8;
+}
+
+.admin-permission-check span {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.admin-permission-check strong {
+  color: #f9fafb;
+  font-size: 0.86rem;
+}
+
+.admin-permission-check small {
+  color: rgba(239, 244, 255, 0.62);
+  line-height: 1.35;
+}
+
 .admin-audit-diff {
   display: grid;
   gap: 8px;

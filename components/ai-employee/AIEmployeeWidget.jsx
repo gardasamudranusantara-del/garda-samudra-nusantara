@@ -63,7 +63,33 @@ function normalizeRole(role) {
   return String(role || "staff").toLowerCase();
 }
 
-function getQuickPrompts(role) {
+function getQuickPrompts(role, permissions = []) {
+  const access = new Set(permissions || []);
+  const prompts = [];
+
+  if (access.has("edit_leads")) {
+    prompts.push("Tampilkan prospek baru hari ini", "Apa prospek yang perlu follow-up?");
+  }
+  if (access.has("finance_access")) {
+    prompts.push("Cek invoice yang belum lunas", "Ringkas laporan finance bulan ini");
+  }
+  if (access.has("finance_manage_access")) {
+    prompts.push("Apa approval finance yang menunggu?");
+  }
+  if (access.has("attendance_access")) {
+    prompts.push("Ringkas absensi hari ini");
+  }
+  if (access.has("documents_access")) {
+    prompts.push("Cek dokumen penting");
+  }
+  if (access.has("supplier_access")) {
+    prompts.push("Cari ringkasan pemasok");
+  }
+
+  if (prompts.length) {
+    return [...new Set(prompts)].slice(0, 4);
+  }
+
   return roleQuickPrompts[normalizeRole(role)] || roleQuickPrompts.staff;
 }
 
@@ -93,7 +119,7 @@ function getWelcomeMessage(role) {
   return "Halo, aku AI Employee GSN. Akses akunmu terbatas, jadi aku akan bantu hal umum dan panduan dashboard yang sesuai role kamu.";
 }
 
-export default function AIEmployeeWidget({ userRole, authToken, username }) {
+export default function AIEmployeeWidget({ userRole, userPermissions = [], authToken, username }) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([
@@ -106,7 +132,7 @@ export default function AIEmployeeWidget({ userRole, authToken, username }) {
   const [pendingAction, setPendingAction] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
-  const quickPrompts = useMemo(() => getQuickPrompts(userRole), [userRole]);
+  const quickPrompts = useMemo(() => getQuickPrompts(userRole, userPermissions), [userRole, userPermissions]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });

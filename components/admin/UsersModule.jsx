@@ -7,12 +7,38 @@ export default function UsersModule({
   adminRoleLabels,
   adminRoleDescriptions,
   adminRoleOptions,
+  accessOptions,
+  defaultPermissionsByRole,
   updateUserAccount,
   deleteUserAccount,
   userDraft,
   setUserDraft,
   saveUserAccount
 }) {
+  function toggleDraftPermission(permission) {
+    setUserDraft((current) => {
+      const permissions = new Set(current.permissions || []);
+      if (permissions.has(permission)) {
+        permissions.delete(permission);
+      } else {
+        permissions.add(permission);
+      }
+
+      return { ...current, permissions: ["view", ...Array.from(permissions).filter((item) => item !== "view")] };
+    });
+  }
+
+  function toggleAccountPermission(account, permission) {
+    const permissions = new Set(account.permissions || []);
+    if (permissions.has(permission)) {
+      permissions.delete(permission);
+    } else {
+      permissions.add(permission);
+    }
+
+    updateUserAccount(account, { permissions: ["view", ...Array.from(permissions).filter((item) => item !== "view")] });
+  }
+
   return (
     <section className="admin-settings-grid">
       <div className="admin-panel">
@@ -33,7 +59,7 @@ export default function UsersModule({
               <small>{adminRoleDescriptions[account.role] || "Akses dashboard khusus."}</small>
               {account.source !== "env" ? (
                 <div className="admin-user-actions">
-                  <select value={account.role} onChange={(event) => updateUserAccount(account, { role: event.target.value })}>
+                  <select value={account.role} onChange={(event) => updateUserAccount(account, { role: event.target.value, permissions: defaultPermissionsByRole[event.target.value] || ["view"] })}>
                     {adminRoleOptions.map((role) => (
                       <option key={role.value} value={role.value}>{role.label}</option>
                     ))}
@@ -42,6 +68,21 @@ export default function UsersModule({
                     {account.is_active === false ? "Aktifkan" : "Nonaktifkan"}
                   </button>
                   <button className="danger" onClick={() => deleteUserAccount(account)} type="button">Hapus</button>
+                  <div className="admin-permission-grid">
+                    {accessOptions.map((permission) => (
+                      <label key={`${account.username}-${permission.value}`} className="admin-permission-check">
+                        <input
+                          checked={(account.permissions || []).includes(permission.value)}
+                          onChange={() => toggleAccountPermission(account, permission.value)}
+                          type="checkbox"
+                        />
+                        <span>
+                          <strong>{permission.label}</strong>
+                          <small>{permission.description}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <small>Akun environment. Ubah akun ini melalui env Vercel jika diperlukan.</small>
@@ -61,12 +102,30 @@ export default function UsersModule({
           <label>Username<input value={userDraft.username} onChange={(event) => setUserDraft((current) => ({ ...current, username: event.target.value }))} placeholder="marketing" /></label>
           <label>Password<input value={userDraft.password} onChange={(event) => setUserDraft((current) => ({ ...current, password: event.target.value }))} placeholder="minimal 6 karakter" type="password" /></label>
           <label>Role
-            <select value={userDraft.role} onChange={(event) => setUserDraft((current) => ({ ...current, role: event.target.value }))}>
+            <select value={userDraft.role} onChange={(event) => setUserDraft((current) => ({ ...current, role: event.target.value, permissions: defaultPermissionsByRole[event.target.value] || ["view"] }))}>
               {adminRoleOptions.map((role) => (
                 <option key={role.value} value={role.value}>{role.label}</option>
               ))}
             </select>
           </label>
+          <div className="admin-permission-editor">
+            <p>Akses yang ditampilkan</p>
+            <div className="admin-permission-grid">
+              {accessOptions.map((permission) => (
+                <label key={permission.value} className="admin-permission-check">
+                  <input
+                    checked={(userDraft.permissions || []).includes(permission.value)}
+                    onChange={() => toggleDraftPermission(permission.value)}
+                    type="checkbox"
+                  />
+                  <span>
+                    <strong>{permission.label}</strong>
+                    <small>{permission.description}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
           <button onClick={saveUserAccount} type="button">Simpan User</button>
         </div>
         <div className="admin-modal-confirm">

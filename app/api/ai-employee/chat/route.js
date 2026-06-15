@@ -1,7 +1,7 @@
 import { getAuthorizedAdmin } from "@/lib/adminAuth";
 import { insertAiAuditLog } from "@/lib/gsnDataStore";
 import { callLLM } from "@/lib/ai-employee/llm-provider";
-import { getToolByName, getToolsForRole } from "@/lib/ai-employee/tools";
+import { canUseTool, getToolByName, getToolsForContext } from "@/lib/ai-employee/tools";
 import { buildSystemPrompt } from "@/lib/ai-employee/system-prompts";
 import { createHmac, timingSafeEqual } from "crypto";
 
@@ -107,6 +107,7 @@ async function getUserFromRequest(request) {
     username: admin.username,
     adminRole: admin.role,
     role: mapAdminRoleToAiRole(admin.role),
+    permissions: Array.isArray(admin.permissions) ? admin.permissions : [],
     userToken,
     baseUrl: request.url
   };
@@ -159,7 +160,7 @@ export async function POST(request) {
       );
     }
 
-    const tools = getToolsForRole(ctx.role);
+    const tools = getToolsForContext(ctx);
     const systemPrompt = buildSystemPrompt(ctx.role);
     const history = Array.isArray(body.history) ? body.history : [];
 
@@ -172,7 +173,7 @@ export async function POST(request) {
         return Response.json({ reply: "Aksi tidak ditemukan atau sudah kedaluwarsa.", history }, { status: 400 });
       }
 
-      if (!tool.allowedRoles.includes(ctx.role)) {
+      if (!canUseTool(tool, ctx)) {
         await logAudit({
           userId: ctx.userId,
           username: ctx.username,
@@ -246,7 +247,7 @@ export async function POST(request) {
       });
     }
 
-    if (!tool.allowedRoles.includes(ctx.role)) {
+    if (!canUseTool(tool, ctx)) {
       await logAudit({
         userId: ctx.userId,
         username: ctx.username,

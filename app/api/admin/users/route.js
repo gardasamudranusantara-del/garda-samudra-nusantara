@@ -14,12 +14,42 @@ const adminRoleIds = [
   "viewer"
 ];
 
+const permissionIds = [
+  "view",
+  "edit_leads",
+  "delete_leads",
+  "edit_investors",
+  "delete_investors",
+  "edit_quotations",
+  "delete_quotations",
+  "download_pdf",
+  "settings",
+  "automation",
+  "activity_log",
+  "user_management",
+  "finance_access",
+  "finance_manage_access",
+  "finance_export",
+  "supplier_access",
+  "attendance_access",
+  "documents_access",
+  "analytics_access"
+];
+
 function cleanUsername(value) {
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40);
 }
 
 function cleanRole(value) {
   return adminRoleIds.includes(value) ? value : "marketing";
+}
+
+function cleanPermissions(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return [...new Set(["view", ...value.filter((item) => permissionIds.includes(item))])];
 }
 
 function userStoreError(error) {
@@ -52,6 +82,7 @@ export async function POST(request) {
   const username = cleanUsername(data.username);
   const password = String(data.password || "").trim();
   const role = cleanRole(data.role);
+  const permissions = cleanPermissions(data.permissions);
 
   if (!username || password.length < 6) {
     return Response.json({ message: "Username and password with at least 6 characters are required." }, { status: 400 });
@@ -59,11 +90,12 @@ export async function POST(request) {
 
   try {
     const before = await getStoredAdminUserForAudit(username);
-    const after = { username, role, is_active: data.is_active !== false };
+    const after = { username, role, permissions, is_active: data.is_active !== false };
     const result = await upsertStoredAdminUser({
       username,
       password: hashAdminPassword(password),
       role,
+      permissions,
       is_active: data.is_active !== false
     });
 
@@ -74,7 +106,7 @@ export async function POST(request) {
       referenceType: "admin_user",
       referenceId: username,
       metadata: {
-        fields: ["username", "role", "is_active"],
+        fields: ["username", "role", "permissions", "is_active"],
         before: before || {},
         after
       }
@@ -102,6 +134,9 @@ export async function PATCH(request) {
 
   if (adminRoleIds.includes(data.role)) {
     updates.role = data.role;
+  }
+  if (Array.isArray(data.permissions)) {
+    updates.permissions = cleanPermissions(data.permissions);
   }
   if (typeof data.password === "string" && data.password.trim()) {
     if (data.password.trim().length < 6) {

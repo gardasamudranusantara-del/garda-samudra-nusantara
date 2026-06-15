@@ -177,6 +177,33 @@ const adminRoleOptions = [
 ];
 const adminRoleDescriptions = Object.fromEntries(adminRoleOptions.map((role) => [role.value, role.description]));
 const adminRoleLabels = Object.fromEntries(adminRoleOptions.map((role) => [role.value, role.label]));
+const accessOptions = [
+  { value: "edit_leads", label: "Prospek & CRM", description: "Melihat dan mengelola prospek buyer." },
+  { value: "edit_quotations", label: "Penawaran", description: "Membuat dan mengubah quotation." },
+  { value: "download_pdf", label: "Download PDF", description: "Mengunduh quotation dan dokumen PDF." },
+  { value: "supplier_access", label: "Database Pemasok", description: "Melihat modul pemasok." },
+  { value: "documents_access", label: "Dokumen", description: "Melihat dan mengelola dokumen bisnis." },
+  { value: "analytics_access", label: "Analitik", description: "Melihat analitik website dan CRM." },
+  { value: "finance_access", label: "Keuangan", description: "Melihat modul finance." },
+  { value: "finance_manage_access", label: "Approval Finance", description: "Approval, closing, dan kontrol finance." },
+  { value: "finance_export", label: "Export Finance", description: "Export laporan finance." },
+  { value: "attendance_access", label: "Absensi", description: "Melihat dan memakai modul absensi." },
+  { value: "activity_log", label: "Aktivitas", description: "Melihat log aktivitas dashboard." },
+  { value: "user_management", label: "Pengguna", description: "Membuat, mengubah, dan menghapus user." },
+  { value: "settings", label: "Pengaturan", description: "Mengubah profil perusahaan dan integrasi." },
+  { value: "automation", label: "Automation", description: "Menjalankan automation internal." }
+];
+const defaultPermissionsByRole = {
+  ceo: ["view", "edit_leads", "delete_leads", "edit_investors", "delete_investors", "edit_quotations", "delete_quotations", "download_pdf", "settings", "automation", "activity_log", "user_management", "finance_access", "finance_manage_access", "finance_export", "supplier_access", "attendance_access", "documents_access", "analytics_access"],
+  cso: ["view", "edit_leads", "delete_leads", "edit_investors", "delete_investors", "edit_quotations", "delete_quotations", "download_pdf", "settings", "automation", "activity_log", "user_management", "finance_access", "finance_manage_access", "finance_export", "supplier_access", "attendance_access", "documents_access", "analytics_access"],
+  owner: ["view", "edit_leads", "delete_leads", "edit_investors", "delete_investors", "edit_quotations", "delete_quotations", "download_pdf", "settings", "automation", "activity_log", "user_management", "finance_access", "finance_manage_access", "finance_export", "supplier_access", "attendance_access", "documents_access", "analytics_access"],
+  finance: ["view", "download_pdf", "activity_log", "finance_access", "finance_manage_access", "finance_export", "documents_access"],
+  procurement: ["view", "edit_leads", "edit_quotations", "download_pdf", "activity_log", "documents_access"],
+  marketing: ["view", "edit_leads", "edit_quotations", "download_pdf", "activity_log", "analytics_access"],
+  hr: ["view", "activity_log", "user_management", "attendance_access"],
+  staff: ["view", "activity_log", "attendance_access"],
+  viewer: ["view"]
+};
 const executiveRoleIds = ["ceo", "cso", "owner"];
 const financeRoleIds = ["ceo", "cso", "owner", "finance"];
 const userManagerRoleIds = ["ceo", "cso", "owner", "hr"];
@@ -1264,7 +1291,7 @@ export default function AdminDashboard() {
   const [settingsDraft, setSettingsDraft] = useState(defaultSettings);
   const [modal, setModal] = useState(null);
   const [userAccounts, setUserAccounts] = useState([]);
-  const [userDraft, setUserDraft] = useState({ username: "", password: "", role: "marketing" });
+  const [userDraft, setUserDraft] = useState({ username: "", password: "", role: "marketing", permissions: defaultPermissionsByRole.marketing });
   const [attendanceDraft, setAttendanceDraft] = useState({
     status: "Present",
     work_mode: "Office",
@@ -1659,7 +1686,7 @@ export default function AdminDashboard() {
     }
 
     setNotice(`Admin user ${userDraft.username} saved.`);
-    setUserDraft({ username: "", password: "", role: "marketing" });
+    setUserDraft({ username: "", password: "", role: "marketing", permissions: defaultPermissionsByRole.marketing });
     await loadUsers(savedCredentials);
     await loadDashboard(savedCredentials);
   }
@@ -3093,12 +3120,20 @@ export default function AdminDashboard() {
   const financePeriodLocks = finance?.financePeriodLocks || [];
   const currentRole = adminProfile?.role || "";
   const currentUsername = String(adminProfile?.username || "").toLowerCase();
+  const currentPermissions = adminProfile?.permissions?.length ? adminProfile.permissions : defaultPermissionsByRole[currentRole] || [];
+  const hasAccess = (permission) => currentPermissions.includes(permission);
   const isExecutive = executiveRoleIds.includes(currentRole);
-  const canUseFinance = financeRoleIds.includes(currentRole) && Boolean(finance);
-  const canViewSuppliers = supplierAccessUsernames.includes(currentUsername);
+  const canUseFinance = hasAccess("finance_access") && Boolean(finance);
+  const canViewSuppliers = supplierAccessUsernames.includes(currentUsername) || hasAccess("supplier_access");
   const canDelete = isExecutive;
-  const canUseSettings = isExecutive;
-  const canManageUsers = userManagerRoleIds.includes(currentRole);
+  const canUseSettings = hasAccess("settings");
+  const canManageUsers = hasAccess("user_management");
+  const canUseLeads = hasAccess("edit_leads");
+  const canUseQuotations = hasAccess("edit_quotations");
+  const canUseDocuments = hasAccess("documents_access");
+  const canUseAnalytics = hasAccess("analytics_access");
+  const canUseAttendance = hasAccess("attendance_access");
+  const canUseInvestors = hasAccess("edit_investors") || isExecutive;
   const todayKey = new Date().toISOString().slice(0, 10);
   const todayAttendance = attendanceRecords.filter((record) => String(record.attendance_date || record.created_at || "").slice(0, 10) === todayKey);
   const currentAttendance = todayAttendance.find((record) => record.username === adminProfile?.username);
@@ -3109,14 +3144,26 @@ export default function AdminDashboard() {
     notCheckedOut: todayAttendance.filter((record) => record.check_in_at && !record.check_out_at).length
   };
   const visibleModules = modules.filter((module) => {
+    if (module === "Leads" || module === "Buyers") {
+      return canUseLeads;
+    }
     if (module === "Finance") {
-      return financeRoleIds.includes(currentRole);
+      return canUseFinance;
     }
     if (module === "Suppliers") {
       return canViewSuppliers;
     }
+    if (module === "Documents") {
+      return canUseDocuments;
+    }
+    if (module === "Analytics") {
+      return canUseAnalytics;
+    }
+    if (module === "Attendance") {
+      return canUseAttendance;
+    }
     if (module === "Investors") {
-      return isExecutive;
+      return canUseInvestors;
     }
     if (module === "Settings") {
       return isExecutive;
@@ -3131,10 +3178,6 @@ export default function AdminDashboard() {
       if (group.financeOnly && !canUseFinance) {
         return null;
       }
-      if (group.executiveOnly && !isExecutive) {
-        return null;
-      }
-
       const items = group.items.filter((item) => {
         if (item.financeOnly && !canUseFinance) {
           return false;
@@ -3154,7 +3197,22 @@ export default function AdminDashboard() {
         if (item.module === "Users" && !canManageUsers) {
           return false;
         }
-        if (item.module === "Investors" && !isExecutive) {
+        if ((item.module === "Leads" || item.module === "Buyers") && !canUseLeads) {
+          return false;
+        }
+        if (item.module === "Quotations" && !canUseQuotations) {
+          return false;
+        }
+        if (item.module === "Documents" && !canUseDocuments) {
+          return false;
+        }
+        if (item.module === "Analytics" && !canUseAnalytics) {
+          return false;
+        }
+        if (item.module === "Attendance" && !canUseAttendance) {
+          return false;
+        }
+        if (item.module === "Investors" && !canUseInvestors) {
           return false;
         }
         return true;
@@ -3162,7 +3220,7 @@ export default function AdminDashboard() {
 
       return items.length ? { ...group, items } : null;
     })
-    .filter(Boolean), [canManageUsers, canUseFinance, canUseSettings, canViewSuppliers, isExecutive]);
+    .filter(Boolean), [canManageUsers, canUseAnalytics, canUseAttendance, canUseDocuments, canUseFinance, canUseInvestors, canUseLeads, canUseQuotations, canUseSettings, canViewSuppliers, isExecutive]);
   const commandItems = useMemo(() => visibleSidebarGroups.flatMap((group) => group.items.map((item) => ({
     ...item,
     group: group.title
@@ -5717,7 +5775,7 @@ export default function AdminDashboard() {
             </FinanceModule>
           ) : null}
 
-          {activeModule === "Attendance" ? (
+          {activeModule === "Attendance" && canUseAttendance ? (
             <AttendanceModule
               currentAttendance={currentAttendance}
               saveAttendance={saveAttendance}
@@ -5733,7 +5791,7 @@ export default function AdminDashboard() {
             />
           ) : null}
 
-          {activeModule === "Activity" ? (
+          {activeModule === "Activity" && hasAccess("activity_log") ? (
             <ActivityModule
               latestAdminActivities={latestAdminActivities}
               activityFilters={activityFilters}
@@ -5871,6 +5929,8 @@ export default function AdminDashboard() {
               adminRoleLabels={adminRoleLabels}
               adminRoleDescriptions={adminRoleDescriptions}
               adminRoleOptions={adminRoleOptions}
+              accessOptions={accessOptions}
+              defaultPermissionsByRole={defaultPermissionsByRole}
               updateUserAccount={updateUserAccount}
               deleteUserAccount={deleteUserAccount}
               userDraft={userDraft}
@@ -5986,6 +6046,7 @@ export default function AdminDashboard() {
           authToken={savedCredentials.session}
           username={adminProfile?.username || savedCredentials.username}
           userRole={adminProfile?.role || savedCredentials.role}
+          userPermissions={currentPermissions}
         />
       ) : null}
     </main>
