@@ -4520,8 +4520,14 @@ export default function AdminDashboard() {
                       autoComplete="username"
                       name="username"
                       value={credentials.username}
-                      onChange={(event) => setCredentials((current) => ({ ...current, username: event.target.value }))}
-                      onInput={(event) => setCredentials((current) => ({ ...current, username: event.currentTarget.value }))}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setCredentials((current) => ({ ...current, username: value }));
+                      }}
+                      onInput={(event) => {
+                        const value = event.currentTarget.value;
+                        setCredentials((current) => ({ ...current, username: value }));
+                      }}
                       placeholder={copy.usernamePlaceholder}
                       type="text"
                     />
@@ -4536,8 +4542,14 @@ export default function AdminDashboard() {
                       autoComplete="current-password"
                       name="password"
                       value={credentials.password}
-                      onChange={(event) => setCredentials((current) => ({ ...current, password: event.target.value }))}
-                      onInput={(event) => setCredentials((current) => ({ ...current, password: event.currentTarget.value }))}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setCredentials((current) => ({ ...current, password: value }));
+                      }}
+                      onInput={(event) => {
+                        const value = event.currentTarget.value;
+                        setCredentials((current) => ({ ...current, password: value }));
+                      }}
                       placeholder={copy.passwordPlaceholder}
                       type={passwordVisible ? "text" : "password"}
                     />
