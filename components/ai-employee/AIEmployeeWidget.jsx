@@ -1,13 +1,97 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-const quickPrompts = [
-  "Tampilkan prospek baru hari ini",
-  "Cek invoice yang belum lunas",
-  "Apa reminder penting hari ini?",
-  "Ringkas laporan finance bulan ini"
-];
+const roleQuickPrompts = {
+  ceo: [
+    "Tampilkan prospek baru hari ini",
+    "Cek invoice yang belum lunas",
+    "Apa reminder penting hari ini?",
+    "Ringkas laporan finance bulan ini"
+  ],
+  cso: [
+    "Tampilkan prospek baru hari ini",
+    "Cek invoice yang belum lunas",
+    "Apa reminder penting hari ini?",
+    "Ringkas laporan finance bulan ini"
+  ],
+  owner: [
+    "Tampilkan prospek baru hari ini",
+    "Cek invoice yang belum lunas",
+    "Apa reminder penting hari ini?",
+    "Ringkas laporan finance bulan ini"
+  ],
+  finance: [
+    "Cek invoice yang belum lunas",
+    "Ringkas laporan finance bulan ini",
+    "Apa approval finance yang menunggu?",
+    "Cek pengeluaran bulan ini"
+  ],
+  marketing: [
+    "Tampilkan prospek baru hari ini",
+    "Apa prospek yang perlu follow-up?",
+    "Cari riwayat buyer",
+    "Bantu buat catatan follow-up buyer"
+  ],
+  procurement: [
+    "Apa reminder penting hari ini?",
+    "Cari dokumen supplier",
+    "Cek quotation yang perlu dipantau",
+    "Bantu rangkum kebutuhan sourcing"
+  ],
+  hr: [
+    "Ringkas absensi hari ini",
+    "Cek user dashboard aktif",
+    "Apa reminder internal hari ini?",
+    "Bantu buat catatan HR"
+  ],
+  staff: [
+    "Apa saja yang bisa saya lakukan?",
+    "Bantu buat catatan kerja hari ini",
+    "Bantu susun follow-up sederhana",
+    "Jelaskan cara memakai dashboard"
+  ],
+  viewer: [
+    "Apa saja yang bisa saya lihat?",
+    "Jelaskan menu dashboard",
+    "Bantu baca ringkasan yang tersedia",
+    "Jelaskan cara memakai dashboard"
+  ]
+};
+
+function normalizeRole(role) {
+  return String(role || "staff").toLowerCase();
+}
+
+function getQuickPrompts(role) {
+  return roleQuickPrompts[normalizeRole(role)] || roleQuickPrompts.staff;
+}
+
+function getWelcomeMessage(role) {
+  const normalizedRole = normalizeRole(role);
+
+  if (["ceo", "cso", "owner"].includes(normalizedRole)) {
+    return "Halo, aku AI Employee GSN. Aku bisa bantu cek prospek, invoice, finance, reminder, dan operasional penting.";
+  }
+
+  if (normalizedRole === "finance") {
+    return "Halo, aku AI Employee GSN. Aku bisa bantu cek invoice, laporan finance, pengeluaran, approval, dan reminder pembayaran.";
+  }
+
+  if (normalizedRole === "marketing") {
+    return "Halo, aku AI Employee GSN. Aku bisa bantu cek prospek, riwayat buyer, follow-up, dan quotation.";
+  }
+
+  if (normalizedRole === "procurement") {
+    return "Halo, aku AI Employee GSN. Aku bisa bantu hal umum procurement sesuai aksesmu. Data pemasok tetap dibatasi khusus Dapi dan Pici.";
+  }
+
+  if (normalizedRole === "hr") {
+    return "Halo, aku AI Employee GSN. Aku bisa bantu ringkasan absensi, user, dan proses internal HR.";
+  }
+
+  return "Halo, aku AI Employee GSN. Akses akunmu terbatas, jadi aku akan bantu hal umum dan panduan dashboard yang sesuai role kamu.";
+}
 
 export default function AIEmployeeWidget({ userRole, authToken, username }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,13 +99,14 @@ export default function AIEmployeeWidget({ userRole, authToken, username }) {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Halo, aku AI Employee GSN. Aku bisa bantu cek prospek, invoice, pengeluaran, dan mencatat data setelah kamu konfirmasi."
+      content: getWelcomeMessage(userRole)
     }
   ]);
   const [history, setHistory] = useState([]);
   const [pendingAction, setPendingAction] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
+  const quickPrompts = useMemo(() => getQuickPrompts(userRole), [userRole]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
