@@ -4479,10 +4479,6 @@ export default function AdminDashboard() {
             <span />
             <span />
           </div>
-          <div className="admin-login-language" aria-label="Pilihan bahasa login">
-            <button className={language === "id" ? "is-active" : ""} onMouseDown={() => setLanguage("id")} onClick={() => setLanguage("id")} type="button">ID</button>
-            <button className={language === "en" ? "is-active" : ""} onMouseDown={() => setLanguage("en")} onClick={() => setLanguage("en")} type="button">EN</button>
-          </div>
           <div className="admin-login-left">
             <div className="admin-login-brand">
               <img alt="Garda Samudra Nusantara" src="/logos/gsn-admin-logo.png" />
@@ -4512,12 +4508,15 @@ export default function AdminDashboard() {
               ))}
             </div>
           </div>
-          <div className="admin-login-divider" aria-hidden="true"><span /></div>
           <div className="admin-login-right">
+            <div className="admin-login-language" aria-label="Pilihan bahasa login" translate="no">
+              <button aria-label="Bahasa Indonesia" className={language === "id" ? "is-active" : ""} onMouseDown={() => setLanguage("id")} onClick={() => setLanguage("id")} translate="no" type="button">ID</button>
+              <button aria-label="English language" className={language === "en" ? "is-active" : ""} onMouseDown={() => setLanguage("en")} onClick={() => setLanguage("en")} translate="no" type="button">EN</button>
+            </div>
             <div className="admin-login-card">
               <div className="admin-login-lock" aria-hidden="true">GSN</div>
               <p>{copy.portal}</p>
-              <h2>{copy.welcome} <span aria-hidden="true">👋</span></h2>
+              <h2>{copy.welcome}</h2>
               <span className="admin-security-note">{copy.loginSubtext}</span>
               <form onSubmit={handleLogin}>
                 <label className={credentials.username ? "is-filled" : ""}>
