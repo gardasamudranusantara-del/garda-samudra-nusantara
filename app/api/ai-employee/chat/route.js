@@ -155,7 +155,7 @@ export async function POST(request) {
     const rateLimit = checkRateLimit(ctx);
     if (!rateLimit.ok) {
       return Response.json(
-        { reply: `AI Employee sedang membatasi request supaya API tetap hemat. Coba lagi sekitar ${rateLimit.retryAfter} detik lagi.`, history: [] },
+        { reply: `Jarvis sedang membatasi request supaya API tetap hemat. Coba lagi sekitar ${rateLimit.retryAfter} detik lagi.`, history: [] },
         { status: 429, headers: { "Retry-After": String(rateLimit.retryAfter) } }
       );
     }
@@ -310,7 +310,7 @@ export async function POST(request) {
   } catch (error) {
     console.error("[AI_EMPLOYEE_ERROR]", error);
     return Response.json(
-      { reply: error.message || "AI Employee sedang bermasalah.", history: [] },
+      { reply: error.message || "Jarvis sedang bermasalah.", history: [] },
       { status: 500 }
     );
   }

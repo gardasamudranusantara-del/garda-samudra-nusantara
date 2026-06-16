@@ -10,56 +10,105 @@ export default function AnalyticsModule({
   latestEvents,
   BarList,
   buildCountMap,
-  formatDate
+  formatDate,
+  language = "id"
 }) {
+  const text = language === "en" ? {
+    totalClicks: "Total Clicks",
+    conversionRate: "Lead Conversion",
+    mostClicked: "Most Clicked",
+    newLeads: "New Leads",
+    analyticsSummary: "Analytics Summary",
+    ownerInsight: "Owner Insights",
+    noDominantClick: "No dominant click yet",
+    clickInsight: "Website feature attracting the most visitor attention.",
+    noDominantCountry: "No dominant country yet",
+    countryInsight: "Buyer country that appears most often in inquiries.",
+    noDominantProduct: "No dominant product yet",
+    productInsight: "Product most frequently requested by buyers.",
+    conversionInsight: "Ratio of website clicks converted into incoming leads.",
+    featureClicks: "Feature Clicks",
+    topClicked: "Most Clicked",
+    noClickData: "No click data yet.",
+    leadSource: "Lead Source",
+    leadOrigin: "Lead Origin",
+    noLeadSource: "No lead source data yet.",
+    latestActivity: "Latest Activity",
+    clickHistory: "Website Click History",
+    noWebsiteActivity: "No website activity yet."
+  } : {
+    totalClicks: "Total Klik",
+    conversionRate: "Rasio Jadi Lead",
+    mostClicked: "Paling Sering Diklik",
+    newLeads: "Prospek Baru",
+    analyticsSummary: "Ringkasan Analitik",
+    ownerInsight: "Insight Untuk Owner",
+    noDominantClick: "Belum ada klik dominan",
+    clickInsight: "Fitur website yang paling menarik perhatian visitor.",
+    noDominantCountry: "Belum ada negara dominan",
+    countryInsight: "Negara buyer yang paling sering muncul di inquiry.",
+    noDominantProduct: "Belum ada produk dominan",
+    productInsight: "Produk yang paling sering diminta buyer.",
+    conversionInsight: "Rasio klik website menjadi prospek masuk.",
+    featureClicks: "Klik Fitur",
+    topClicked: "Paling Sering Diklik",
+    noClickData: "Belum ada data klik.",
+    leadSource: "Sumber Prospek",
+    leadOrigin: "Asal Lead",
+    noLeadSource: "Belum ada data asal lead.",
+    latestActivity: "Aktivitas Terbaru",
+    clickHistory: "Riwayat Klik Website",
+    noWebsiteActivity: "Belum ada aktivitas website."
+  };
+
   return (
     <>
       <section className="admin-metrics analytics">
-        <article><span>Total Klik</span><strong>{events.length}</strong></article>
-        <article><span>Rasio Jadi Lead</span><strong>{conversionRate}%</strong></article>
-        <article><span>Paling Sering Diklik</span><strong className="text-small">{mostClicked}</strong></article>
-        <article><span>Prospek Baru</span><strong>{metrics.newToday}</strong></article>
+        <article><span>{text.totalClicks}</span><strong>{events.length}</strong></article>
+        <article><span>{text.conversionRate}</span><strong>{conversionRate}%</strong></article>
+        <article><span>{text.mostClicked}</span><strong className="text-small">{mostClicked}</strong></article>
+        <article><span>{text.newLeads}</span><strong>{metrics.newToday}</strong></article>
       </section>
       <section className="admin-panel admin-analytics-summary">
         <div className="admin-panel-header compact">
           <div>
-            <p>Ringkasan Analitik</p>
-            <h2>Insight Untuk Owner</h2>
+            <p>{text.analyticsSummary}</p>
+            <h2>{text.ownerInsight}</h2>
           </div>
         </div>
         <div className="admin-insight-list">
           <article>
-            <strong>{mostClicked || "Belum ada klik dominan"}</strong>
-            <span>Fitur website yang paling menarik perhatian visitor.</span>
+            <strong>{mostClicked || text.noDominantClick}</strong>
+            <span>{text.clickInsight}</span>
           </article>
           <article>
-            <strong>{chartData.countries[0]?.[0] || "Belum ada negara dominan"}</strong>
-            <span>Negara buyer yang paling sering muncul di inquiry.</span>
+            <strong>{chartData.countries[0]?.[0] || text.noDominantCountry}</strong>
+            <span>{text.countryInsight}</span>
           </article>
           <article>
-            <strong>{chartData.products[0]?.[0] || "Belum ada produk dominan"}</strong>
-            <span>Produk yang paling sering diminta buyer.</span>
+            <strong>{chartData.products[0]?.[0] || text.noDominantProduct}</strong>
+            <span>{text.productInsight}</span>
           </article>
           <article>
             <strong>{conversionRate}%</strong>
-            <span>Rasio klik website menjadi prospek masuk.</span>
+            <span>{text.conversionInsight}</span>
           </article>
         </div>
       </section>
       <section className="admin-chart-grid analytics">
         <div className="admin-panel">
-          <div className="admin-panel-header compact"><div><p>Klik Fitur</p><h2>Paling Sering Diklik</h2></div></div>
-          <BarList items={chartData.clicks} empty="Belum ada data klik." />
+          <div className="admin-panel-header compact"><div><p>{text.featureClicks}</p><h2>{text.topClicked}</h2></div></div>
+          <BarList items={chartData.clicks} empty={text.noClickData} />
         </div>
         <div className="admin-panel">
-          <div className="admin-panel-header compact"><div><p>Sumber Prospek</p><h2>Asal Lead</h2></div></div>
-          <BarList items={buildCountMap(leads, (lead) => lead.source || "inquiry_form").slice(0, 7)} empty="Belum ada data asal lead." />
+          <div className="admin-panel-header compact"><div><p>{text.leadSource}</p><h2>{text.leadOrigin}</h2></div></div>
+          <BarList items={buildCountMap(leads, (lead) => lead.source || "inquiry_form").slice(0, 7)} empty={text.noLeadSource} />
         </div>
         <div className="admin-panel wide">
           <div className="admin-panel-header">
             <div>
-              <p>Aktivitas Terbaru</p>
-              <h2>Riwayat Klik Website</h2>
+              <p>{text.latestActivity}</p>
+              <h2>{text.clickHistory}</h2>
             </div>
           </div>
           <div className="admin-event-list">
@@ -70,7 +119,7 @@ export default function AnalyticsModule({
                 <small>{formatDate(event.created_at)}</small>
               </article>
             ))}
-            {!latestEvents.length ? <p className="admin-empty">Belum ada aktivitas website.</p> : null}
+            {!latestEvents.length ? <p className="admin-empty">{text.noWebsiteActivity}</p> : null}
           </div>
         </div>
       </section>

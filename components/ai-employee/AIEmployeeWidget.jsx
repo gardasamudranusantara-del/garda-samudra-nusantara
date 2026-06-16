@@ -97,26 +97,26 @@ function getWelcomeMessage(role) {
   const normalizedRole = normalizeRole(role);
 
   if (["ceo", "cso", "owner"].includes(normalizedRole)) {
-    return "Halo, aku AI Employee GSN. Aku bisa bantu cek prospek, invoice, finance, reminder, dan operasional penting.";
+    return "Halo, aku Jarvis, AI internal GSN. Aku bisa bantu cek prospek, invoice, finance, reminder, dan operasional penting.";
   }
 
   if (normalizedRole === "finance") {
-    return "Halo, aku AI Employee GSN. Aku bisa bantu cek invoice, laporan finance, pengeluaran, approval, dan reminder pembayaran.";
+    return "Halo, aku Jarvis, AI internal GSN. Aku bisa bantu cek invoice, laporan finance, pengeluaran, approval, dan reminder pembayaran.";
   }
 
   if (normalizedRole === "marketing") {
-    return "Halo, aku AI Employee GSN. Aku bisa bantu cek prospek, riwayat buyer, follow-up, dan quotation.";
+    return "Halo, aku Jarvis, AI internal GSN. Aku bisa bantu cek prospek, riwayat buyer, follow-up, dan quotation.";
   }
 
   if (normalizedRole === "procurement") {
-    return "Halo, aku AI Employee GSN. Aku bisa bantu hal umum procurement sesuai aksesmu. Data pemasok tetap dibatasi khusus Dapi dan Pici.";
+    return "Halo, aku Jarvis, AI internal GSN. Aku bisa bantu hal umum procurement sesuai aksesmu. Data pemasok tetap dibatasi khusus Dapi dan Pici.";
   }
 
   if (normalizedRole === "hr") {
-    return "Halo, aku AI Employee GSN. Aku bisa bantu ringkasan absensi, user, dan proses internal HR.";
+    return "Halo, aku Jarvis, AI internal GSN. Aku bisa bantu ringkasan absensi, user, dan proses internal HR.";
   }
 
-  return "Halo, aku AI Employee GSN. Akses akunmu terbatas, jadi aku akan bantu hal umum dan panduan dashboard yang sesuai role kamu.";
+  return "Halo, aku Jarvis, AI internal GSN. Akses akunmu terbatas, jadi aku akan bantu hal umum dan panduan dashboard yang sesuai role kamu.";
 }
 
 export default function AIEmployeeWidget({ userRole, userPermissions = [], authToken, username }) {
@@ -151,7 +151,7 @@ export default function AIEmployeeWidget({ userRole, userPermissions = [], authT
 
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.reply || data.message || "AI Employee gagal merespons.");
+      throw new Error(data.reply || data.message || "Jarvis gagal merespons.");
     }
     return data;
   }
@@ -210,18 +210,24 @@ export default function AIEmployeeWidget({ userRole, userPermissions = [], authT
   return (
     <div className={`ai-employee ${isOpen ? "is-open" : ""}`}>
       {!isOpen ? (
-        <button className="ai-employee-launcher" onClick={() => setIsOpen(true)} type="button">
-          <span>AI</span>
-          <strong>Employee</strong>
+        <button aria-label="Open Jarvis" className="ai-employee-launcher" onClick={() => setIsOpen(true)} type="button">
+          <span className="ai-employee-character">
+            <img alt="" aria-hidden="true" src="/images/jarvis-dashboard.png?v=jarvis-1" />
+          </span>
         </button>
       ) : (
-        <section className="ai-employee-panel" aria-label="GSN AI Employee">
+        <section className="ai-employee-panel" aria-label="Jarvis AI dashboard assistant">
           <header className="ai-employee-header">
-            <div>
-              <p>GSN AI Employee</p>
-              <span>{username || "Admin"} / {userRole || "staff"}</span>
+            <div className="ai-employee-identity">
+              <span className="ai-employee-avatar">
+                <img alt="" aria-hidden="true" src="/images/jarvis-dashboard.png?v=jarvis-1" />
+              </span>
+              <div>
+                <p>Jarvis</p>
+                <span>{username || "Admin"} / {userRole || "staff"}</span>
+              </div>
             </div>
-            <button aria-label="Close AI Employee" onClick={() => setIsOpen(false)} type="button">x</button>
+            <button aria-label="Close Jarvis" onClick={() => setIsOpen(false)} type="button">x</button>
           </header>
 
           <div className="ai-employee-messages" ref={scrollRef}>
@@ -230,7 +236,7 @@ export default function AIEmployeeWidget({ userRole, userPermissions = [], authT
                 {message.content}
               </article>
             ))}
-            {isLoading ? <article className="ai-message assistant muted">Sedang membaca data...</article> : null}
+            {isLoading ? <article className="ai-message assistant muted">Jarvis sedang membaca data...</article> : null}
             {pendingAction && !isLoading ? (
               <div className="ai-confirmation">
                 <p>{pendingAction.summary}</p>
@@ -259,7 +265,7 @@ export default function AIEmployeeWidget({ userRole, userPermissions = [], authT
             <input
               disabled={isLoading || Boolean(pendingAction)}
               onChange={(event) => setInput(event.target.value)}
-              placeholder={pendingAction ? "Konfirmasi dulu aksi di atas" : "Tanya AI Employee..."}
+              placeholder={pendingAction ? "Konfirmasi dulu aksi di atas" : "Tanya Jarvis..."}
               value={input}
             />
             <button disabled={isLoading || Boolean(pendingAction)} type="submit">Kirim</button>

@@ -114,7 +114,38 @@ const languageCopy = {
     featureTwo: "Real-time Analytics",
     featureTwoText: "Keputusan lebih cepat berdasarkan data akurat.",
     featureThree: "All In One Platform",
-    featureThreeText: "Semua kebutuhan bisnis dalam satu sistem."
+    featureThreeText: "Semua kebutuhan bisnis dalam satu sistem.",
+    notificationCenter: "Pusat Notifikasi",
+    internalInfo: "Info Internal",
+    markRead: "Tandai Dibaca",
+    noNotifications: "Belum ada notifikasi.",
+    supabaseMissingTitle: "Supabase belum terhubung.",
+    supabaseMissingText: "Tambahkan SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_DASHBOARD_ACCOUNTS, dan ADMIN_SESSION_SECRET di Vercel agar data live GSN tersimpan aman.",
+    totalLeads: "Total Prospek",
+    newToday: "Masuk Hari Ini",
+    investors: "Investor",
+    quotationRequests: "Permintaan Penawaran",
+    nusabotLeads: "Lead NusaBot",
+    pendingFollowUps: "Perlu Follow-Up",
+    highPriority: "Prioritas Tinggi",
+    startHere: "Mulai Dari Sini",
+    quickActionsTitle: "Aksi Cepat",
+    quickActionsHint: "Pekerjaan harian dalam 2-3 klik",
+    needsAttention: "Perlu Perhatian",
+    importantTasks: "Tugas Penting",
+    allSafe: "Semua aman.",
+    noImportantTasks: "Tidak ada tugas penting yang menunggu sekarang.",
+    systemInsight: "Insight Sistem",
+    todaySummary: "Ringkasan Hari Ini",
+    noDominantProduct: "Belum ada produk dominan",
+    topProductHint: "Produk yang paling sering diminati.",
+    noDominantCountry: "Belum ada negara dominan",
+    topCountryHint: "Negara buyer paling aktif.",
+    mostClickedHint: "Fitur website paling sering diklik.",
+    latestActivities: "Aktivitas Terbaru",
+    lastFiveActivities: "5 Aktivitas Terakhir",
+    seeAll: "Lihat Semua",
+    noAdminActivity: "Belum ada aktivitas admin."
   },
   en: {
     portal: "GSN INTERNAL PORTAL",
@@ -152,7 +183,38 @@ const languageCopy = {
     featureTwo: "Real-time Analytics",
     featureTwoText: "Faster decisions based on accurate data.",
     featureThree: "All In One Platform",
-    featureThreeText: "All business needs in one system."
+    featureThreeText: "All business needs in one system.",
+    notificationCenter: "Notification Center",
+    internalInfo: "Internal Info",
+    markRead: "Mark as Read",
+    noNotifications: "No notifications yet.",
+    supabaseMissingTitle: "Supabase is not connected.",
+    supabaseMissingText: "Add SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_DASHBOARD_ACCOUNTS, and ADMIN_SESSION_SECRET in Vercel so live GSN data is stored securely.",
+    totalLeads: "Total Leads",
+    newToday: "New Today",
+    investors: "Investors",
+    quotationRequests: "Quotation Requests",
+    nusabotLeads: "NusaBot Leads",
+    pendingFollowUps: "Pending Follow-Ups",
+    highPriority: "High Priority",
+    startHere: "Start Here",
+    quickActionsTitle: "Quick Actions",
+    quickActionsHint: "Daily work in 2-3 clicks",
+    needsAttention: "Needs Attention",
+    importantTasks: "Important Tasks",
+    allSafe: "All clear.",
+    noImportantTasks: "No important tasks are waiting right now.",
+    systemInsight: "System Insight",
+    todaySummary: "Today's Summary",
+    noDominantProduct: "No dominant product yet",
+    topProductHint: "Most requested product.",
+    noDominantCountry: "No dominant country yet",
+    topCountryHint: "Most active buyer country.",
+    mostClickedHint: "Most clicked website feature.",
+    latestActivities: "Latest Activities",
+    lastFiveActivities: "Last 5 Activities",
+    seeAll: "See All",
+    noAdminActivity: "No admin activity yet."
   }
 };
 const labelTranslations = {
@@ -221,8 +283,8 @@ const erpSidebarGroups = [
     items: [
       { label: "Prospek", module: "Leads", permission: "edit_leads", description: "Lead buyer dan follow-up" },
       { label: "Pembeli", module: "Buyers", permission: "crm_buyers_view", description: "Database buyer aktif" },
-      { label: "Pemasok", module: "Suppliers", permission: "crm_suppliers_view", description: "Database supplier", supplierOnly: true },
-      { label: "Penawaran", module: "Quotations", permission: "edit_quotations", description: "Quotation dan dokumen buyer" }
+      { label: "Pemasok", module: "Suppliers", permission: "crm_suppliers_view", description: "Database pemasok", supplierOnly: true },
+      { label: "Penawaran", module: "Quotations", permission: "edit_quotations", description: "Penawaran dan dokumen pembeli" }
     ]
   },
   {
@@ -600,12 +662,33 @@ function hoursSince(value) {
   return Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 36e5));
 }
 
-function normalizeProducts(lead) {
+function toPlainText(value) {
+  if (value === null || typeof value === "undefined") {
+    return "";
+  }
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value).trim();
+  }
+  if (typeof value === "object") {
+    return String(
+      value.product ||
+      value.name ||
+      value.label ||
+      value.title ||
+      value.category ||
+      value.value ||
+      ""
+    ).trim();
+  }
+  return String(value || "").trim();
+}
+
+function normalizeProducts(lead = {}) {
   if (Array.isArray(lead.products)) {
-    return lead.products;
+    return lead.products.map(toPlainText).filter(Boolean);
   }
   if (Array.isArray(lead.product_interest)) {
-    return lead.product_interest;
+    return lead.product_interest.map(toPlainText).filter(Boolean);
   }
   if (typeof lead.product_interest === "string") {
     return lead.product_interest.split(",").map((item) => item.trim()).filter(Boolean);
@@ -615,13 +698,13 @@ function normalizeProducts(lead) {
 
 function parseListText(value) {
   if (Array.isArray(value)) {
-    return value.map((item) => String(item || "").trim()).filter(Boolean);
+    return value.map(toPlainText).filter(Boolean);
   }
   return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
 }
 
 function listToText(value) {
-  return Array.isArray(value) ? value.join(", ") : String(value || "");
+  return Array.isArray(value) ? value.map(toPlainText).filter(Boolean).join(", ") : String(value || "");
 }
 
 function labelStatus(value) {
@@ -1073,7 +1156,7 @@ function makeQuotationNumber(index, year = new Date().getFullYear()) {
 }
 
 function getQuotationNumber(item = {}) {
-  return item.quotation_number || `${item.request_summary || ""} ${item.document_title || ""} ${item.document_text || ""}`.match(/GSN-QTN-\d{4}-\d{4}/)?.[0] || "";
+  return toPlainText(item.quotation_number) || `${item.request_summary || ""} ${item.document_title || ""} ${item.document_text || ""}`.match(/GSN-QTN-\d{4}-\d{4}/)?.[0] || "";
 }
 
 function getNextQuotationNumber(quotationRequests = [], quotationDocuments = []) {
@@ -1134,7 +1217,7 @@ function getDocumentName(url = "") {
 
 function getQuotationProductsText(quotation = {}) {
   if (Array.isArray(quotation.products) && quotation.products.length) {
-    return quotation.products.join(", ");
+    return quotation.products.map(toPlainText).filter(Boolean).join(", ");
   }
   return quotation.product_details || quotation.request_summary || "Quoted products";
 }
@@ -1173,12 +1256,15 @@ function makeQuotationItemsFromLead(lead = {}) {
 function getQuotationItems(draft = {}, lead = {}) {
   const draftItems = Array.isArray(draft.items) ? draft.items : [];
   const cleaned = draftItems
-    .map((item) => ({
-      product: String(item.product || "").trim(),
-      quantity: String(item.quantity || "").trim(),
-      unit_price: String(item.unit_price || "").trim(),
-      notes: String(item.notes || "").trim()
-    }))
+    .map((item) => {
+      const entry = item && typeof item === "object" ? item : { product: item };
+      return {
+        product: toPlainText(entry.product),
+        quantity: toPlainText(entry.quantity),
+        unit_price: toPlainText(entry.unit_price),
+        notes: toPlainText(entry.notes)
+      };
+    })
     .filter((item) => item.product || item.quantity || item.unit_price || item.notes);
 
   return cleaned.length ? cleaned : makeQuotationItemsFromLead(lead);
@@ -1294,7 +1380,7 @@ function quotationToDraft(item = {}) {
     email: item.email || "",
     whatsapp: item.whatsapp || "",
     country: item.country || "",
-    products: Array.isArray(item.products) ? item.products.join(", ") : "",
+    products: listToText(item.products),
     quantity: item.quantity || "",
     incoterm: item.incoterm || "",
     unit_price: item.unit_price || "",
@@ -3960,14 +4046,21 @@ export default function AdminDashboard() {
   const selectedFollowUpHours = selected ? hoursSince(selected.created_at) : 0;
   const assignableUsers = useMemo(() => userAccounts.filter((account) => account.is_active !== false).map((account) => account.username), [userAccounts]);
   const attentionTasks = useMemo(() => ([
-    metrics.pendingFollowUps ? { title: "Follow-up buyer", detail: `${metrics.pendingFollowUps} prospek perlu dihubungi`, tone: "high", module: "Leads" } : null,
-    metrics.highPriority ? { title: "Prioritas tinggi", detail: `${metrics.highPriority} lead harus dipantau`, tone: "medium", module: "Leads" } : null,
-    unreadNotifications.length ? { title: "Notifikasi baru", detail: `${unreadNotifications.length} info belum dibaca`, tone: "medium", module: "Dashboard" } : null,
-    canUseFinance && financeReminders.total ? { title: "Keuangan", detail: `${financeReminders.total} reminder finance aktif`, tone: "high", module: "Finance" } : null,
-    !currentAttendance?.check_in_at ? { title: "Absensi hari ini", detail: "Belum absen masuk", tone: "low", module: "Attendance" } : null
-  ].filter(Boolean).slice(0, 5)), [canUseFinance, currentAttendance?.check_in_at, financeReminders.total, metrics.highPriority, metrics.pendingFollowUps, unreadNotifications.length]);
+    metrics.pendingFollowUps ? { title: language === "en" ? "Buyer follow-up" : "Follow-up buyer", detail: language === "en" ? `${metrics.pendingFollowUps} prospects need contact` : `${metrics.pendingFollowUps} prospek perlu dihubungi`, tone: "high", module: "Leads" } : null,
+    metrics.highPriority ? { title: language === "en" ? "High priority" : "Prioritas tinggi", detail: language === "en" ? `${metrics.highPriority} leads need monitoring` : `${metrics.highPriority} lead harus dipantau`, tone: "medium", module: "Leads" } : null,
+    unreadNotifications.length ? { title: language === "en" ? "New notifications" : "Notifikasi baru", detail: language === "en" ? `${unreadNotifications.length} unread updates` : `${unreadNotifications.length} info belum dibaca`, tone: "medium", module: "Dashboard" } : null,
+    canUseFinance && financeReminders.total ? { title: language === "en" ? "Finance" : "Keuangan", detail: language === "en" ? `${financeReminders.total} active finance reminders` : `${financeReminders.total} reminder finance aktif`, tone: "high", module: "Finance" } : null,
+    !currentAttendance?.check_in_at ? { title: language === "en" ? "Today's attendance" : "Absensi hari ini", detail: language === "en" ? "Not checked in yet" : "Belum absen masuk", tone: "low", module: "Attendance" } : null
+  ].filter(Boolean).slice(0, 5)), [canUseFinance, currentAttendance?.check_in_at, financeReminders.total, language, metrics.highPriority, metrics.pendingFollowUps, unreadNotifications.length]);
   const homeActivities = useMemo(() => latestAdminActivities.slice(0, 5), [latestAdminActivities]);
-  const quickActions = [
+  const quickActions = language === "en" ? [
+    { label: "Add Prospect", hint: "Manage buyer inquiry", module: "Leads" },
+    { label: "Create Quotation", hint: "Buyer quotation", module: "Quotations" },
+    { label: "Record Revenue", hint: "Revenue / cash in", module: "Finance", financeTarget: "finance-revenue-form" },
+    { label: "Record Expense", hint: "Expense approval", module: "Finance", financeTarget: "finance-expense-form" },
+    { label: "Upload Document", hint: "Contract, invoice, legal", module: "Documents" },
+    { label: "Check In", hint: "Daily attendance", module: "Attendance" }
+  ] : [
     { label: "Tambah Prospek", hint: "Kelola inquiry buyer", module: "Leads" },
     { label: "Buat Penawaran", hint: "Quotation buyer", module: "Quotations" },
     { label: "Catat Pemasukan", hint: "Revenue / cash in", module: "Finance", financeTarget: "finance-revenue-form" },
@@ -4357,9 +4450,9 @@ export default function AdminDashboard() {
           </button>
           <div className="admin-topbar-actions">
             <input aria-label="Tanggal kerja" type="date" value={todayKey} readOnly />
-            <div className="admin-language-switch" aria-label="Pilihan bahasa">
-              <button className={language === "id" ? "is-active" : ""} onMouseDown={() => setLanguage("id")} onClick={() => setLanguage("id")} type="button">ID</button>
-              <button className={language === "en" ? "is-active" : ""} onMouseDown={() => setLanguage("en")} onClick={() => setLanguage("en")} type="button">EN</button>
+            <div className="admin-language-switch" aria-label="Pilihan bahasa" translate="no">
+              <button aria-label="Bahasa Indonesia" className={language === "id" ? "is-active" : ""} onMouseDown={() => setLanguage("id")} onClick={() => setLanguage("id")} translate="no" type="button">ID</button>
+              <button aria-label="English language" className={language === "en" ? "is-active" : ""} onMouseDown={() => setLanguage("en")} onClick={() => setLanguage("en")} translate="no" type="button">EN</button>
             </div>
             <button onClick={() => setCommandOpen(true)} type="button">{copy.quickCreate}</button>
             <button className="admin-bell" onClick={() => setNotificationsOpen((value) => !value)} type="button">
@@ -4433,10 +4526,10 @@ export default function AdminDashboard() {
         <section className="admin-panel admin-notifications">
           <div className="admin-panel-header">
             <div>
-              <p>Pusat Notifikasi</p>
-              <h2>Info Internal</h2>
+              <p>{copy.notificationCenter}</p>
+              <h2>{copy.internalInfo}</h2>
             </div>
-            <button disabled={!unreadNotifications.length} onClick={() => markNotificationsRead(true)} type="button">Tandai Dibaca</button>
+            <button disabled={!unreadNotifications.length} onClick={() => markNotificationsRead(true)} type="button">{copy.markRead}</button>
           </div>
           <div className="admin-notification-list">
             {notifications.slice(0, 12).map((item) => (
@@ -4446,7 +4539,7 @@ export default function AdminDashboard() {
                 <small>{item.message || "-"} | {formatDate(item.created_at)}</small>
               </button>
             ))}
-            {!notifications.length ? <p className="admin-empty">Belum ada notifikasi.</p> : null}
+            {!notifications.length ? <p className="admin-empty">{copy.noNotifications}</p> : null}
           </div>
         </section>
       ) : null}
@@ -4562,7 +4655,7 @@ export default function AdminDashboard() {
                 </button>
               </form>
               <div className="admin-login-notice">
-                <strong>i</strong>
+                <strong aria-hidden="true" translate="no" />
                 <p>{copy.securityNotice}</p>
               </div>
               {notice ? <strong className="admin-login-error">{notice}</strong> : null}
@@ -4575,25 +4668,25 @@ export default function AdminDashboard() {
         <>
           {!data.configured ? (
             <section className="admin-setup-warning">
-              <h2>Supabase belum terhubung.</h2>
-              <p>Tambahkan SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_DASHBOARD_ACCOUNTS, dan ADMIN_SESSION_SECRET di Vercel agar data live GSN tersimpan aman.</p>
+              <h2>{copy.supabaseMissingTitle}</h2>
+              <p>{copy.supabaseMissingText}</p>
             </section>
           ) : null}
 
           {activeModule === "Dashboard" ? <section className="admin-metrics crm admin-home-kpis">
-            <article><span>Total Prospek</span><strong>{metrics.totalLeads}</strong></article>
-            <article><span>Masuk Hari Ini</span><strong>{metrics.newToday}</strong></article>
-            <article><span>Investor</span><strong>{metrics.investorInquiries}</strong></article>
-            <article><span>Permintaan Penawaran</span><strong>{metrics.quotationRequests}</strong></article>
-            <article><span>Lead NusaBot</span><strong>{metrics.nusabotLeads}</strong></article>
-            <article><span>Perlu Follow-Up</span><strong>{metrics.pendingFollowUps}</strong></article>
-            <article><span>Prioritas Tinggi</span><strong>{metrics.highPriority}</strong></article>
+            <article><span>{copy.totalLeads}</span><strong>{metrics.totalLeads}</strong></article>
+            <article><span>{copy.newToday}</span><strong>{metrics.newToday}</strong></article>
+            <article><span>{copy.investors}</span><strong>{metrics.investorInquiries}</strong></article>
+            <article><span>{copy.quotationRequests}</span><strong>{metrics.quotationRequests}</strong></article>
+            <article><span>{copy.nusabotLeads}</span><strong>{metrics.nusabotLeads}</strong></article>
+            <article><span>{copy.pendingFollowUps}</span><strong>{metrics.pendingFollowUps}</strong></article>
+            <article><span>{copy.highPriority}</span><strong>{metrics.highPriority}</strong></article>
           </section> : null}
 
           <nav className="admin-module-tabs" aria-label="Admin modules">
             {visibleModules.map((module) => (
               <button className={activeModule === module ? "is-active" : ""} key={module} onClick={() => setActiveModule(module)} type="button">
-                {moduleLabels[module] || module}
+                {translateLabel(moduleLabels[module] || module)}
               </button>
             ))}
           </nav>
@@ -4608,15 +4701,16 @@ export default function AdminDashboard() {
                 unreadNotifications={unreadNotifications}
                 canUseFinance={canUseFinance}
                 onOpenModule={setActiveModule}
+                language={language}
               />
 
               <div className="admin-panel admin-home-focus">
                 <div className="admin-panel-header">
                   <div>
-                    <p>Mulai Dari Sini</p>
-                    <h2>Quick Actions</h2>
+                    <p>{copy.startHere}</p>
+                    <h2>{copy.quickActionsTitle}</h2>
                   </div>
-                  <span className="admin-muted">Pekerjaan harian dalam 2-3 klik</span>
+                  <span className="admin-muted">{copy.quickActionsHint}</span>
                 </div>
                 <div className="admin-quick-actions">
                   {quickActions.map((action) => (
@@ -4640,8 +4734,8 @@ export default function AdminDashboard() {
               <div className="admin-panel">
                 <div className="admin-panel-header compact">
                   <div>
-                    <p>Perlu Perhatian</p>
-                    <h2>Tugas Penting</h2>
+                    <p>{copy.needsAttention}</p>
+                    <h2>{copy.importantTasks}</h2>
                   </div>
                 </div>
                 <div className="admin-task-list">
@@ -4653,8 +4747,8 @@ export default function AdminDashboard() {
                   ))}
                   {!attentionTasks.length ? (
                     <div className="admin-empty-state">
-                      <strong>Semua aman.</strong>
-                      <span>Tidak ada tugas penting yang menunggu sekarang.</span>
+                      <strong>{copy.allSafe}</strong>
+                      <span>{copy.noImportantTasks}</span>
                     </div>
                   ) : null}
                 </div>
@@ -4663,24 +4757,24 @@ export default function AdminDashboard() {
               <div className="admin-panel">
                 <div className="admin-panel-header compact">
                   <div>
-                    <p>Insight Sistem</p>
-                    <h2>Ringkasan Hari Ini</h2>
+                    <p>{copy.systemInsight}</p>
+                    <h2>{copy.todaySummary}</h2>
                   </div>
                 </div>
                 <div className="admin-insight-list">
-                  <article><strong>{chartData.products[0]?.[0] || "Belum ada produk dominan"}</strong><span>Produk yang paling sering diminati.</span></article>
-                  <article><strong>{chartData.countries[0]?.[0] || "Belum ada negara dominan"}</strong><span>Negara buyer paling aktif.</span></article>
-                  <article><strong>{mostClicked || "-"}</strong><span>Fitur website paling sering diklik.</span></article>
+                  <article><strong>{chartData.products[0]?.[0] || copy.noDominantProduct}</strong><span>{copy.topProductHint}</span></article>
+                  <article><strong>{chartData.countries[0]?.[0] || copy.noDominantCountry}</strong><span>{copy.topCountryHint}</span></article>
+                  <article><strong>{mostClicked || "-"}</strong><span>{copy.mostClickedHint}</span></article>
                 </div>
               </div>
 
               <div className="admin-panel">
                 <div className="admin-panel-header compact">
                   <div>
-                    <p>Aktivitas Terbaru</p>
-                    <h2>5 Aktivitas Terakhir</h2>
+                    <p>{copy.latestActivities}</p>
+                    <h2>{copy.lastFiveActivities}</h2>
                   </div>
-                  <button onClick={() => setActiveModule("Activity")} type="button">Lihat Semua</button>
+                  <button onClick={() => setActiveModule("Activity")} type="button">{copy.seeAll}</button>
                 </div>
                 <div className="admin-event-list compact">
                   {homeActivities.map((activity) => (
@@ -4690,7 +4784,7 @@ export default function AdminDashboard() {
                       <small>{formatDate(activity.created_at)}</small>
                     </article>
                   ))}
-                  {!homeActivities.length ? <p className="admin-empty">Belum ada aktivitas admin.</p> : null}
+                  {!homeActivities.length ? <p className="admin-empty">{copy.noAdminActivity}</p> : null}
                 </div>
               </div>
             </section>
@@ -5042,7 +5136,7 @@ export default function AdminDashboard() {
                     onClick={() => exportRowsCsv(
                       `gsn-quotations-${new Date().toISOString().slice(0, 10)}.csv`,
                       ["Created At", "Quotation Number", "Buyer", "Company", "Country", "Products", "Quantity", "Incoterm", "Price", "Status"],
-                      quotationRequests.map((item) => [item.created_at, getQuotationNumber(item), item.buyer_name, item.company_name, item.country, Array.isArray(item.products) ? item.products.join("; ") : "", item.quantity, item.incoterm, item.unit_price, item.status])
+                      quotationRequests.map((item) => [item.created_at, getQuotationNumber(item), item.buyer_name, item.company_name, item.country, listToText(item.products), item.quantity, item.incoterm, item.unit_price, item.status])
                     )}
                     type="button"
                   >
@@ -5053,7 +5147,7 @@ export default function AdminDashboard() {
                   {quotationRequests.map((item) => (
                     <article key={item.id}>
                       <strong>{getQuotationNumber(item) || item.buyer_name || item.company_name || "Quotation"}</strong>
-                      <span>{Array.isArray(item.products) ? item.products.join(", ") : "-"} | {item.quantity || "-"}</span>
+                      <span>{listToText(item.products) || "-"} | {item.quantity || "-"}</span>
                       <small>{item.buyer_name || item.company_name || "Buyer"} - {item.status || "Draft"} - {formatDate(item.created_at)}</small>
                       <div className="admin-actions">
                         <button onClick={() => updateQuotation(item.id, { status: item.status === "Sent" ? "Draft" : "Sent" })} type="button">
@@ -5096,6 +5190,7 @@ export default function AdminDashboard() {
               BarList={BarList}
               buildCountMap={buildCountMap}
               formatDate={formatDate}
+              language={language}
             />
           ) : null}
 
@@ -6148,6 +6243,7 @@ export default function AdminDashboard() {
               attendanceSummary={attendanceSummary}
               attendanceRecords={attendanceRecords}
               exportRowsCsv={exportRowsCsv}
+              language={language}
             />
           ) : null}
 
@@ -6184,13 +6280,13 @@ export default function AdminDashboard() {
                   })
                   .map((module) => (
                     <button key={module} onClick={() => setActiveModule(module)} type="button">
-                      <strong>{moduleLabels[module] || module}</strong>
+                      <strong>{translateLabel(moduleLabels[module] || module)}</strong>
                       <span>
-                        {module === "Quotations" ? "Kelola permintaan penawaran dan dokumen quotation." :
-                          module === "Investors" ? "Pantau peluang investor dan kerja sama strategis." :
-                          module === "Activity" ? "Lihat audit perubahan dan aktivitas admin." :
-                          module === "Settings" ? "Atur profil perusahaan, notifikasi, dan analytics." :
-                          "Kelola akun dashboard dan role pengguna."}
+                        {module === "Quotations" ? (language === "en" ? "Manage quotation requests and quotation documents." : "Kelola permintaan penawaran dan dokumen quotation.") :
+                          module === "Investors" ? (language === "en" ? "Monitor investor opportunities and strategic partnerships." : "Pantau peluang investor dan kerja sama strategis.") :
+                          module === "Activity" ? (language === "en" ? "View audit changes and admin activity." : "Lihat audit perubahan dan aktivitas admin.") :
+                          module === "Settings" ? (language === "en" ? "Manage company profile, notifications, and analytics." : "Atur profil perusahaan, notifikasi, dan analytics.") :
+                          (language === "en" ? "Manage dashboard accounts and user roles." : "Kelola akun dashboard dan role pengguna.")}
                       </span>
                     </button>
                   ))}
@@ -6296,6 +6392,7 @@ export default function AdminDashboard() {
               userDraft={userDraft}
               setUserDraft={setUserDraft}
               saveUserAccount={saveUserAccount}
+              language={language}
             />
           ) : null}
 
